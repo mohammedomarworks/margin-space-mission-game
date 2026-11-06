@@ -1,0 +1,782 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/launch_planner.gd" id="1_plan"]
+[ext_resource type="Script" path="res://margin/scripts/orbit_camera.gd" id="2_cam"]
+[ext_resource type="Script" path="res://margin/scripts/spacecraft_3d.gd" id="3_craft"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Launch"]
+sky_top_color = Color(0.01, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.02, 0.03, 0.06, 1)
+ground_bottom_color = Color(0.01, 0.01, 0.02, 1)
+ground_horizon_color = Color(0.02, 0.03, 0.05, 1)
+
+[sub_resource type="Sky" id="Sky_Launch"]
+sky_material = SubResource("SkyMat_Launch")
+
+[sub_resource type="Environment" id="Env_Launch"]
+background_mode = 2
+sky = SubResource("Sky_Launch")
+ambient_light_source = 2
+ambient_light_color = Color(0.12, 0.16, 0.24, 1)
+ambient_light_energy = 0.85
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_Moon_Center"]
+albedo_color = Color(0.52, 0.54, 0.58, 1)
+roughness = 0.94
+
+[sub_resource type="SphereMesh" id="Mesh_Moon_Center"]
+material = SubResource("Mat_Moon_Center")
+radius = 2.2
+height = 4.4
+
+[sub_resource type="ImmediateMesh" id="Mesh_OrbitLine"]
+
+[sub_resource type="StyleBoxFlat" id="Style_TopBar"]
+bg_color = Color(0.07, 0.09, 0.13, 0.94)
+border_color = Color(0.2, 0.26, 0.35, 0.8)
+border_width_bottom = 1
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_Pill"]
+bg_color = Color(0.1, 0.14, 0.2, 0.8)
+border_color = Color(0.25, 0.35, 0.48, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SidePanel"]
+bg_color = Color(0.06, 0.08, 0.12, 0.9)
+border_color = Color(0.2, 0.26, 0.35, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_CheckCard"]
+bg_color = Color(0.09, 0.12, 0.18, 0.85)
+border_color = Color(0.2, 0.26, 0.36, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_Diagnostics"]
+bg_color = Color(0.22, 0.08, 0.08, 0.92)
+border_color = Color(0.95, 0.35, 0.25, 0.9)
+border_width_left = 2
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryLaunchBtn"]
+bg_color = Color(0.08, 0.42, 0.65, 0.95)
+border_color = Color(0.22, 0.74, 0.96, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_Modal"]
+bg_color = Color(0.06, 0.08, 0.12, 0.96)
+border_color = Color(0.22, 0.74, 0.96, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+
+[node name="LaunchPlanning" type="Node3D"]
+script = ExtResource("1_plan")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Launch")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 8, 10, 8)
+light_color = Color(1, 0.98, 0.94, 1)
+light_energy = 1.7
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, -3, -5)
+light_color = Color(0.4, 0.55, 0.78, 1)
+light_energy = 0.65
+omni_range = 20.0
+
+[node name="Moon" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_Moon_Center")
+
+[node name="OrbitPathLine" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_OrbitLine")
+
+[node name="Spacecraft3D" type="Node3D" parent="."]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 2.8)
+script = ExtResource("3_craft")
+
+[node name="OrbitCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.94, 0.34, 0, -0.34, 0.94, 0, 2.0, 5.5)
+script = ExtResource("2_cam")
+distance = 5.5
+pitch = 20.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 54.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("Style_TopBar")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Branding" type="VBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/Branding"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 16
+text = "MARGIN // ORBIT & LAUNCH PLANNING"
+
+[node name="Subtitle" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/Branding"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "LUNAR SOUTH POLE VOLATILE SURVEY"
+
+[node name="Spacer1" type="Control" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TelemetryPills" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MassPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopMassLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/MassPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "Wet Mass: 202.1 kg"
+
+[node name="CostPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopCostLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/CostPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "Spacecraft: $129.0M"
+
+[node name="DvPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopDvLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/DvPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "Onboard ΔV: 320 m/s"
+
+[node name="SciPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopScienceLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/SciPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "Science: 76 pts"
+
+[node name="Spacer2" type="Control" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Actions" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BackToWorkshopBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "← WORKSHOP"
+
+[node name="MainMenuBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "MAIN MENU"
+
+[node name="MainLayout" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 66.0
+offset_right = -16.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="LeftPanel" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_SidePanel")
+
+[node name="LeftScroll" type="ScrollContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="TransferHeader" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "1. SELECT TRANSLUNAR TRANSFER STRATEGY"
+
+[node name="TransferCardsContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="HSeparator1" type="HSeparator" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+layout_mode = 2
+
+[node name="OrbitHeader" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "2. SELECT LUNAR ORBIT PROFILE"
+
+[node name="OrbitCardsContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="HSeparator2" type="HSeparator" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+layout_mode = 2
+
+[node name="LVHeader" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "3. SELECT LAUNCH VEHICLE PROFILE"
+
+[node name="LVCardsContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/LeftScroll/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CenterSpacer" type="Control" parent="CanvasLayer/RootUI/MainLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="RightPanel" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout"]
+custom_minimum_size = Vector2(370, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_SidePanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ChecklistHeader" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "ENGINEERING FLIGHT READINESS CHECKLIST"
+
+[node name="ChecklistSub" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "5 Critical Systems Checks Before Lunar Launch"
+
+[node name="ChecklistScroll" type="ScrollContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ChecksList" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="MassCheckCard" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CheckCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/MassCheckCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/MassCheckCard/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/MassCheckCard/VBox/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 11
+text = "1. WET MASS VS LAUNCHER TLI CAP"
+
+[node name="CheckMassStatus" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/MassCheckCard/VBox/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "PASS"
+
+[node name="CheckMassDetail" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/MassCheckCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "202.1 kg wet / 450 kg cap"
+
+[node name="CheckMassBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/MassCheckCard/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+show_percentage = false
+
+[node name="VolCheckCard" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CheckCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/VolCheckCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/VolCheckCard/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/VolCheckCard/VBox/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 11
+text = "2. PACKED VOLUME VS FAIRING"
+
+[node name="CheckVolStatus" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/VolCheckCard/VBox/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "PASS"
+
+[node name="CheckVolDetail" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/VolCheckCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "1.35 m³ / 5.80 m³"
+
+[node name="CheckVolBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/VolCheckCard/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+show_percentage = false
+
+[node name="DimCheckCard" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CheckCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/DimCheckCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/DimCheckCard/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/DimCheckCard/VBox/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 11
+text = "3. FAIRING GEOMETRY (DIAM & HEIGHT)"
+
+[node name="CheckDimStatus" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/DimCheckCard/VBox/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "PASS"
+
+[node name="CheckDimDetail" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/DimCheckCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "1.20m ⌀ × 1.45m H (Limit: 1.80m × 2.60m)"
+
+[node name="PropCheckCard" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CheckCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/PropCheckCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/PropCheckCard/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/PropCheckCard/VBox/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 11
+text = "4. ONBOARD ΔV VS ORBIT REQUIREMENT"
+
+[node name="CheckPropStatus" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/PropCheckCard/VBox/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "PASS"
+
+[node name="CheckPropDetail" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/PropCheckCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "946 m/s onboard / 840 m/s req (20 MCC + 670 LOI + 150 SK)"
+
+[node name="CheckPropBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/PropCheckCard/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+show_percentage = false
+
+[node name="BudgetCheckCard" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CheckCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/BudgetCheckCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/BudgetCheckCard/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/BudgetCheckCard/VBox/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 11
+text = "5. TOTAL COMBINED MISSION BUDGET"
+
+[node name="CheckBudgetStatus" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/BudgetCheckCard/VBox/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "PASS"
+
+[node name="CheckBudgetDetail" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/BudgetCheckCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "$161.0M total ($129M craft + $32M launch) / $180M cap"
+
+[node name="CheckBudgetBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ChecklistScroll/ChecksList/BudgetCheckCard/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 5)
+layout_mode = 2
+show_percentage = false
+
+[node name="DiagnosticsBox" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Diagnostics")
+
+[node name="DiagnosticsLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/DiagnosticsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 10
+text = "LAUNCH BLOCKED — DEFICITS DETECTED"
+autowrap_mode = 2
+
+[node name="ExecuteLaunchBtn" type="Button" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryLaunchBtn")
+theme_override_font_sizes/font_size = 12
+text = "EXECUTE LUNAR LAUNCH SEQUENCE →"
+
+[node name="SequenceOverlay" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -120.0
+offset_right = 320.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_Modal")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/SequenceOverlay"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SeqPhaseLabel" type="Label" parent="CanvasLayer/RootUI/SequenceOverlay/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 15
+text = "PHASE 1: TRANS-LUNAR INJECTION (TLI)"
+
+[node name="SeqDetailLabel" type="Label" parent="CanvasLayer/RootUI/SequenceOverlay/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "Executing upper stage burn. Translunar coast initiated."
+autowrap_mode = 2
+
+[node name="SeqProgressBar" type="ProgressBar" parent="CanvasLayer/RootUI/SequenceOverlay/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+
+[node name="SeqTelemetryLabel" type="Label" parent="CanvasLayer/RootUI/SequenceOverlay/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "Geocentric Inertial Velocity: 10.92 km/s (at TLI burnout relative to Earth center, LEO perigee alt ~185 km) | Telemetry: NOMINAL"
+
+[node name="ResultsModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -330.0
+offset_top = -180.0
+offset_right = 330.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_Modal")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/ResultsModal"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ResultTitleLabel" type="Label" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 0.45, 1)
+theme_override_font_sizes/font_size = 17
+text = "LUNAR MISSION LAUNCH SUCCESSFUL"
+
+[node name="ResultOrbitLabel" type="Label" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "Target Orbit Inserted: Low Circular Polar Orbit"
+
+[node name="ResultLVLabel" type="Label" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Launch Vehicle: Medium Commercial EELV-Class"
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+layout_mode = 2
+
+[node name="ResultDvLabel" type="Label" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "Spacecraft ΔV Breakdown: 946 m/s onboard - 840 m/s req (20 MCC + 670 LOI + 150 SK) = +106 m/s flight reserve"
+autowrap_mode = 2
+
+[node name="ResultBudgetLabel" type="Label" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "Budget Reserve: +$19.0M remaining under scenario limit"
+
+[node name="ResultScienceLabel" type="Label" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 11
+text = "Science Performance Rating: 76.0 points"
+
+[node name="Buttons" type="HBoxContainer" parent="CanvasLayer/RootUI/ResultsModal/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="ReturnWorkshopBtn" type="Button" parent="CanvasLayer/RootUI/ResultsModal/VBox/Buttons"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "RETURN TO WORKSHOP"
+
+[node name="MenuBtn" type="Button" parent="CanvasLayer/RootUI/ResultsModal/VBox/Buttons"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "MAIN MENU"
+
+[node name="CommenceOpsBtn" type="Button" parent="CanvasLayer/RootUI/ResultsModal/VBox/Buttons"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "COMMENCE MISSION OPERATIONS →"
+
+[node name="CameraControlsHint" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -330.0
+offset_top = -60.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/CameraControlsHint"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HintText" type="Label" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "LMB: Rotate | RMB: Pan | Wheel: Zoom"
+
+[node name="ResetCamBtn" type="Button" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "RESET VIEW"
+
+[node name="Disclaimer" type="Label" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -22.0
+offset_right = 500.0
+offset_bottom = -6.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.45, 0.5, 0.58, 0.8)
+theme_override_font_sizes/font_size = 9
+text = "An independent educational simulation. Not affiliated with or endorsed by NASA or JPL."
+
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/BackToWorkshopBtn" to="." method="_on_back_to_workshop_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/MainMenuBtn" to="." method="_on_main_menu_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ExecuteLaunchBtn" to="." method="_on_execute_launch_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/ResultsModal/VBox/Buttons/ReturnWorkshopBtn" to="." method="_on_back_to_workshop_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/ResultsModal/VBox/Buttons/MenuBtn" to="." method="_on_main_menu_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/ResultsModal/VBox/Buttons/CommenceOpsBtn" to="." method="_on_commence_operations_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CameraControlsHint/HBox/ResetCamBtn" to="." method="_on_reset_view_pressed"]

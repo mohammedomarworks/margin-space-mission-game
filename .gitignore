@@ -1,0 +1,36 @@
+# Godot 4+ engine and editor cache
+.godot/
+*.uid
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*~
+
+# Local development exercises (preserved locally, excluded from MARGIN repo)
+/crystal_dash/
+/scripts/
+/main.tscn
+/main.gd
+/rotator.gd
+
+# Android and local SDK folders
+/android/
+
+# Environment and sensitive keys
+.env
+.env.*
+*.key
+*.pem
+
+# Include web build output for Vercel deployment
+!build/web/
+!build/web/**

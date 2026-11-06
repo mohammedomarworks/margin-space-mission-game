@@ -1,0 +1,685 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/workshop_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://margin/scripts/orbit_camera.gd" id="2_cam"]
+[ext_resource type="Script" path="res://margin/scripts/spacecraft_3d.gd" id="3_craft"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
+sky_top_color = Color(0.01, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.02, 0.03, 0.06, 1)
+ground_bottom_color = Color(0.01, 0.01, 0.02, 1)
+ground_horizon_color = Color(0.02, 0.03, 0.05, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat_1")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.12, 0.15, 0.22, 1)
+ambient_light_energy = 0.8
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_Moon"]
+albedo_color = Color(0.48, 0.5, 0.53, 1)
+roughness = 0.9
+
+[sub_resource type="SphereMesh" id="Mesh_Moon"]
+material = SubResource("Mat_Moon")
+radius = 8.0
+height = 16.0
+
+[sub_resource type="StyleBoxFlat" id="Style_TopBar"]
+bg_color = Color(0.07, 0.09, 0.13, 0.94)
+border_color = Color(0.2, 0.26, 0.35, 0.8)
+border_width_bottom = 1
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SidePanel"]
+bg_color = Color(0.06, 0.08, 0.12, 0.9)
+border_color = Color(0.2, 0.26, 0.35, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_Pill"]
+bg_color = Color(0.1, 0.14, 0.2, 0.8)
+border_color = Color(0.25, 0.35, 0.48, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="Style_EchoPanel"]
+bg_color = Color(0.08, 0.11, 0.16, 0.96)
+border_color = Color(0.22, 0.74, 0.96, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[node name="Workshop" type="Node3D"]
+script = ExtResource("1_ctrl")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 5, 8, 5)
+light_color = Color(1, 0.98, 0.92, 1)
+light_energy = 1.6
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, -2, -3)
+light_color = Color(0.4, 0.55, 0.75, 1)
+light_energy = 0.6
+omni_range = 15.0
+
+[node name="DistantMoon" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, -12, -26)
+mesh = SubResource("Mesh_Moon")
+
+[node name="Spacecraft3D" type="Node3D" parent="."]
+script = ExtResource("3_craft")
+
+[node name="OrbitCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4.2)
+script = ExtResource("2_cam")
+distance = 4.2
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 54.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("Style_TopBar")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Branding" type="VBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/Branding"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 17
+text = "MARGIN // WORKSHOP"
+
+[node name="Subtitle" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/Branding"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "LUNAR SOUTH POLE VOLATILE SURVEY"
+
+[node name="Spacer1" type="Control" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TelemetryPills" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MassPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopMassLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/MassPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "Mass: 202.1 / 380 kg"
+
+[node name="CostPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopCostLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/CostPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "Cost: $129.0M / $180M"
+
+[node name="PowerPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopPowerLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/PowerPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 12
+text = "Power: +251 W"
+
+[node name="SciPill" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopScienceLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TelemetryPills/SciPill"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 12
+text = "Science: 76 pts"
+
+[node name="Spacer2" type="Control" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Actions" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ResetBuildBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "RESET BUILD"
+
+[node name="BriefingBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "MISSION BRIEFING"
+
+[node name="PlanLaunchBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 12
+text = "ORBIT & LAUNCH →"
+
+[node name="MainMenuBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "MAIN MENU"
+
+[node name="MainLayout" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 66.0
+offset_right = -16.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="LeftPanel" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_SidePanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SubsystemsHeader" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "SPACECRAFT SUBSYSTEMS"
+
+[node name="CatScroll" type="ScrollContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+custom_minimum_size = Vector2(0, 110)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="CategoryButtonContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/CatScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+
+[node name="ActiveCategoryTitle" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 13
+text = "STRUCTURE"
+
+[node name="CompScroll" type="ScrollContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ComponentCardContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/CompScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CenterSpacer" type="Control" parent="CanvasLayer/RootUI/MainLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="RightPanel" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_SidePanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TelemetryHeader" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "LIVE MISSION TELEMETRY (6 MARGINS)"
+
+[node name="ResourceScroll" type="ScrollContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="TelemetryList" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="MassCard" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/MassCard"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/MassCard/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 12
+text = "1. LAUNCH MASS"
+
+[node name="MassMarginLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/MassCard/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "+46.8% Margin"
+
+[node name="MassValLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/MassCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "202.1 kg / 380.0 kg"
+
+[node name="MassBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/MassCard"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+show_percentage = false
+
+[node name="PowerCard" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/PowerCard"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/PowerCard/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 12
+text = "2. POWER BALANCE"
+
+[node name="PowerMarginLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/PowerCard/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "+148% Margin"
+
+[node name="PowerValLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/PowerCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Sun: +251 W | Eclipse DoD: 28%"
+
+[node name="PowerBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/PowerCard"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+show_percentage = false
+
+[node name="BudgetCard" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/BudgetCard"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/BudgetCard/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 12
+text = "3. MISSION BUDGET"
+
+[node name="BudgetMarginLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/BudgetCard/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "+28.3% Margin"
+
+[node name="BudgetValLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/BudgetCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "$129.0M / $180.0M"
+
+[node name="BudgetBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/BudgetCard"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+show_percentage = false
+
+[node name="DataCard" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/DataCard"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/DataCard/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 12
+text = "4. DATA BALANCE"
+
+[node name="DataMarginLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/DataCard/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "+87.6% Margin"
+
+[node name="DataValLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/DataCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Gen: 1.8 / Link: 14.5 Gbit/d"
+
+[node name="DataBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/DataCard"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+show_percentage = false
+
+[node name="CommsCard" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/CommsCard"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/CommsCard/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 12
+text = "5. COMMS LINK MARGIN"
+
+[node name="CommsMarginLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/CommsCard/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "+5.2 dB Margin"
+
+[node name="CommsValLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/CommsCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Link: +8.2 dB (DSN 34m)"
+
+[node name="CommsBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/CommsCard"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+show_percentage = false
+
+[node name="LifetimeCard" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList"]
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/LifetimeCard"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/LifetimeCard/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 12
+text = "6. ORBIT LIFETIME"
+
+[node name="LifetimeMarginLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/LifetimeCard/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "+87.7% Margin"
+
+[node name="LifetimeValLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/LifetimeCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Achievable: -- Days / 365 Req (ΔV: -- m/s)"
+
+[node name="LifetimeBar" type="ProgressBar" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/ResourceScroll/TelemetryList/LifetimeCard"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+show_percentage = false
+
+[node name="HSeparator2" type="HSeparator" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+
+[node name="QualStatusPanel" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/QualStatusPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="QualTitleLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/QualStatusPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 0.45, 1)
+theme_override_font_sizes/font_size = 12
+text = "MISSION ARCHITECTURE QUALIFIED"
+
+[node name="QualDescLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/QualStatusPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_font_sizes/font_size = 10
+text = "All 6 engineering margins are positive."
+autowrap_mode = 2
+
+[node name="QualScienceLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/QualStatusPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 10
+text = "Estimated Science Return: 76.0 pts"
+
+[node name="TradeOffEchoPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -180.0
+offset_right = 340.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Style_EchoPanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TradeOffEchoPanel"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Header" type="HBoxContainer" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox"]
+layout_mode = 2
+
+[node name="Titles" type="VBoxContainer" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="EchoTitle" type="Label" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox/Header/Titles"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "TRADE-OFF ECHO: GALLIUM ARSENIDE SOLAR WINGS"
+
+[node name="EchoCategory" type="Label" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox/Header/Titles"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "SUBSYSTEM: POWER GENERATION"
+
+[node name="DismissBtn" type="Button" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox/Header"]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "✕"
+
+[node name="DeltasHBox" type="HBoxContainer" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="EchoPositivesContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox/DeltasHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="EchoNegativesContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox/DeltasHBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="EchoInsightLabel" type="Label" parent="CanvasLayer/RootUI/TradeOffEchoPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
+theme_override_font_sizes/font_size = 11
+text = "AEROSPACE INSIGHT: Triple-junction cells deliver 30% efficiency..."
+autowrap_mode = 2
+
+[node name="CameraControlsHint" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -330.0
+offset_top = -60.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/CameraControlsHint"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HintText" type="Label" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "LMB: Rotate | RMB: Pan | Scroll: Zoom"
+
+[node name="ResetCamBtn" type="Button" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "RESET VIEW"
+
+[node name="Disclaimer" type="Label" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -22.0
+offset_right = 500.0
+offset_bottom = -6.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.45, 0.5, 0.58, 0.8)
+theme_override_font_sizes/font_size = 9
+text = "An independent educational simulation. Not affiliated with or endorsed by NASA or JPL."
+
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/ResetBuildBtn" to="." method="_on_reset_build_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/BriefingBtn" to="." method="_on_mission_briefing_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/PlanLaunchBtn" to="." method="_on_plan_launch_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/MainMenuBtn" to="." method="_on_main_menu_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/TradeOffEchoPanel/VBox/Header/DismissBtn" to="." method="_on_dismiss_echo_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CameraControlsHint/HBox/ResetCamBtn" to="." method="_on_reset_camera_pressed"]

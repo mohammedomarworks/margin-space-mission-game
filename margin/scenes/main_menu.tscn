@@ -1,0 +1,337 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/main_menu_controller.gd" id="1_menu"]
+[ext_resource type="Script" path="res://margin/scripts/orbit_camera.gd" id="2_cam"]
+[ext_resource type="Script" path="res://margin/scripts/spacecraft_3d.gd" id="3_craft"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Menu"]
+sky_top_color = Color(0.01, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.02, 0.03, 0.06, 1)
+ground_bottom_color = Color(0.01, 0.01, 0.02, 1)
+ground_horizon_color = Color(0.02, 0.03, 0.05, 1)
+
+[sub_resource type="Sky" id="Sky_Menu"]
+sky_material = SubResource("SkyMat_Menu")
+
+[sub_resource type="Environment" id="Env_Menu"]
+background_mode = 2
+sky = SubResource("Sky_Menu")
+ambient_light_source = 2
+ambient_light_color = Color(0.12, 0.16, 0.24, 1)
+ambient_light_energy = 0.9
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_Moon_Menu"]
+albedo_color = Color(0.5, 0.52, 0.56, 1)
+roughness = 0.92
+
+[sub_resource type="SphereMesh" id="Mesh_Moon_Menu"]
+material = SubResource("Mat_Moon_Menu")
+radius = 9.0
+height = 18.0
+
+[sub_resource type="StyleBoxFlat" id="Style_MenuCard"]
+bg_color = Color(0.06, 0.08, 0.12, 0.88)
+border_color = Color(0.2, 0.28, 0.4, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn_Menu"]
+bg_color = Color(0.08, 0.38, 0.6, 0.95)
+border_color = Color(0.22, 0.74, 0.96, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryBtn_Menu"]
+bg_color = Color(0.1, 0.14, 0.2, 0.85)
+border_color = Color(0.25, 0.35, 0.48, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_ModalPanel"]
+bg_color = Color(0.06, 0.08, 0.12, 0.96)
+border_color = Color(0.22, 0.74, 0.96, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 28.0
+content_margin_top = 24.0
+content_margin_right = 28.0
+content_margin_bottom = 24.0
+
+[node name="MainMenu" type="Node3D"]
+script = ExtResource("1_menu")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Menu")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 6, 8, 6)
+light_color = Color(1, 0.98, 0.94, 1)
+light_energy = 1.7
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, -2, -4)
+light_color = Color(0.4, 0.55, 0.78, 1)
+light_energy = 0.65
+omni_range = 18.0
+
+[node name="DistantMoon" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, -8, -22)
+mesh = SubResource("Mesh_Moon_Menu")
+
+[node name="Spacecraft3D" type="Node3D" parent="."]
+script = ExtResource("3_craft")
+
+[node name="OrbitCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 3.8)
+script = ExtResource("2_cam")
+distance = 3.8
+pitch = 18.0
+auto_rotate = true
+auto_rotate_speed = 6.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="BrandLayout" type="VBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 60.0
+offset_top = -220.0
+offset_right = 460.0
+offset_bottom = 220.0
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="TitleBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BrandLayout"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/BrandLayout/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 46
+text = "M A R G I N"
+
+[node name="Subtitle" type="Label" parent="CanvasLayer/RootUI/BrandLayout/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 15
+text = "THE SPACE MISSION DESIGN GAME"
+
+[node name="Tagline" type="Label" parent="CanvasLayer/RootUI/BrandLayout/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 12
+text = "Every Gram. Every Watt. Every Decision."
+
+[node name="MissionBanner" type="PanelContainer" parent="CanvasLayer/RootUI/BrandLayout"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_MenuCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Badge" type="Label" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "CURRENT CAMPAIGN MISSION:"
+
+[node name="MName" type="Label" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 13
+text = "LUNAR SOUTH POLE — VOLATILE MAPPING"
+
+[node name="MDesc" type="Label" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Map epithermal neutron flux depressions and characterize candidate hydrogen-rich regolith deposits in polar craters."
+autowrap_mode = 2
+
+[node name="MenuButtons" type="VBoxContainer" parent="CanvasLayer/RootUI/BrandLayout"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="StartMissionBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn_Menu")
+theme_override_font_sizes/font_size = 14
+text = "START MISSION →"
+
+[node name="MissionBriefingBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
+theme_override_font_sizes/font_size = 13
+text = "MISSION BRIEFING"
+
+[node name="WorkshopDirectBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
+theme_override_font_sizes/font_size = 13
+text = "3D SPACECRAFT WORKSHOP"
+
+[node name="HowToPlayBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
+theme_override_font_sizes/font_size = 13
+text = "HOW TO PLAY"
+
+[node name="FooterDisclaimer" type="Label" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -28.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.45, 0.5, 0.58, 0.8)
+theme_override_font_sizes/font_size = 10
+text = "An independent educational simulation. Not affiliated with or endorsed by NASA or JPL."
+horizontal_alignment = 1
+
+[node name="HowToPlayModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -240.0
+offset_right = 340.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_ModalPanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/HowToPlayModal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ModalHeader" type="HBoxContainer" parent="CanvasLayer/RootUI/HowToPlayModal/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 18
+text = "HOW TO PLAY MARGIN"
+
+[node name="CloseModalBtn" type="Button" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalHeader"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+text = "✕"
+
+[node name="ModalScroll" type="ScrollContainer" parent="CanvasLayer/RootUI/HowToPlayModal/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ModalText" type="VBoxContainer" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="P1" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll/ModalText"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "1. THE ENGINEERING CHALLENGE
+In space missions, there are no \"perfect\" spacecraft. Every component choice involves rigorous physical trade-offs. You are given a scientific goal, a launch mass limit, and a strict budget."
+autowrap_mode = 2
+
+[node name="P2" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll/ModalText"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "2. NINE SUBSYSTEMS
+Configure your vehicle across Structure, Power, Battery, Propulsion, Comms, Computer, ADCS, Thermal, and Scientific Instruments. You can rotate and zoom around the 3D spacecraft to inspect individual modules."
+autowrap_mode = 2
+
+[node name="P3" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll/ModalText"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "3. SIX LIVE MARGINS
+Keep all six gauges positive:
+• Mass (must stay below 380 kg)
+• Power (sunlight surplus + battery eclipse DoD <= 70%)
+• Budget (must stay below $180.0M)
+• Data (downlink throughput must exceed sensor generation)
+• Comms (RF link margin >= +3.0 dB)
+• Orbit Lifetime (propulsion ΔV >= 150 m/s for 1 year)"
+autowrap_mode = 2
+
+[node name="P4" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll/ModalText"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 12
+text = "4. SIGNATURE FEATURE: TRADE-OFF ECHO
+Every time you swap a module, the Trade-Off Echo analyzes the exact impact on your margins and presents real-world aerospace insights."
+autowrap_mode = 2
+
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/StartMissionBtn" to="." method="_on_start_mission_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/MissionBriefingBtn" to="." method="_on_mission_briefing_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/WorkshopDirectBtn" to="." method="_on_jump_to_workshop_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/HowToPlayBtn" to="." method="_on_how_to_play_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalHeader/CloseModalBtn" to="." method="_on_close_modal_pressed"]

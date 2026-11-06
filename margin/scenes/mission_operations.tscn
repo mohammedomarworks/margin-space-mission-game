@@ -1,0 +1,693 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/mission_operations_controller.gd" id="1_ops"]
+[ext_resource type="Script" path="res://margin/scripts/orbit_camera.gd" id="2_cam"]
+[ext_resource type="Script" path="res://margin/scripts/spacecraft_3d.gd" id="3_craft"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Ops"]
+sky_top_color = Color(0.01, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.02, 0.03, 0.06, 1)
+ground_bottom_color = Color(0.01, 0.01, 0.02, 1)
+ground_horizon_color = Color(0.02, 0.03, 0.05, 1)
+
+[sub_resource type="Sky" id="Sky_Ops"]
+sky_material = SubResource("SkyMat_Ops")
+
+[sub_resource type="Environment" id="Env_Ops"]
+background_mode = 2
+sky = SubResource("Sky_Ops")
+ambient_light_source = 2
+ambient_light_color = Color(0.12, 0.16, 0.24, 1)
+ambient_light_energy = 0.85
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_Moon_Surface"]
+albedo_color = Color(0.48, 0.50, 0.54, 1)
+roughness = 0.95
+
+[sub_resource type="SphereMesh" id="Mesh_Moon_Ops"]
+material = SubResource("Mat_Moon_Surface")
+radius = 2.2
+height = 4.4
+
+[sub_resource type="ImmediateMesh" id="Mesh_OrbitLine_Ops"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_GroundTrack"]
+albedo_color = Color(0.22, 0.74, 0.96, 0.9)
+emission_enabled = true
+emission = Color(0.22, 0.74, 0.96, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="SphereMesh" id="Mesh_GroundTrack"]
+material = SubResource("Mat_GroundTrack")
+radius = 0.06
+height = 0.12
+
+[sub_resource type="StandardMaterial3D" id="Mat_ScanBeam"]
+transparency = 1
+blend_mode = 1
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(0.15, 0.75, 1.0, 0.35)
+
+[sub_resource type="CylinderMesh" id="Mesh_ScanBeam"]
+material = SubResource("Mat_ScanBeam")
+top_radius = 0.04
+bottom_radius = 0.65
+height = 1.8
+
+[sub_resource type="StyleBoxFlat" id="Style_TopBar"]
+bg_color = Color(0.07, 0.09, 0.13, 0.94)
+border_color = Color(0.2, 0.26, 0.35, 0.8)
+border_width_bottom = 1
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_Pill"]
+bg_color = Color(0.1, 0.14, 0.2, 0.85)
+border_color = Color(0.25, 0.35, 0.48, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SidePanel"]
+bg_color = Color(0.06, 0.08, 0.12, 0.92)
+border_color = Color(0.2, 0.26, 0.35, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_Card"]
+bg_color = Color(0.09, 0.12, 0.18, 0.88)
+border_color = Color(0.2, 0.26, 0.36, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryActionBtn"]
+bg_color = Color(0.08, 0.45, 0.7, 0.95)
+border_color = Color(0.22, 0.74, 0.96, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_CautionBox"]
+bg_color = Color(0.18, 0.14, 0.06, 0.9)
+border_color = Color(0.85, 0.7, 0.2, 0.8)
+border_width_left = 2
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="Style_Modal"]
+bg_color = Color(0.06, 0.08, 0.12, 0.98)
+border_color = Color(0.22, 0.74, 0.96, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+
+[node name="MissionOperations" type="Node3D"]
+script = ExtResource("1_ops")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Ops")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 10, 8, 12)
+light_color = Color(1, 0.98, 0.92, 1)
+light_energy = 1.3
+shadow_enabled = true
+
+[node name="MoonCenter" type="Node3D" parent="."]
+
+[node name="MoonMesh" type="MeshInstance3D" parent="MoonCenter"]
+unique_name_in_owner = true
+mesh = SubResource("Mesh_Moon_Ops")
+
+[node name="CraterMarkers" type="Node3D" parent="MoonCenter"]
+unique_name_in_owner = true
+
+[node name="OrbitPathMesh" type="MeshInstance3D" parent="MoonCenter"]
+unique_name_in_owner = true
+mesh = SubResource("Mesh_OrbitLine_Ops")
+
+[node name="GroundTrackMarker" type="MeshInstance3D" parent="MoonCenter"]
+unique_name_in_owner = true
+mesh = SubResource("Mesh_GroundTrack")
+
+[node name="SpacecraftPivot" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.2, 0)
+
+[node name="SpacecraftMesh" type="Node3D" parent="SpacecraftPivot"]
+unique_name_in_owner = true
+script = ExtResource("3_craft")
+
+[node name="ScanBeam" type="MeshInstance3D" parent="SpacecraftPivot"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0.9)
+mesh = SubResource("Mesh_ScanBeam")
+
+[node name="OrbitCamera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0.939693, 0.34202, 0, -0.34202, 0.939693, 0, 2.5, 6.2)
+script = ExtResource("2_cam")
+default_distance = 6.2
+min_distance = 3.0
+max_distance = 12.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="TopBar" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 54.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("Style_TopBar")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="MissionIdentity" type="VBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/MissionIdentity"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 14
+text = "MARGIN — MISSION OPERATIONS"
+
+[node name="Subtitle" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/MissionIdentity"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 10
+text = "LUNAR SOUTH POLE VOLATILE SURVEY"
+
+[node name="TimelineBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+custom_minimum_size = Vector2(170, 0)
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="TopTimelineLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/TimelineBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "MONTH 1 / 12 (Day 30.4 / 365)"
+
+[node name="TopTimelineBar" type="ProgressBar" parent="CanvasLayer/RootUI/TopBar/HBox/TimelineBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+max_value = 12.0
+value = 1.0
+show_percentage = false
+
+[node name="ResourcesHBox" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="PropPanel" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopPropLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox/PropPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Propellant: 66.0 kg (+106 m/s)"
+
+[node name="PowerPanel" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopPowerLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox/PowerPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Battery: 100% SOH (DoD: 31%)"
+
+[node name="DataPanel" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopDataLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox/DataPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Buffer: 0/512 Gbit (Down: 0)"
+
+[node name="DsnPanel" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopDsnLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox/DsnPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "DSN: Goldstone (34m)"
+
+[node name="BudgetPanel" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopBudgetLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox/BudgetPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Budget: $19.5M"
+
+[node name="SciencePanel" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="TopScienceLabel" type="Label" parent="CanvasLayer/RootUI/TopBar/HBox/ResourcesHBox/SciencePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 10
+text = "Science: 0.0 pts"
+
+[node name="Actions" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BackToWorkshopBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "WORKSHOP"
+
+[node name="MainMenuBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/HBox/Actions"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "MAIN MENU"
+
+[node name="MainLayout" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 62.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="LeftPanel" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout"]
+custom_minimum_size = Vector2(330, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_SidePanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderLbl" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 13
+text = "FLIGHT OPERATIONS COMMAND"
+
+[node name="EventCard" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Card")
+
+[node name="EventVBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/EventCard"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="EventTitleLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/EventCard/EventVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "WINDOW 1: Commissioning & Baseline"
+
+[node name="EventConditionLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/EventCard/EventVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_font_sizes/font_size = 10
+text = "Condition: Outgassing complete. Arrays locked on Sun."
+autowrap_mode = 3
+
+[node name="EventFlavorLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/EventCard/EventVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 9
+text = "Initial sweeps confirm detector baseline over Shackleton."
+autowrap_mode = 3
+
+[node name="EventRecommendationLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/EventCard/EventVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.75, 0.3, 1)
+theme_override_font_sizes/font_size = 9
+text = "Flight Director Note: Nominal survey recommended."
+autowrap_mode = 3
+
+[node name="ModeSectionLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "SELECT OPERATIONAL MODE:"
+
+[node name="ModeContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CraterSectionLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "SELECT PRIMARY POLAR CRATER TARGET:"
+
+[node name="CraterSelectorContainer" type="GridContainer" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ExecuteWindowBtn" type="Button" parent="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
+text = "EXECUTE WINDOW OPERATIONAL CYCLE →"
+
+[node name="CenterSpacer" type="Control" parent="CanvasLayer/RootUI/MainLayout"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="RightPanel" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_SidePanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SciHeaderLbl" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 13
+text = "LUNAR POLAR VOLATILE MAPPING"
+
+[node name="CandidateCounterLabel" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "Candidate Volatile Reservoirs Identified: 0 / 6"
+
+[node name="CraterBarsContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CautionCard" type="PanelContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CautionBox")
+
+[node name="CautionLbl" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/CautionCard"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.82, 0.45, 1)
+theme_override_font_sizes/font_size = 9
+text = "SCIENTIFIC CAUTION: Hydrogen moderation detected via neutron flux depression is a scientific proxy. It is NOT direct proof of pure surface water-ice deposits at every location."
+autowrap_mode = 3
+
+[node name="LogHeaderLbl" type="Label" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.88, 1)
+theme_override_font_sizes/font_size = 11
+text = "MISSION TELEMETRY FLIGHT LOG:"
+
+[node name="LogScroll" type="ScrollContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="LogContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/MainLayout/RightPanel/VBox/LogScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="CameraControlsHint" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -56.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Style_Pill")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/CameraControlsHint"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="CamHintLabel" type="Label" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "LMB: Rotate | Wheel: Zoom"
+
+[node name="PolarViewBtn" type="Button" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "POLAR"
+
+[node name="GlobalViewBtn" type="Button" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "GLOBAL"
+
+[node name="ResetCamBtn" type="Button" parent="CanvasLayer/RootUI/CameraControlsHint/HBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "RESET"
+
+[node name="CampaignModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -240.0
+offset_right = 320.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_Modal")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/CampaignModal"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SummaryTitleLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "MISSION OPERATIONS CAMPAIGN COMPLETE"
+horizontal_alignment = 1
+
+[node name="SummaryStatusLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "MISSION OBJECTIVE ACHIEVED: Polar survey completed with positive flight margins."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+layout_mode = 2
+
+[node name="SummaryScienceLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Final Science Score: 84.5 points (Target: 70.0 pts)"
+
+[node name="SummaryCratersLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Polar Craters Surveyed: 6 / 6 with verified hydrogen proxies"
+
+[node name="SummaryDataLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Scientific Data Return: 154.2 Gbit downlinked to DSN (Buffer Loss: 0.0 Gbit)"
+
+[node name="SummaryPropLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Propulsion Reserves: 34.2 kg propellant remaining (+74 m/s reserve)"
+
+[node name="SummaryBatteryLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Electrical Bus Health: 98.2% State-of-Health (Eclipse Blackouts: 0)"
+
+[node name="SummaryBudgetLabel" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Operational Budget Balance: +$5.2M remaining under scenario cap"
+
+[node name="CautionNote" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.7, 0.2, 1)
+theme_override_font_sizes/font_size = 10
+text = "Hydrogen enhancement detected via neutron flux moderation is a scientific proxy. It is not direct proof of pure surface water ice at every location."
+autowrap_mode = 3
+
+[node name="DebriefHint" type="Label" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 10
+text = "Your operational telemetry, crater mapping matrices, and flight anomalies have been logged for the upcoming Flight Debrief analysis."
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="CanvasLayer/RootUI/CampaignModal/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="ReturnWorkshopBtn" type="Button" parent="CanvasLayer/RootUI/CampaignModal/VBox/Buttons"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "RETURN TO WORKSHOP"
+
+[node name="MenuBtn" type="Button" parent="CanvasLayer/RootUI/CampaignModal/VBox/Buttons"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "MAIN MENU"
+
+[node name="ProceedDebriefBtn" type="Button" parent="CanvasLayer/RootUI/CampaignModal/VBox/Buttons"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "PROCEED TO FLIGHT DEBRIEF →"
+
+[node name="FooterDisclaimer" type="Label" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -24.0
+offset_right = 500.0
+offset_bottom = -6.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.45, 0.5, 0.58, 0.8)
+theme_override_font_sizes/font_size = 9
+text = "An independent educational simulation. Not affiliated with or endorsed by NASA or JPL."
+
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/BackToWorkshopBtn" to="." method="_on_back_to_workshop_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/TopBar/HBox/Actions/MainMenuBtn" to="." method="_on_main_menu_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/MainLayout/LeftPanel/VBox/ExecuteWindowBtn" to="." method="_on_execute_window_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CameraControlsHint/HBox/PolarViewBtn" to="." method="_on_polar_view_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CameraControlsHint/HBox/GlobalViewBtn" to="." method="_on_global_view_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CameraControlsHint/HBox/ResetCamBtn" to="." method="_on_reset_cam_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CampaignModal/VBox/Buttons/ReturnWorkshopBtn" to="." method="_on_back_to_workshop_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CampaignModal/VBox/Buttons/MenuBtn" to="." method="_on_main_menu_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/CampaignModal/VBox/Buttons/ProceedDebriefBtn" to="." method="_on_proceed_to_debrief_pressed"]
