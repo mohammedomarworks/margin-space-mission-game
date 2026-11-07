@@ -2,13 +2,55 @@
   "version": 2,
   "outputDirectory": "build/web",
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/index.wasm",
+      "has": [
+        {
+          "type": "header",
+          "key": "accept-encoding",
+          "value": ".*br.*"
+        }
+      ],
+      "destination": "/index.wasm.br"
+    },
+    {
+      "source": "/index.wasm",
+      "destination": "/index.identity.wasm"
+    }
+  ],
   "headers": [
     {
-      "source": "/(.*)\\.wasm",
+      "source": "/index.wasm.br",
       "headers": [
         {
           "key": "Content-Type",
           "value": "application/wasm"
+        },
+        {
+          "key": "Content-Encoding",
+          "value": "br"
+        },
+        {
+          "key": "Vary",
+          "value": "Accept-Encoding"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/index.identity.wasm",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        },
+        {
+          "key": "Vary",
+          "value": "Accept-Encoding"
         },
         {
           "key": "Cache-Control",
