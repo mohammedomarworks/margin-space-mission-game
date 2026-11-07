@@ -29,6 +29,7 @@ func _ready() -> void:
 
 func _set_team_players(count: int) -> void:
 	TeamData.configure_team(count)
+	print("[Briefing] Team mode set: %d players (Active: %s)" % [count, str(TeamData.is_team_mode_active)])
 	_refresh_team_ui()
 
 func _refresh_team_ui() -> void:
@@ -57,10 +58,12 @@ func _refresh_team_ui() -> void:
 
 func _on_lunar_selected() -> void:
 	MissionScenario.set_active_scenario("lunar_south_pole")
+	print("[Briefing] Scenario selected: lunar_south_pole (LSP-01)")
 	_refresh_briefing()
 
 func _on_earth_selected() -> void:
 	MissionScenario.set_active_scenario("earth_climate_sentinel")
+	print("[Briefing] Scenario selected: earth_climate_sentinel (ECS-01)")
 	_refresh_briefing()
 
 func _refresh_briefing() -> void:

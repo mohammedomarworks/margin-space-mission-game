@@ -20,8 +20,14 @@ MARGIN features multiple operational mission scenarios, interactive emergency de
 - **Success Criteria:** Minimum 60.0/100 composite score on the 8-pillar rubric.
 
 #### Scenario B: Earth Climate Sentinel (ECS-01)
-- **Target Orbit:** Sun-Synchronous Orbit (705 km polar SSO, 98.2° inclination, 10:30 AM descending node).
-- **Core Objective:** Monitor 6 critical planetary sentinels across the Earth system (Amazon Basin Deforestation & Carbon Flux, Greenland Ice Sheet Elevation Change, Sahara Mineral Dust Aerosol Transport, Antarctic Ross Ice Shelf Crevasse Dynamics, Indo-Pacific Warm Pool Thermal Anomaly, North Atlantic Subpolar Gyre Circulation).
+- **Target Orbit:** Sun-Synchronous Orbit (selected educational reference orbit: 705 km polar SSO, 98.2° inclination, 10:30 AM descending node; modeled on the Landsat/EOS morning constellation, not a universal requirement for all Earth observation missions).
+- **Core Objective:** Monitor 6 critical planetary sentinels across the Earth system:
+  1. *Amazon Basin:* Deforestation & carbon flux monitoring.
+  2. *Greenland Ice Sheet:* Elevation change and summer melt dynamics.
+  3. *Sahara Mineral Dust Belt:* Transatlantic aerosol transport.
+  4. *Antarctic Ross Ice Shelf:* Rift propagation & calving dynamics.
+  5. *Indo-Pacific Warm Pool:* ENSO thermal anomaly tracking.
+  6. *North Atlantic Surface Indicators for AMOC Research:* Monitors surface sea temperature anomalies and altimetry indicators. (Note: A single satellite with optical/SAR payloads cannot measure full-depth AMOC transport; satellite surface observations provide valuable indicators but cannot replace the in-situ oceanographic mooring arrays, such as RAPID/OSNAP, required for sustained AMOC monitoring).
 - **Dedicated Earth Observation Payloads:**
   - *Multispectral Climate Radiometer:* 12-band VIS/NIR/TIR instrument for aerosol optical depth and sea surface temperature (28 kg, 65W, \$14.5M).
   - *GHG Imaging Spectrometer:* Hyper-spectral shortwave infrared sensor for CO2 and CH4 column plumes (36 kg, 92W, \$21.0M).
@@ -40,7 +46,7 @@ MARGIN features multiple operational mission scenarios, interactive emergency de
 
 ### 2. Local Cooperative Team Mode (1–4 Players Pass-and-Play)
 
-MARGIN includes a turn-based pass-and-play local cooperative mode designed for classrooms, engineering teams, and co-op gaming sessions:
+MARGIN includes a turn-based pass-and-play local cooperative mode designed for classrooms, engineering teams, and co-op gaming sessions (local pass-and-play only; not an online multiplayer service):
 - **Configurable in Mission Briefing:** Toggle between Solo Flight and 1–4 Player Co-Op with custom officer names.
 - **4 Distinct Specialist Roles:**
   1. **Mission Director (Player 1):** Strategic oversight, budget ceiling authorization, final launch go/no-go call, and inter-discipline tiebreaker.
@@ -56,18 +62,16 @@ MARGIN includes a turn-based pass-and-play local cooperative mode designed for c
 ### 3. Interactive Mission Operations & Emergency Events
 
 During the 12-month operational flight phase, missions encounter interactive emergency decision events that require immediate engineering trade-offs and produce persistent consequences:
-- **Window 3 — Solar Proton Event (SPE) / Solar Storm Alert:**
-  - *Option A: Safe Mode Orientation.* Reorient bus to shadow sensitive avionics behind the heat shield. Subsystems protected; science operations suspended for the window.
-  - *Option B: Magnetic Shield Slew.* Expend 25 m/s RCS propellant to actively counter plasma torques. Science continues at 100%; propellant reserve permanently depleted.
-  - *Option C: Ride Out Storm.* Maintain standard survey pointing. Saves propellant and collects data, but risks an 18% permanent bus reliability penalty.
+- **Window 3 — Solar Proton Event (SPE) / Solar Particle Storm:**
+  - *Option A: Full Safe Mode.* Suspend non-essential science instruments while maintaining essential power, thermal control, and communications. Protects sensitive avionics and optics from proton flux; reduces science output during the event.
+  - *Option B: Partial Protection (Attitude Stance).* Perform an attitude-control maneuver to maintain sun/comm alignment while disabling vulnerable optical detectors. Secondary protected sensors stay active, preserving 75% science with minimal modeled degradation. (Described strictly as an attitude-control maneuver; orientation does not deflect solar protons).
+  - *Option C: Continue Operations.* Maintain active observations. Preserves 100% science yield, but accepts increased modeled radiation-related equipment degradation (-7.5% equipment health) and persistent sensor SEU noise in future windows. (Radiation-risk calculations are educational simulation models).
 - **Window 4 — Deep Space Network (DSN) Ground Station Outage:**
-  - *Option A: Cache Telemetry Locally.* Buffer science in solid-state recorder. Lowers risk of data loss, but risks recorder buffer overflow if downlink capacity is exceeded.
-  - *Option B: Secondary Commercial Ground Station Relay.* Divert downlink through commercial ESA/commercial ground networks at an operational cost of \$3.5M.
-  - *Option C: Drop Housekeeping & Transmit Raw Science.* Sacrifice engineering telemetry to push maximum science packets through constrained bandwidth.
-- **Window 7 — Main Bus Battery Cell Thermal Anomaly:**
-  - *Option A: Restrict Operations to Sunlight.* Never operate high-power instruments in orbital eclipse. Eliminates battery strain, but cuts high-resolution mapping windows by 40%.
-  - *Option B: Recondition Cell Matrix.* Perform thermal pulse reconditioning, accepting a permanent 10% reduction in battery capacity while preserving operational flexibility.
-  - *Option C: Deep Sleep Safe-Hold.* Put secondary instruments in low-power stasis until thermal equilibrium is restored.
+  - *Option A: Store Data in Solid-State Buffer.* Buffer science in solid-state recorder until ground station service resumes. Lowers risk of immediate data loss, but risks recorder buffer overflow if subsequent downlink capacity is exceeded.
+  - *Option B: Use Backup Communication (Commercial S-Band Relay).* Divert downlink through commercial ground station networks at an educational operational cost of \$0.5M, successfully draining buffer.
+- **Window 7 — Electrical Battery Emergency in Shadow:**
+  - *Option A: Shed Non-Critical Load.* Temporarily disable non-essential instrument heaters and secondary sensors to lower eclipse power demand. Protects battery longevity (<42% DoD).
+  - *Option B: Continue Full Operations.* Keep all payload sensors and heaters operating at full power throughout the eclipse shadow. Accepts deep discharge (>85% DoD) and accelerated modeled battery degradation (-5.0% battery SOH loss).
 - **Audit Integration:** All player decisions, resource expenditures, and consequence logs are preserved and itemized in the Mission Debrief Engineering Decision Audit tab.
 
 ---
@@ -153,11 +157,24 @@ MARGIN is grounded in published planetary science and aerospace literature:
 
 ---
 
-## ⚠️ Educational Simulation Disclaimer
+## ⚠️ Educational Simulation Disclaimers & Assumptions
 
-*MARGIN is an independent educational simulation created for academic, design, and simulation demonstration purposes. It is not affiliated with, endorsed by, or sponsored by NASA, the Jet Propulsion Laboratory (JPL), the European Space Agency (ESA), or any commercial aerospace launch provider.*
+*MARGIN is an independent educational aerospace simulation created for academic, design, and simulation demonstration purposes. It is not affiliated with, endorsed by, or sponsored by NASA, the Jet Propulsion Laboratory (JPL), the European Space Agency (ESA), or any commercial aerospace launch provider.*
 
-*All launch vehicle costs (\$14.0M, \$32.0M, \$65.0M) and operational budgets are illustrative educational models. Hydrogen enhancement detected via neutron flux moderation is modeled strictly as a scientific proxy for volatile concentration and does not constitute definitive proof of surface water ice at every surveyed crater.*
+To maintain clear separation between published literature and simulation mechanics:
+
+1. **Scientific Literature Grounding:**
+   - Planetary epithermal neutron moderation physics (LP-NS Feldman et al., LRO LEND Mitrofanov et al.).
+   - Ballistic Weak Stability Boundary transfer trajectories (NASA/JPL Monograph 12 Parker & Anderson).
+   - Radar polarimetry and thermal infrared surface observation principles (Mini-RF Raney et al., CryoSat-2, Sentinel-3, OCO-2).
+
+2. **In-Game Educational Estimates & Simplifications:**
+   - **Instrument Parameters:** Instrument mass, power consumption, data rates, and procurement costs are in-game educational models calibrated for gameplay trade-off tension rather than certified flight specifications.
+   - **Launch Vehicle Family:** Launch vehicle pricing (\$12.0M to \$65.0M) and payload capacities (TLI/SSO/LEO) are educational approximations representing distinct commercial launch classes.
+   - **Operational Costs & Emergency Events:** Emergency event cost penalties (e.g. \$0.5M commercial antenna pass fees), radiation degradation percentages (-7.5% SOH), and battery thermal penalties are stylized educational gameplay mechanics.
+   - **Reference Orbit Selection:** The 705 km altitude / 98.2° inclination Sun-Synchronous Orbit (SSO) is a selected educational reference orbit modeled on the Landsat/Earth Observing System morning constellation architecture; it is not a universal requirement for all Earth observation missions.
+   - **AMOC Observational Scope:** Satellite surface skin temperature and altimetry observations provide valuable surface indicators for ocean dynamics, but do not directly measure full-depth Atlantic Meridional Overturning Circulation (AMOC) volume transport; sustained AMOC monitoring fundamentally requires deep-water in-situ mooring networks (e.g. RAPID/OSNAP).
+   - **Volatile Proxies:** Regolith hydrogen enhancement detected via neutron flux moderation is modeled strictly as a scientific proxy for volatile concentration and does not constitute definitive proof of surface water ice at every surveyed crater.
 
 ---
 

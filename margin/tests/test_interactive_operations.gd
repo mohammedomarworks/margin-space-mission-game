@@ -44,7 +44,7 @@ func _test_event_definitions() -> void:
 	print("--- TEST 1: Emergency Event Database Definitions ---")
 	var ev3: Dictionary = MissionOperationsData.get_emergency_event(3)
 	_assert(not ev3.is_empty() and ev3["id"] == "event_solar_storm", "Window 3 contains Solar Storm emergency event")
-	_assert(ev3["choices"].size() == 2, "Solar Storm has exactly 2 strategic choices (Safe Mode vs Continue Science)")
+	_assert(ev3["choices"].size() == 3, "Solar Storm has 3 strategic choices (Full Safe Mode, Partial Protection, Continue Operations)")
 	
 	var ev4: Dictionary = MissionOperationsData.get_emergency_event(4)
 	_assert(not ev4.is_empty() and ev4["id"] == "event_dsn_outage", "Window 4 contains DSN Outage emergency event")
@@ -57,14 +57,21 @@ func _test_event_definitions() -> void:
 func _test_solar_storm_decisions() -> void:
 	print("\n--- TEST 2: Event A — Solar Storm Trade-Off Dynamics ---")
 	
-	# Case 1: Safe Mode Choice
+	# Case 1: Full Safe Mode Choice
 	var sim_safe := MissionSimulator.new()
 	sim_safe.initialize(SpacecraftState.new())
 	sim_safe.advance_window("mode_nominal", "crater_shackleton") # Win 1
 	sim_safe.advance_window("mode_nominal", "crater_shackleton") # Win 2
 	var rep3_safe: Dictionary = sim_safe.advance_window("mode_nominal", "crater_shackleton", "choice_safe_mode") # Win 3
 	
-	# Case 2: Continue Science Choice
+	# Case 2: Partial Protection Choice
+	var sim_partial := MissionSimulator.new()
+	sim_partial.initialize(SpacecraftState.new())
+	sim_partial.advance_window("mode_nominal", "crater_shackleton") # Win 1
+	sim_partial.advance_window("mode_nominal", "crater_shackleton") # Win 2
+	var rep3_partial: Dictionary = sim_partial.advance_window("mode_nominal", "crater_shackleton", "choice_partial_protection") # Win 3
+	
+	# Case 3: Continue Operations Choice
 	var sim_risk := MissionSimulator.new()
 	sim_risk.initialize(SpacecraftState.new())
 	sim_risk.advance_window("mode_nominal", "crater_shackleton") # Win 1
@@ -76,11 +83,15 @@ func _test_solar_storm_decisions() -> void:
 		"Safe Mode yields higher equipment health (%0.1f%%) than Continuing Full Science (%0.1f%%)" % [
 			rep3_safe["equipment_health_pct"], rep3_risk["equipment_health_pct"]
 		])
+	_assert(rep3_partial["equipment_health_pct"] > rep3_risk["equipment_health_pct"],
+		"Partial Protection yields higher equipment health than Continuing Full Operations")
 	_assert(rep3_safe["science_score_gain"] < rep3_risk["science_score_gain"],
 		"Safe Mode sacrifices science gain (%0.1f pts) compared to Continuing Full Science (%0.1f pts)" % [
 			rep3_safe["science_score_gain"], rep3_risk["science_score_gain"]
 		])
-	_assert(sim_risk.persistent_sensor_noise == true and sim_safe.persistent_sensor_noise == false,
+	_assert(rep3_partial["science_score_gain"] >= rep3_safe["science_score_gain"],
+		"Partial Protection yields equal or better science gain than Full Safe Mode")
+	_assert(sim_risk.persistent_sensor_noise == true and sim_safe.persistent_sensor_noise == false and sim_partial.persistent_sensor_noise == false,
 		"Continuing Science activates persistent sensor SEU degradation flag for future windows")
 
 func _test_dsn_outage_decisions() -> void:

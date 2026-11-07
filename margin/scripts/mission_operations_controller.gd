@@ -401,6 +401,10 @@ func _show_emergency_modal(emerg: Dictionary) -> void:
 		_execute_window_step("")
 		return
 	
+	print("[Operations] Emergency modal triggered for Window %d: %s (%d choices)" % [
+		sim.current_window, emerg.get("id", ""), emerg.get("choices", []).size()
+	])
+	
 	emergency_modal.visible = true
 	emergency_title_label.text = emerg.get("title", "EMERGENCY DIRECTIVE REQUIRED")
 	emergency_scenario_label.text = emerg.get("scenario", "")
@@ -453,6 +457,7 @@ func _update_impact_preview() -> void:
 func _on_confirm_directive_pressed() -> void:
 	if emergency_modal:
 		emergency_modal.visible = false
+	print("[Operations] Confirmed directive for Window %d: %s" % [sim.current_window, _selected_emergency_choice_id])
 	_execute_window_step(_selected_emergency_choice_id)
 
 func _execute_window_step(emergency_choice_id: String) -> void:

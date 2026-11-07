@@ -148,11 +148,12 @@ static func get_all_orbits() -> Dictionary:
 			
 			"science_multiplier": 1.10,
 			"spatial_resolution_rating": "Optimal Climate Imaging (10:30 AM local solar illumination)",
-			"description": "Flies at 705 km altitude with 98.2° retrograde inclination. Earth's oblate equatorial bulge (J2) precesses the orbital plane at ~0.9856°/day, matching Earth's mean orbital rate around the Sun.",
+			"description": "Selected educational reference orbit at 705 km altitude with 98.2° retrograde inclination (modeled on the Landsat/Earth Observing System morning constellation architecture; this is a selected educational reference orbit, not a universal requirement for all Earth observation). Earth's oblate equatorial bulge (J2) precesses the orbital plane at ~0.9856°/day, matching Earth's mean orbital rate around the Sun.",
 			"coverage_summary": "Global coverage with identical local solar time crossing (10:30 LTDN) on every pass, eliminating sun-angle calibration errors.",
 			"eclipse_summary": "Orbital eclipse is limited to 35 minutes per 98.8-minute orbit; solar panels enjoy ~65% sunlight duty cycle.",
 			"propulsion_summary": "Requires 75 m/s total ΔV (5 MCC + 45 circularization + 25 annual drag makeup).",
 			"educational_tradeoff": "Sun-synchronous nodal precession creates identical shadow angles, which is critical for measuring seasonal ice-sheet albedo and vegetation indices without solar illumination bias.",
+			"educational_reference_note": "705 km altitude with 98.2° inclination is a selected educational reference orbit modeled on the EOS/Landsat orbital architecture, not a universal requirement for Earth observation.",
 			"geometry_type": "circular_earth_sso"
 		},
 		"orbit_earth_polar_leo": {

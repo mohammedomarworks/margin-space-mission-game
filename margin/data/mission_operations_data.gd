@@ -158,15 +158,15 @@ static func get_all_climate_sentinels() -> Dictionary:
 		},
 		"sentinel_north_atlantic": {
 			"id": "sentinel_north_atlantic",
-			"name": "North Atlantic Subpolar Gyre",
+			"name": "North Atlantic Surface Indicators for AMOC Research",
 			"lat_deg": 57.0,
 			"lon_deg": -35.0,
 			"diameter_km": 1500.0,
-			"baseline_metric": "Sea Surface Temperature & AMOC Overturning",
-			"confidence": "High (Sentinel-3 SLSTR Heritage)",
+			"baseline_metric": "Surface Sea Temperature & Altimetry Indicators",
+			"confidence": "High (Surface Proxy / Sentinel-3 Heritage)",
 			"science_weight": 1.25,
-			"description": "Major deep-water formation node of the Atlantic Meridional Overturning Circulation (AMOC). Measures cold freshwater melt pools.",
-			"scientific_proxy_note": "Thermal infrared brightness temperature proxy measures sea surface skin temperature; sea-spray affects radiative transfer."
+			"description": "Monitors sea surface temperature anomalies and steric height gradients in the subpolar gyre. Note: A single satellite with optical/SAR payloads does not measure full-depth AMOC volume transport; orbital surface observations provide valuable indicators but cannot replace dedicated in-situ mooring arrays (e.g. RAPID/OSNAP) required for sustained AMOC monitoring.",
+			"scientific_proxy_note": "Surface skin temperature and radar topography serve as surface proxy indicators for subpolar gyre dynamics; full-depth ocean transport requires in-situ oceanographic sensor networks."
 		},
 		"sentinel_siberian_permafrost": {
 			"id": "sentinel_siberian_permafrost",
@@ -297,15 +297,15 @@ static func get_window_event(window_idx: int) -> Dictionary:
 			"emergency_event": {
 				"id": "event_solar_storm",
 				"title": "EMERGENCY: Severe Solar Particle Storm Approaching",
-				"scenario": "A fast coronal mass ejection is bombarding cislunar space with high-energy proton flux, threatening sensitive detectors and star tracker optics.",
+				"scenario": "A fast coronal mass ejection is bombarding cislunar space with high-energy proton flux. Note: Radiation-risk calculations and equipment degradation rates are in-game educational simulation models.",
 				"default_choice_id": "choice_safe_mode",
 				"choices": [
 					{
 						"id": "choice_safe_mode",
-						"name": "ENTER SAFE MODE",
+						"name": "FULL SAFE MODE",
 						"tag": "Protective Stance",
-						"description": "Stow high-voltage instruments, orient solar panels edge-on to proton flux, and reduce bus power draw.",
-						"impact_summary": "Power: -40% load | Health: Protected (0% wear) | Science: -40% yield this window",
+						"description": "Suspend non-essential science instruments while maintaining essential power, thermal control, and communications. Reduces science output during the event.",
+						"impact_summary": "Power: -40% load | Health: Protected (0% modeled wear) | Science: -40% yield this window",
 						"effects": {
 							"power_load_multiplier": 0.60,
 							"equipment_health_delta": 0.0,
@@ -314,11 +314,24 @@ static func get_window_event(window_idx: int) -> Dictionary:
 						}
 					},
 					{
+						"id": "choice_partial_protection",
+						"name": "PARTIAL PROTECTION (ATTITUDE STANCE)",
+						"tag": "Balanced Stance",
+						"description": "Perform an attitude-control maneuver to maintain sun/comm alignment. Disable vulnerable payloads while keeping selected protected secondary systems active. (Attitude-control maneuver only; does not deflect solar protons).",
+						"impact_summary": "Power: -15% load | Health: Minimal modeled wear (-2.5%) | Science: Preserves 75% yield | Lasting: No persistent noise",
+						"effects": {
+							"power_load_multiplier": 0.85,
+							"equipment_health_delta": -2.5,
+							"science_multiplier": 0.75,
+							"persistent_sensor_noise": false
+						}
+					},
+					{
 						"id": "choice_continue_science",
-						"name": "CONTINUE SCIENCE OPERATIONS",
+						"name": "CONTINUE OPERATIONS",
 						"tag": "High-Risk Stance",
-						"description": "Keep neutron detector and spectrometers active during peak solar event to capture rare solar proton interaction data.",
-						"impact_summary": "Power: +25% load | Health: -7.5% equipment wear | Science: Full points preserved | Lasting: Sensor SEU noise in future windows",
+						"description": "Continue active observations throughout the storm. Accept increased modeled radiation-related equipment degradation in exchange for observation continuity.",
+						"impact_summary": "Power: +25% load | Health: -7.5% modeled equipment wear | Science: Full points preserved | Lasting: Modeled sensor SEU noise in future windows",
 						"effects": {
 							"power_load_multiplier": 1.25,
 							"equipment_health_delta": -7.5,

@@ -76,6 +76,11 @@ func _ready() -> void:
 	# Initial telemetry update
 	_update_telemetry_ui(state.calculate_telemetry())
 	
+	var scen = MissionScenario.get_active_scenario()
+	print("[Workshop] Loaded for scenario: %s | Budget cap: $%.1fM | Mass cap: %.1f kg | Team mode: %s" % [
+		scen.id, scen.budget_cap_m, scen.mass_limit_kg, str(TeamData.is_team_mode_active)
+	])
+	
 	# Initially hide echo panel until a component is swapped
 	echo_panel.visible = false
 
@@ -248,6 +253,10 @@ func _create_component_card(comp: Dictionary, is_equipped: bool) -> PanelContain
 func _on_configuration_changed(cat: ComponentDatabase.Category, old_comp: Dictionary, new_comp: Dictionary) -> void:
 	# Update 3D model
 	spacecraft.update_component(cat, new_comp["id"])
+	
+	print("[Workshop] Component changed: %s -> %s (Mass: %.1f kg, Cost: $%.1fM)" % [
+		old_comp.get("name", "None"), new_comp.get("name", "None"), state.total_mass_kg, state.total_cost_m
+	])
 	
 	# Decision attribution
 	var role_id: String = TeamData.ROLE_SCIENCE if cat == ComponentDatabase.Category.INSTRUMENTS else TeamData.ROLE_SYSTEMS

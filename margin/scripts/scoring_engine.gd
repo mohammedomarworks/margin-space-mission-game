@@ -512,18 +512,26 @@ static func _generate_engineering_audit(
 			if ch_id == "choice_safe_mode":
 				findings.append({
 					"subsystem": "Flight Operations & Thermal",
-					"decision": "Executed Emergency Safe Mode During Solar Particle Storm",
+					"decision": "Executed Full Safe Mode During Solar Particle Storm",
 					"verdict": "PRUDENT VEHICLE CONSERVATION",
 					"impact_type": "positive",
-					"detail": "Protected spectrometer detectors and star trackers from high-energy proton flux degradation at the cost of a temporary observation pause."
+					"detail": "Suspended non-essential instruments to protect sensitive detectors and optics from high-energy proton flux at the cost of reduced observation yield."
+				})
+			elif ch_id == "choice_partial_protection":
+				findings.append({
+					"subsystem": "Flight Operations & Thermal",
+					"decision": "Executed Partial Protection & Protective Attitude Stance",
+					"verdict": "BALANCED SCIENCE & PROTECTION",
+					"impact_type": "neutral",
+					"detail": "Disabled vulnerable optical payloads while retaining protected secondary sensors. Attitude alignment preserved 75% science with minimal modeled degradation (-2.5%)."
 				})
 			else:
 				findings.append({
 					"subsystem": "Flight Operations & Thermal",
-					"decision": "Continued Science Operations Through Solar Storm",
+					"decision": "Continued Operations Through Solar Storm",
 					"verdict": "AGGRESSIVE SCIENCE / HARDWARE WEAR",
 					"impact_type": "warning",
-					"detail": "Preserved orbital observation continuity during coronal mass ejection, but incurred sensor degradation (-7.5% equipment health) and persistent noise."
+					"detail": "Preserved continuous orbital observations through particle storm, but accepted modeled sensor wear (-7.5% equipment health) and persistent SEU noise."
 				})
 		elif ev_id == "event_dsn_outage":
 			if ch_id == "choice_backup_comm":
