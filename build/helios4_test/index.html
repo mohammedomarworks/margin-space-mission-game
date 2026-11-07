@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+	<title>MARGIN — The Space Mission Design Game</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+
+		html, body, #canvas {
+			margin: 0;
+			padding: 0;
+			border: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		body {
+			color: #e2e8f0;
+			background-color: #060a12;
+			overflow: hidden;
+			touch-action: none;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+		}
+
+		#canvas {
+			display: block;
+			width: 100%;
+			height: 100%;
+		}
+
+		#canvas:focus {
+			outline: none;
+		}
+
+		/* --- MARGIN CUSTOM LOADING SCREEN OVERLAY --- */
+		#status {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: radial-gradient(circle at center, #0d1527 0%, #060a12 100%);
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			z-index: 100;
+			transition: opacity 0.4s ease-out;
+		}
+
+		.loading-card {
+			width: 90%;
+			max-width: 520px;
+			padding: 36px 32px;
+			background: rgba(13, 22, 40, 0.85);
+			border: 1px solid rgba(0, 229, 255, 0.25);
+			border-radius: 12px;
+			box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 229, 255, 0.1);
+			text-align: center;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			backdrop-filter: blur(8px);
+		}
+
+		.margin-logo {
+			font-size: 38px;
+			font-weight: 900;
+			letter-spacing: 0.35em;
+			color: #00e5ff;
+			text-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+			margin-left: 0.35em; /* Optical balance for letter spacing */
+			margin-bottom: 4px;
+		}
+
+		.margin-subtitle {
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.25em;
+			color: #94a3b8;
+			margin-bottom: 6px;
+			text-transform: uppercase;
+		}
+
+		.margin-tagline {
+			font-size: 11px;
+			font-style: italic;
+			color: #64748b;
+			margin-bottom: 28px;
+		}
+
+		/* Animated Radar Reticle */
+		.radar-box {
+			width: 64px;
+			height: 64px;
+			position: relative;
+			margin-bottom: 24px;
+		}
+
+		.radar-circle {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			border: 2px solid rgba(0, 229, 255, 0.2);
+			border-radius: 50%;
+		}
+
+		.radar-sweep {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			border: 2px solid transparent;
+			border-top: 2px solid #00e5ff;
+			border-right: 2px solid #00e5ff;
+			border-radius: 50%;
+			animation: spin 1.2s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+			box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+		}
+
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+
+		#status-message {
+			font-size: 13px;
+			font-weight: 600;
+			color: #cbd5e1;
+			margin-bottom: 14px;
+			letter-spacing: 0.05em;
+		}
+
+		/* Custom Sleek Progress Bar */
+		.progress-bar-container {
+			width: 100%;
+			height: 8px;
+			background: #11192b;
+			border-radius: 4px;
+			overflow: hidden;
+			border: 1px solid rgba(0, 229, 255, 0.3);
+			margin-bottom: 10px;
+			position: relative;
+		}
+
+		#custom-progress-bar {
+			width: 0%;
+			height: 100%;
+			background: linear-gradient(90deg, #0284c7, #00e5ff);
+			box-shadow: 0 0 10px rgba(0, 229, 255, 0.7);
+			transition: width 0.15s ease-out;
+		}
+
+		#custom-progress-bar.compiling {
+			animation: pulse-compile 1.2s infinite ease-in-out;
+			background: linear-gradient(90deg, #0284c7, #38bdf8, #818cf8);
+		}
+
+		@keyframes pulse-compile {
+			0%, 100% { opacity: 0.8; filter: brightness(1.0); }
+			50% { opacity: 1.0; filter: brightness(1.35); }
+		}
+
+		#progress-details {
+			font-size: 11px;
+			font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+			color: #7dd3fc;
+			letter-spacing: 0.05em;
+			margin-bottom: 12px;
+		}
+
+		#status-advice {
+			display: none;
+			font-size: 11px;
+			color: #94a3b8;
+			font-style: italic;
+			margin-bottom: 14px;
+			line-height: 1.4;
+		}
+
+		.engine-badge {
+			font-size: 10px;
+			color: #475569;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+		}
+
+		/* Compatibility error box */
+		#status-notice {
+			display: none;
+			background-color: rgba(185, 28, 28, 0.2);
+			border: 1px solid #ef4444;
+			border-radius: 6px;
+			color: #fca5a5;
+			font-size: 12px;
+			padding: 12px;
+			margin-top: 15px;
+			text-align: left;
+			width: 100%;
+			line-height: 1.4;
+		}
+	</style>
+	<link rel="icon" type="image/png" href="index.icon.png" />
+	<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+	<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+
+</head>
+<body>
+	<canvas id="canvas">
+		Your browser does not support the WebGL canvas tag.
+	</canvas>
+
+	<noscript>
+		<div style="color: white; text-align: center; margin-top: 50px;">
+			JavaScript is required to launch MARGIN.
+		</div>
+	</noscript>
+
+	<div id="status">
+		<div class="loading-card">
+			<div class="margin-logo">MARGIN</div>
+			<div class="margin-subtitle">The Space Mission Design Game</div>
+			<div class="margin-tagline">Every Gram. Every Watt. Every Decision.</div>
+
+			<div class="radar-box">
+				<div class="radar-circle"></div>
+				<div class="radar-sweep"></div>
+			</div>
+
+			<div id="status-message">Initializing Flight Simulator & Ephemeris...</div>
+
+			<div class="progress-bar-container">
+				<div id="custom-progress-bar"></div>
+			</div>
+
+			<div id="progress-details">Connecting to Flight Simulation Server...</div>
+
+			<div id="status-advice"></div>
+
+			<div id="status-notice"></div>
+
+			<div class="engine-badge">WebGL 2.0 Compatibility • Single-Threaded WASM • IndexedDB</div>
+		</div>
+	</div>
+
+	<script src="index.js"></script>
+	<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":789136,"index.wasm":28046004},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_THREADS_ENABLED = false;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const customProgressBar = document.getElementById('custom-progress-bar');
+	const progressDetails = document.getElementById('progress-details');
+	const statusMessage = document.getElementById('status-message');
+	const statusNotice = document.getElementById('status-notice');
+	const statusAdvice = document.getElementById('status-advice');
+
+	let initializing = true;
+	let downloadStartTime = null;
+
+	const adviceTimer = setTimeout(() => {
+		if (initializing && statusAdvice) {
+			statusAdvice.style.display = 'block';
+			statusAdvice.textContent = 'Cold load downloads the 3D flight engine (~6.1 MB compressed). On slower connections this may take a few minutes. Subsequent loads will be cached & near-instant.';
+		}
+	}, 12000);
+
+	function displayFailureNotice(err) {
+		console.error('[MARGIN Web Engine Error]', err);
+		if (statusNotice) {
+			statusNotice.style.display = 'block';
+			statusNotice.textContent = 'Launch Error: ' + (err.message || err);
+		}
+		if (statusMessage) {
+			statusMessage.textContent = 'Simulation Initialization Failed';
+			statusMessage.style.color = '#ef4444';
+		}
+		if (adviceTimer) clearTimeout(adviceTimer);
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		displayFailureNotice('Required WebGL/WebAssembly browser features missing:\n' + missing.join('\n'));
+	} else {
+		engine.startGame({
+			'onProgress': function (current, total) {
+				if (!downloadStartTime && current > 0) {
+					downloadStartTime = performance.now();
+				}
+				if (current > 0 && total > 0) {
+					const now = performance.now();
+					const currentMB = (current / (1024 * 1024)).toFixed(1);
+					const totalMB = (total / (1024 * 1024)).toFixed(1);
+					const rawRatio = Math.min(1.0, current / total);
+
+					if (rawRatio < 1.0) {
+						// Stage 1: Network download (maps to 0% - 85% of progress bar)
+						const visualPct = Math.min(85, Math.floor(rawRatio * 85));
+						if (customProgressBar) {
+							customProgressBar.style.width = visualPct + '%';
+						}
+
+						let speedStr = '';
+						let etaStr = '';
+						if (downloadStartTime && (now - downloadStartTime) > 600) {
+							const elapsedSec = (now - downloadStartTime) / 1000;
+							const bytesPerSec = current / elapsedSec;
+							if (bytesPerSec > 1024 * 1024) {
+								speedStr = ` • ${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+							} else if (bytesPerSec > 1024) {
+								speedStr = ` • ${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+							}
+							const remainingBytes = total - current;
+							const etaSec = Math.ceil(remainingBytes / Math.max(1, bytesPerSec));
+							if (etaSec > 0 && isFinite(etaSec) && etaSec < 3600) {
+								etaStr = ` • ~${etaSec}s left`;
+							}
+						}
+
+						if (progressDetails) {
+							progressDetails.textContent = `Downloading Assets: ${currentMB} MB / ${totalMB} MB (${Math.floor(rawRatio * 100)}%)${speedStr}${etaStr}`;
+						}
+						if (statusMessage) {
+							statusMessage.textContent = 'Streaming Spacecraft & Lunar Assets...';
+						}
+					} else {
+						// Stage 2: WebAssembly Compilation & Shader Linking (85% -> 94%)
+						if (customProgressBar) {
+							customProgressBar.style.width = '92%';
+							customProgressBar.classList.add('compiling');
+						}
+						if (statusMessage) {
+							statusMessage.textContent = 'Compiling WebAssembly Engine Core...';
+						}
+						if (progressDetails) {
+							progressDetails.textContent = 'Translating 28.0 MB bytecode into machine code (CPU)...';
+						}
+					}
+				}
+			},
+		}).then(() => {
+			if (customProgressBar) {
+				customProgressBar.style.width = '100%';
+				customProgressBar.classList.remove('compiling');
+			}
+			if (statusMessage) {
+				statusMessage.textContent = 'Simulation Initialized';
+			}
+			if (progressDetails) {
+				progressDetails.textContent = 'Launching MARGIN Operations Control...';
+			}
+			if (statusOverlay) {
+				statusOverlay.style.opacity = '0';
+				setTimeout(() => {
+					statusOverlay.remove();
+					initializing = false;
+					if (adviceTimer) clearTimeout(adviceTimer);
+				}, 400);
+			}
+		}).catch(displayFailureNotice);
+	}
+}());
+	</script>
+</body>
+</html>
+

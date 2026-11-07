@@ -1,0 +1,214 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_engineering_review_controller.gd" id="1_review"]
+
+[sub_resource type="StyleBoxFlat" id="Style_ReviewCard"]
+bg_color = Color(0.05, 0.07, 0.11, 0.94)
+border_color = Color(0.2, 0.3, 0.45, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 24.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryBtn"]
+bg_color = Color(0.08, 0.12, 0.18, 0.85)
+border_color = Color(0.25, 0.35, 0.5, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_VoteBtn"]
+bg_color = Color(0.06, 0.09, 0.14, 0.9)
+border_color = Color(0.35, 0.45, 0.6, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+
+[node name="Helios4EngineeringReview" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_review")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.04, 0.07, 1)
+
+[node name="MainLayout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 24.0
+offset_right = -40.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 14
+
+[node name="TopBar" type="HBoxContainer" parent="MainLayout"]
+layout_mode = 2
+
+[node name="ReturnToHangarBtn" type="Button" parent="MainLayout/TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 12
+text = "← RETURN TO HANGAR"
+
+[node name="Spacer" type="Control" parent="MainLayout/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleBox" type="VBoxContainer" parent="MainLayout/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="MainLayout/TopBar/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 18
+text = "FLIGHT READINESS REVIEW (FRR) — LAUNCH GATE"
+horizontal_alignment = 2
+
+[node name="Subtitle" type="Label" parent="MainLayout/TopBar/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Authoritative Multi-Specialist Technical Review & GO / NO-GO Polling"
+horizontal_alignment = 2
+
+[node name="StatusBanner" type="Label" parent="MainLayout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 13
+text = "● REVIEW IN PROGRESS"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="MainLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CheckList" type="VBoxContainer" parent="MainLayout/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="VotingPanel" type="PanelContainer" parent="MainLayout"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_ReviewCard")
+
+[node name="VBox" type="VBoxContainer" parent="MainLayout/VotingPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="VoteTitle" type="Label" parent="MainLayout/VotingPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "FINAL LAUNCH POLL — 4-SPECIALIST GO SIGN-OFF:"
+
+[node name="VotesGrid" type="HBoxContainer" parent="MainLayout/VotingPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="VoteBtn_propulsion" type="Button" parent="MainLayout/VotingPanel/VBox/VotesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_VoteBtn")
+theme_override_font_sizes/font_size = 11
+toggle_mode = true
+text = "SIGN OFF [GO]: PROPULSION"
+
+[node name="VoteBtn_structural" type="Button" parent="MainLayout/VotingPanel/VBox/VotesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_VoteBtn")
+theme_override_font_sizes/font_size = 11
+toggle_mode = true
+text = "SIGN OFF [GO]: STRUCTURES"
+
+[node name="VoteBtn_astrogator" type="Button" parent="MainLayout/VotingPanel/VBox/VotesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_VoteBtn")
+theme_override_font_sizes/font_size = 11
+toggle_mode = true
+text = "SIGN OFF [GO]: ASTROGATOR"
+
+[node name="VoteBtn_systems" type="Button" parent="MainLayout/VotingPanel/VBox/VotesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_VoteBtn")
+theme_override_font_sizes/font_size = 11
+toggle_mode = true
+text = "SIGN OFF [GO]: SYSTEMS"
+
+[node name="BottomBar" type="HBoxContainer" parent="MainLayout"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="MainLayout/BottomBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ProceedToLaunchBtn" type="Button" parent="MainLayout/BottomBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 44)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn")
+theme_override_font_sizes/font_size = 13
+disabled = true
+text = "PROCEED TO EARTH LAUNCH (PHASE 2) →"

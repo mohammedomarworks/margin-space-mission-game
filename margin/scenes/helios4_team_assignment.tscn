@@ -1,0 +1,435 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_team_assignment_controller.gd" id="1_team"]
+
+[sub_resource type="StyleBoxFlat" id="Style_TeamCard"]
+bg_color = Color(0.06, 0.08, 0.12, 0.94)
+border_color = Color(0.2, 0.3, 0.45, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleProp"]
+bg_color = Color(0.12, 0.08, 0.04, 0.85)
+border_color = Color(0.98, 0.55, 0.15, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleStruct"]
+bg_color = Color(0.04, 0.12, 0.08, 0.85)
+border_color = Color(0.35, 0.85, 0.55, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleAstro"]
+bg_color = Color(0.04, 0.1, 0.14, 0.85)
+border_color = Color(0.25, 0.75, 1.0, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleSys"]
+bg_color = Color(0.1, 0.05, 0.12, 0.85)
+border_color = Color(0.85, 0.45, 0.95, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_CountBtn"]
+bg_color = Color(0.1, 0.14, 0.22, 0.9)
+border_color = Color(0.35, 0.45, 0.6, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 24.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryBtn"]
+bg_color = Color(0.1, 0.14, 0.2, 0.85)
+border_color = Color(0.3, 0.4, 0.55, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+
+[node name="Helios4TeamAssignment" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_team")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.04, 0.07, 1)
+
+[node name="MainLayout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 24.0
+offset_right = -40.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="TopBar" type="HBoxContainer" parent="MainLayout"]
+layout_mode = 2
+
+[node name="BackBtn" type="Button" parent="MainLayout/TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 12
+text = "← PROLOGUE"
+
+[node name="Spacer" type="Control" parent="MainLayout/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleBox" type="VBoxContainer" parent="MainLayout/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="MainLayout/TopBar/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 18
+text = "HELIOS-4: CREW ROSTER & ROLE ASSIGNMENT"
+horizontal_alignment = 2
+
+[node name="Subtitle" type="Label" parent="MainLayout/TopBar/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Local Pass-and-Play Cooperative Engineering Roster (1–4 Participants)"
+horizontal_alignment = 2
+
+[node name="SetupPanel" type="PanelContainer" parent="MainLayout"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_TeamCard")
+
+[node name="HBox" type="HBoxContainer" parent="MainLayout/SetupPanel"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="CountBox" type="VBoxContainer" parent="MainLayout/SetupPanel/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="MainLayout/SetupPanel/HBox/CountBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "SELECT PARTICIPANT COUNT:"
+
+[node name="Btns" type="HBoxContainer" parent="MainLayout/SetupPanel/HBox/CountBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Player1Btn" type="Button" parent="MainLayout/SetupPanel/HBox/CountBox/Btns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 32)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CountBtn")
+theme_override_font_sizes/font_size = 12
+toggle_mode = true
+text = "1 PLAYER"
+
+[node name="Player2Btn" type="Button" parent="MainLayout/SetupPanel/HBox/CountBox/Btns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 32)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CountBtn")
+theme_override_font_sizes/font_size = 12
+toggle_mode = true
+text = "2 PLAYERS"
+
+[node name="Player3Btn" type="Button" parent="MainLayout/SetupPanel/HBox/CountBox/Btns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 32)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CountBtn")
+theme_override_font_sizes/font_size = 12
+toggle_mode = true
+text = "3 PLAYERS"
+
+[node name="Player4Btn" type="Button" parent="MainLayout/SetupPanel/HBox/CountBox/Btns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 32)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CountBtn")
+theme_override_font_sizes/font_size = 12
+toggle_mode = true
+text = "4 PLAYERS"
+
+[node name="Separator" type="VSeparator" parent="MainLayout/SetupPanel/HBox"]
+layout_mode = 2
+
+[node name="DescBox" type="VBoxContainer" parent="MainLayout/SetupPanel/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="PlayerCountDesc" type="Label" parent="MainLayout/SetupPanel/HBox/DescBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 12
+text = "SOLO MISSION: You control all four workstations and can switch roles freely."
+
+[node name="PassNote" type="Label" parent="MainLayout/SetupPanel/HBox/DescBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Pass-and-play architecture: all participants share a single screen with role handoffs and decision attribution."
+
+[node name="RolesGrid" type="GridContainer" parent="MainLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+columns = 2
+
+[node name="RolePropulsion" type="PanelContainer" parent="MainLayout/RolesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("Style_RoleProp")
+
+[node name="VBox" type="VBoxContainer" parent="MainLayout/RolesGrid/RolePropulsion"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="MainLayout/RolesGrid/RolePropulsion/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MainLayout/RolesGrid/RolePropulsion/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
+theme_override_font_sizes/font_size = 14
+text = "🚀 ROLE 1: PROPULSION ENGINEER"
+
+[node name="NamePropulsion" type="LineEdit" parent="MainLayout/RolesGrid/RolePropulsion/VBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+placeholder_text = "Callsign / Name"
+
+[node name="Focus" type="Label" parent="MainLayout/RolesGrid/RolePropulsion/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "• Hangar: Engine thrust, specific impulse (Isp), fuel tank sizing, and stage-by-stage Delta-V.\n• Launch: Engine ignition, throttle management, and stage separation timing."
+
+[node name="RoleStructural" type="PanelContainer" parent="MainLayout/RolesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("Style_RoleStruct")
+
+[node name="VBox" type="VBoxContainer" parent="MainLayout/RolesGrid/RoleStructural"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="MainLayout/RolesGrid/RoleStructural/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MainLayout/RolesGrid/RoleStructural/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.35, 0.85, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "🏗 ROLE 2: STRUCTURAL ARCHITECT"
+
+[node name="NameStructural" type="LineEdit" parent="MainLayout/RolesGrid/RoleStructural/VBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+placeholder_text = "Callsign / Name"
+
+[node name="Focus" type="Label" parent="MainLayout/RolesGrid/RoleStructural/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "• Hangar: Dry mass, hull material, Center of Mass (CoM) vs Center of Pressure (CoP), and static margin.\n• Launch: Dynamic pressure monitoring, Max-Q structural safety limits, and G-force load warning."
+
+[node name="RoleAstrogator" type="PanelContainer" parent="MainLayout/RolesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("Style_RoleAstro")
+
+[node name="VBox" type="VBoxContainer" parent="MainLayout/RolesGrid/RoleAstrogator"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="MainLayout/RolesGrid/RoleAstrogator/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MainLayout/RolesGrid/RoleAstrogator/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.25, 0.75, 1.0, 1)
+theme_override_font_sizes/font_size = 14
+text = "🧭 ROLE 3: ASTROGATOR"
+
+[node name="NameAstrogator" type="LineEdit" parent="MainLayout/RolesGrid/RoleAstrogator/VBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+placeholder_text = "Callsign / Name"
+
+[node name="Focus" type="Label" parent="MainLayout/RolesGrid/RoleAstrogator/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "• Hangar: Earth-to-L1 transfer trajectory, launch azimuth, and halo-orbit injection planning.\n• Launch: Gravity-turn pitch schedule, corridor monitoring, mid-course corrections, and halo insertion."
+
+[node name="RoleSystems" type="PanelContainer" parent="MainLayout/RolesGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("Style_RoleSys")
+
+[node name="VBox" type="VBoxContainer" parent="MainLayout/RolesGrid/RoleSystems"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="MainLayout/RolesGrid/RoleSystems/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="MainLayout/RolesGrid/RoleSystems/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.45, 0.95, 1)
+theme_override_font_sizes/font_size = 14
+text = "⚡ ROLE 4: SYSTEMS OFFICER"
+
+[node name="NameSystems" type="LineEdit" parent="MainLayout/RolesGrid/RoleSystems/VBox/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+placeholder_text = "Callsign / Name"
+
+[node name="Focus" type="Label" parent="MainLayout/RolesGrid/RoleSystems/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "• Hangar: Solar arrays, battery storage, rad-hardened computer, Faraday cup, and magnetometer.\n• Flight: Telemetry monitoring, sensor deployment, Deep Space Network link, and early-warning packet."
+
+[node name="BottomBar" type="HBoxContainer" parent="MainLayout"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TimedChallengeCheck" type="CheckBox" parent="MainLayout/BottomBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+button_pressed = true
+text = "10-MINUTE COOPERATIVE CHALLENGE TIMER (UNCHECK FOR UNTIMED PRACTICE)"
+
+[node name="Spacer" type="Control" parent="MainLayout/BottomBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ConfirmCrewBtn" type="Button" parent="MainLayout/BottomBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn")
+theme_override_font_sizes/font_size = 13
+text = "CONFIRM ROSTER & ENTER 3D HANGAR →"

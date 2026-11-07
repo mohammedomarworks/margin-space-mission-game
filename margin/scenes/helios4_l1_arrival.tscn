@@ -1,0 +1,233 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_l1_arrival_controller.gd" id="1_arrival"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_L1"]
+sky_top_color = Color(0.005, 0.008, 0.015, 1)
+sky_horizon_color = Color(0.01, 0.015, 0.025, 1)
+ground_bottom_color = Color(0.005, 0.005, 0.01, 1)
+ground_horizon_color = Color(0.01, 0.01, 0.02, 1)
+
+[sub_resource type="Sky" id="Sky_L1"]
+sky_material = SubResource("SkyMat_L1")
+
+[sub_resource type="Environment" id="Env_L1"]
+background_mode = 2
+sky = SubResource("Sky_L1")
+ambient_light_source = 2
+ambient_light_color = Color(0.18, 0.22, 0.3, 1)
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_Sun_L1"]
+emission_enabled = true
+emission = Color(1.0, 0.85, 0.4, 1)
+emission_energy_multiplier = 4.8
+
+[sub_resource type="SphereMesh" id="Mesh_Sun_L1"]
+material = SubResource("Mat_Sun_L1")
+radius = 9.0
+height = 18.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_Earth_L1"]
+albedo_color = Color(0.15, 0.4, 0.8, 1)
+roughness = 0.65
+
+[sub_resource type="SphereMesh" id="Mesh_Earth_L1"]
+material = SubResource("Mat_Earth_L1")
+radius = 1.8
+height = 3.6
+
+[sub_resource type="StyleBoxFlat" id="Style_ArrivalCard"]
+bg_color = Color(0.05, 0.07, 0.12, 0.92)
+border_color = Color(0.22, 0.74, 0.96, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 18.0
+content_margin_right = 24.0
+content_margin_bottom = 18.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[node name="Helios4L1Arrival" type="Node3D"]
+script = ExtResource("1_arrival")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_L1")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -40, 2, 0)
+light_color = Color(1, 0.98, 0.92, 1)
+light_energy = 2.2
+shadow_enabled = true
+
+[node name="SunMesh" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45, 0, 0)
+mesh = SubResource("Mesh_Sun_L1")
+
+[node name="EarthMesh" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 0, 0)
+mesh = SubResource("Mesh_Earth_L1")
+
+[node name="HaloOrbitRing" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+
+[node name="ProbeNode" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.94, -0.059, 0.337, 0, 0.985, 0.174, -0.342, -0.163, 0.926, 3.8, 2.4, 6.8)
+current = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBanner" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 50.0
+grow_horizontal = 2
+
+[node name="TitleBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopBanner"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/TopBanner/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 14
+text = "PHASE 5 & 6: SUN-EARTH L1 INSERTION & INSTRUMENT COMMISSIONING"
+
+[node name="Sub" type="Label" parent="CanvasLayer/RootUI/TopBanner/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Sun-Earth L1 (~1.5 Million km Sunward) • Periodic 3D Halo Orbit Capture"
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/TopBanner"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CommissionStatusBanner" type="Label" parent="CanvasLayer/RootUI/TopBanner"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 13
+text = "● READY FOR HOI BURN"
+
+[node name="BottomCard" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = -220.0
+offset_right = -32.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("Style_ArrivalCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomCard"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MetricsBar" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="FuelReserveLabel" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox/MetricsBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 12
+text = "Propellant: 240.0 kg"
+
+[node name="WarningTimeLabel" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox/MetricsBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "Advance Lead Time: Calculating..."
+
+[node name="TelemetryDataLabel" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox/MetricsBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.75, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 11
+text = "DSN Carrier: 8.4 GHz (Ka-Band) • Magnetometer: Standby • Faraday Cup: Standby"
+horizontal_alignment = 2
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/RootUI/BottomCard/VBox"]
+layout_mode = 2
+
+[node name="StepDescription" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "The spacecraft has arrived at the Sun-Earth L1 libration point. Command the Halo-Orbit Insertion burn to capture the probe."
+autowrap_mode = 2
+
+[node name="ButtonsBar" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/BottomCard/VBox/ButtonsBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CommissionActionBtn" type="Button" parent="CanvasLayer/RootUI/BottomCard/VBox/ButtonsBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(340, 42)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn")
+theme_override_font_sizes/font_size = 12
+text = "EXECUTE HALO-ORBIT INSERTION BURN (-35 kg) →"
+
+[node name="ProceedToDebriefBtn" type="Button" parent="CanvasLayer/RootUI/BottomCard/VBox/ButtonsBar"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(340, 42)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn")
+theme_override_font_sizes/font_size = 12
+text = "COMMISSIONING COMPLETE: PROCEED TO DEBRIEF →"

@@ -743,3 +743,38 @@ func _build_instruments(root: Node3D, variant: String) -> void:
 				horn.position = Vector3(x, 0.88, -0.15)
 				horn.material_override = SpacecraftMaterials.get_mat("antenna_feed")
 				root.add_child(horn)
+		
+		"inst_plasma_boom":
+			# DSCOVR-inspired Deployable Magnetometer Boom & Faraday Cup Plasma Sensor
+			var boom := MeshInstance3D.new()
+			var bcyl := CylinderMesh.new()
+			bcyl.top_radius = 0.02
+			bcyl.bottom_radius = 0.03
+			bcyl.height = 1.40
+			boom.mesh = bcyl
+			boom.position = Vector3(0.0, 1.20, -0.20)
+			boom.rotation_degrees = Vector3(25.0, 0.0, 0.0)
+			boom.material_override = SpacecraftMaterials.get_mat("carbon_fiber")
+			root.add_child(boom)
+			
+			# Fluxgate Magnetometer sensor head at tip
+			var mag_head := MeshInstance3D.new()
+			var msphere := SphereMesh.new()
+			msphere.radius = 0.06
+			msphere.height = 0.12
+			mag_head.mesh = msphere
+			mag_head.position = Vector3(0.0, 1.80, -0.48)
+			mag_head.material_override = SpacecraftMaterials.get_mat("gold_mli")
+			root.add_child(mag_head)
+			
+			# Faraday Cup Solar Wind Plasma Analyzer
+			var cup := MeshInstance3D.new()
+			var ccyl := CylinderMesh.new()
+			ccyl.top_radius = 0.08
+			ccyl.bottom_radius = 0.05
+			ccyl.height = 0.16
+			cup.mesh = ccyl
+			cup.position = Vector3(0.0, 0.78, 0.22)
+			cup.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
+			cup.material_override = SpacecraftMaterials.get_mat("sensor_lens")
+			root.add_child(cup)

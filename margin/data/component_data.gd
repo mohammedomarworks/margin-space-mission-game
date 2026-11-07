@@ -676,6 +676,28 @@ static func get_all_components() -> Dictionary:
 			"tradeoff_negative": "Demands substantial satellite resources (58 kg, -135 W power, 24 Gbit/day data stream) in this educational simulation model.",
 			"engineering_insight": "Modeled on CryoSat-2 SIRAL's along-track SAR and cross-track interferometry for ice topography and sea ice freeboard. Educational mass (58 kg), power (-135 W), and cost ($42.0M) are balanced gameplay estimates rather than actual flight specifications. Does not model a dedicated microwave ocean radar altimeter for dynamic sea-surface height or full-depth AMOC transport.",
 			"visual_variant": "inst_ice_sar"
+		},
+		"inst_dscovr_plasmapack": {
+			"id": "inst_dscovr_plasmapack",
+			"category": Category.INSTRUMENTS,
+			"name": "Faraday Cup & Triaxial Fluxgate Magnetometer (DSCOVR PlasMag)",
+			"tier": "Solar Wind Early-Warning Suite",
+			"mass_kg": 26.0,
+			"cost_m": 25.5,
+			"power_w": -30.0,
+			"data_rate_gbit_day": 4.5,
+			"reliability_pct": 96.0,
+			"science_score": 96.0,
+			"stowed_height_delta_m": 0.45,
+			"stowed_diameter_delta_m": 0.15,
+			"stowed_vol_m3": 0.25,
+			"heritage_name": "NASA DSCOVR PlasMag (Faraday Cup + Fluxgate Magnetometer)",
+			"heritage_url": "https://www.nesdis.noaa.gov/our-satellites/currently-flying/dscovr",
+			"description": "Continuous solar wind plasma speed, density, temperature, and 3-axis interplanetary magnetic field (IMF Bz) monitor stationed at Sun-Earth L1.",
+			"tradeoff_positive": "Provides critical 15 to 60 minute advance warning of geomagnetic superstorms with minimal power consumption (30W).",
+			"tradeoff_negative": "Requires boom mounting away from spacecraft bus magnetic dipole fields and radiation-hardened readouts.",
+			"engineering_insight": "Southward interplanetary magnetic field (negative Bz) enables magnetic reconnection with Earth's magnetosphere, driving severe geomagnetic storms.",
+			"visual_variant": "inst_plasma_boom"
 		}
 	}
 

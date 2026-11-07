@@ -59,6 +59,8 @@ static func set_active_scenario(p_id: String) -> void:
 		_active_scenario_id = "sandbox"
 	elif p_id == "earth_climate_sentinel" or p_id == "ecs_01" or p_id == "earth":
 		_active_scenario_id = "earth_climate_sentinel"
+	elif p_id == "helios_4" or p_id == "helios4" or p_id == "helios":
+		_active_scenario_id = "helios_4"
 	else:
 		_active_scenario_id = "lunar_south_pole"
 
@@ -69,6 +71,7 @@ static func get_all_scenarios() -> Dictionary:
 	return {
 		"lunar_south_pole": _create_lunar_scenario(),
 		"earth_climate_sentinel": _create_earth_scenario(),
+		"helios_4": _create_helios4_scenario(),
 		"sandbox": _create_sandbox_scenario()
 	}
 
@@ -80,6 +83,8 @@ static func get_scenario(p_id: String):
 		return all_scenarios["sandbox"]
 	if p_id == "earth_climate_sentinel" or p_id == "ecs_01" or p_id == "earth":
 		return all_scenarios["earth_climate_sentinel"]
+	if p_id == "helios_4" or p_id == "helios4" or p_id == "helios":
+		return all_scenarios["helios_4"]
 	return all_scenarios["lunar_south_pole"]
 
 # --- SCENARIO FACTORIES ---
@@ -163,6 +168,48 @@ static func _create_earth_scenario():
 		{ "name": "ESA Sentinel-3 Ocean and Land Colour Instrument (OLCI)", "url": "https://sentinels.copernicus.eu/web/sentinel/missions/sentinel-3" },
 		{ "name": "NASA Orbiting Carbon Observatory-2 (OCO-2)", "url": "https://ocov2.jpl.nasa.gov/" },
 		{ "name": "ESA CryoSat-2 SAR Interferometric Radar Altimeter (SIRAL)", "url": "https://earth.esa.int/eogateway/missions/cryosat" }
+	]
+	return s
+
+static func _create_helios4_scenario():
+	var s = (load("res://margin/data/mission_scenario.gd") as GDScript).new()
+	s.id = "helios_4"
+	s.code = "HELIOS-4"
+	s.title = "HELIOS-4: THE LAST LINE OF DEFENSE"
+	s.subtitle = "Sun-Earth L1 Solar Weather Early-Warning Sentinel"
+	s.target_body = "Sun-Earth L1"
+	s.mission_type = "Deep Space Halo-Orbit Sentinel"
+	
+	s.budget_cap_m = 185.0
+	s.mass_limit_kg = 1250.0
+	s.duration_days = 1095 # 3-year baseline mission
+	s.min_science_points = 80.0
+	
+	# L1 is ~1.5 million km sunward from Earth (NOT the midpoint!)
+	s.target_altitude_km = 1500000.0
+	s.orbit_period_min = 259200.0 # ~180-day halo orbit period around L1
+	s.max_eclipse_min = 0.0 # Quasi-continuous solar illumination (halo orbit prevents Earth eclipses)
+	s.ref_mcc_delta_v_ms = 45.0 # Mid-course correction maneuvers
+	s.ref_loi_delta_v_ms = 280.0 # Halo orbit insertion burn
+	s.ref_stationkeeping_delta_v_ms = 120.0 # 3-year stationkeeping budget (halo orbits are dynamically unstable)
+	s.required_delta_v_ms = 445.0 # Total probe ΔV
+	
+	s.default_orbit_id = "orbit_l1_halo"
+	s.default_transfer_id = "transfer_earth_l1"
+	s.default_vehicle_id = "lv_commercial_medium"
+	s.allowed_orbit_ids = ["orbit_l1_halo", "orbit_l1_lissajous"]
+	s.allowed_transfer_ids = ["transfer_earth_l1", "transfer_wsb_l1"]
+	
+	s.scientific_goal = "Station an uncrewed solar-weather early-warning observatory in a stable halo orbit around Sun-Earth L1 to provide continuous plasma, magnetic field, and energetic particle warnings 15 to 60 minutes before CMEs impact Earth."
+	s.scientific_caution = "Sun-Earth L1 is approximately 1.5 million km sunward (only 1% of the distance to the Sun), not the midpoint. Halo orbits around L1 require continuous stationkeeping propellant because libration point collinear orbits are dynamically unstable. The spacecraft is uncrewed."
+	s.target_system_name = "Solar Weather Monitors"
+	s.coverage_label = "L1 Early Warning Telemetry"
+	s.educational_notes = "Inspired by NASA's DSCOVR and SOHO missions. DSCOVR PlasMag instruments measure solar wind velocity, density, and magnetic field direction (especially Bz)."
+	
+	s.heritage_references = [
+		{ "name": "NASA Deep Space Climate Observatory (DSCOVR) PlasMag", "url": "https://www.nesdis.noaa.gov/our-satellites/currently-flying/dscovr" },
+		{ "name": "ESA/NASA Solar and Heliospheric Observatory (SOHO)", "url": "https://soho.nascom.nasa.gov/" },
+		{ "name": "NASA Advanced Composition Explorer (ACE)", "url": "https://izw1.caltech.edu/ACE/" }
 	]
 	return s
 

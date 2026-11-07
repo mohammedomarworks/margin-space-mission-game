@@ -1,0 +1,279 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_prologue_controller.gd" id="1_prologue"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Prologue"]
+sky_top_color = Color(0.01, 0.015, 0.03, 1)
+sky_horizon_color = Color(0.03, 0.02, 0.04, 1)
+ground_bottom_color = Color(0.01, 0.01, 0.02, 1)
+ground_horizon_color = Color(0.02, 0.02, 0.03, 1)
+
+[sub_resource type="Sky" id="Sky_Prologue"]
+sky_material = SubResource("SkyMat_Prologue")
+
+[sub_resource type="Environment" id="Env_Prologue"]
+background_mode = 2
+sky = SubResource("Sky_Prologue")
+ambient_light_source = 2
+ambient_light_color = Color(0.15, 0.18, 0.25, 1)
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_Sun_Prologue"]
+emission_enabled = true
+emission = Color(1, 0.65, 0.15, 1)
+emission_energy_multiplier = 4.2
+
+[sub_resource type="SphereMesh" id="Mesh_Sun_Prologue"]
+radius = 5.0
+height = 10.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_Earth_Prologue"]
+albedo_color = Color(0.18, 0.42, 0.85, 1)
+roughness = 0.65
+
+[sub_resource type="SphereMesh" id="Mesh_Earth_Prologue"]
+material = SubResource("Mat_Earth_Prologue")
+radius = 1.6
+height = 3.2
+
+[sub_resource type="StyleBoxFlat" id="Style_EmergencyCard"]
+bg_color = Color(0.06, 0.08, 0.12, 0.92)
+border_color = Color(0.98, 0.45, 0.15, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 28.0
+content_margin_top = 24.0
+content_margin_right = 28.0
+content_margin_bottom = 24.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 24.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryBtn"]
+bg_color = Color(0.1, 0.14, 0.2, 0.85)
+border_color = Color(0.3, 0.4, 0.55, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+
+[node name="Helios4Prologue" type="Node3D"]
+script = ExtResource("1_prologue")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Prologue")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.25, 0.433, 0, 0.866, 0.5, -0.5, -0.433, 0.75, 8, 5, 8)
+light_color = Color(1, 0.95, 0.85, 1)
+light_energy = 2.0
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.966, -0.05, 0.254, 0, 0.981, 0.194, -0.259, -0.187, 0.947, 2.5, 1.2, 7.5)
+
+[node name="SunMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 2.5, -20)
+material_override = SubResource("Mat_Sun_Prologue")
+mesh = SubResource("Mesh_Sun_Prologue")
+
+[node name="EarthMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, -2, -15)
+mesh = SubResource("Mesh_Earth_Prologue")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HeaderBar" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 32.0
+offset_top = 20.0
+offset_right = -32.0
+offset_bottom = 54.0
+grow_horizontal = 2
+
+[node name="BackToMenuBtn" type="Button" parent="CanvasLayer/RootUI/HeaderBar"]
+custom_minimum_size = Vector2(140, 34)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 12
+text = "← MAIN MENU"
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/HeaderBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EmergencyBadge" type="Label" parent="CanvasLayer/RootUI/HeaderBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
+theme_override_font_sizes/font_size = 13
+text = "● CRISIS LEVEL: G5+ SOLAR SUPERSTORM • YEAR 2038"
+
+[node name="CenterCard" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -460.0
+offset_top = -260.0
+offset_right = 460.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_EmergencyCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/CenterCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="VBoxContainer" parent="CanvasLayer/RootUI/CenterCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Tag" type="Label" parent="CanvasLayer/RootUI/CenterCard/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
+theme_override_font_sizes/font_size = 11
+text = "PLANETARY DEFENSE DIRECTIVE #38-L1 • FLASH AUTHORIZATION"
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/CenterCard/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.97, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "HELIOS-4: THE LAST LINE OF DEFENSE"
+
+[node name="Sub" type="Label" parent="CanvasLayer/RootUI/CenterCard/VBox/Header"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 13
+text = "Sun-Earth L1 Solar Weather Early-Warning Sentinel Deployment"
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/RootUI/CenterCard/VBox"]
+layout_mode = 2
+
+[node name="BriefingText" type="RichTextLabel" parent="CanvasLayer/RootUI/CenterCard/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "[color=#f87171][b]SITUATION ASSESSMENT (OCTOBER 2038):[/b][/color]
+Extreme Active Region AR-4188 has rotated into direct Sun-Earth alignment. Coronal imaging confirms the onset of an unprecedented coronal mass ejection (CME) shock front traveling toward Earth in excess of 2,400 km/s.
+
+[color=#38bdf8][b]OPERATIONAL MISSION OBJECTIVE:[/b][/color]
+A specialized four-officer team is authorized to construct, launch, navigate, and commission the [b]HELIOS-4[/b] early-warning spacecraft into a stable [b]halo orbit at Sun-Earth L1[/b] (~1.5 million kilometers sunward from Earth).
+
+[color=#fbbf24][b]KEY SCIENTIFIC & ENGINEERING PRINCIPLES:[/b][/color]
+• [b]Sun-Earth L1 Location:[/b] L1 is located approximately 1.5 million km sunward (only ~1% of the distance from Earth to the Sun), [b]NOT[/b] the midpoint.
+• [b]Halo Orbit Dynamics:[/b] The spacecraft enters a periodic 3D halo orbit around the unstable L1 libration point. It does not stop at a fixed point, and requires continuous stationkeeping propellant.
+• [b]Uncrewed Vehicle:[/b] HELIOS-4 is an autonomous robotic probe. There is no human crew, life-support, or oxygen subsystem.
+• [b]NASA DSCOVR Heritage:[/b] Utilizing Faraday Cup plasma analyzers and triaxial fluxgate magnetometers to measure solar wind velocity, density, and magnetic field direction (Bz) to beam early warnings (15–60 min lead time) to Earth."
+
+[node name="ButtonGroup" type="HBoxContainer" parent="CanvasLayer/RootUI/CenterCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="DonkiBtn" type="Button" parent="CanvasLayer/RootUI/CenterCard/VBox/ButtonGroup"]
+custom_minimum_size = Vector2(240, 42)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 12
+text = "VIEW DONKI LIVE REFERENCE"
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/CenterCard/VBox/ButtonGroup"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ProceedBtn" type="Button" parent="CanvasLayer/RootUI/CenterCard/VBox/ButtonGroup"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn")
+theme_override_font_sizes/font_size = 13
+text = "ASSIGN 4-OFFICER TEAM →"
+
+[node name="DonkiModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -380.0
+offset_top = -240.0
+offset_right = 380.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_EmergencyCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/DonkiModal"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/DonkiModal/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/DonkiModal/VBox/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.35, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 16
+text = "NASA DONKI / CCMC SPACE WEATHER CATALOG"
+
+[node name="CloseDonkiBtn" type="Button" parent="CanvasLayer/RootUI/DonkiModal/VBox/HBox"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+text = "✕"
+
+[node name="Note" type="Label" parent="CanvasLayer/RootUI/DonkiModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 11
+text = "Official CCMC Domain: https://ccmc.gsfc.nasa.gov/DONKI/ • Benchmark Space Weather Events:"
+
+[node name="Scroll" type="ScrollContainer" parent="CanvasLayer/RootUI/DonkiModal/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DonkiEventList" type="VBoxContainer" parent="CanvasLayer/RootUI/DonkiModal/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8

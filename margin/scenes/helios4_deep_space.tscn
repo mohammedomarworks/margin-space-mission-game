@@ -1,0 +1,290 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_deep_space_controller.gd" id="1_deepspace"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Space"]
+sky_top_color = Color(0.005, 0.008, 0.015, 1)
+sky_horizon_color = Color(0.01, 0.015, 0.025, 1)
+ground_bottom_color = Color(0.005, 0.005, 0.01, 1)
+ground_horizon_color = Color(0.01, 0.01, 0.02, 1)
+
+[sub_resource type="Sky" id="Sky_Space"]
+sky_material = SubResource("SkyMat_Space")
+
+[sub_resource type="Environment" id="Env_Space"]
+background_mode = 2
+sky = SubResource("Sky_Space")
+ambient_light_source = 2
+ambient_light_color = Color(0.15, 0.18, 0.25, 1)
+ambient_light_energy = 0.8
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_Sun_Deep"]
+emission_enabled = true
+emission = Color(1.0, 0.82, 0.35, 1)
+emission_energy_multiplier = 4.5
+
+[sub_resource type="SphereMesh" id="Mesh_Sun_Deep"]
+material = SubResource("Mat_Sun_Deep")
+radius = 8.0
+height = 16.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_Earth_Deep"]
+albedo_color = Color(0.18, 0.45, 0.82, 1)
+roughness = 0.7
+
+[sub_resource type="SphereMesh" id="Mesh_Earth_Deep"]
+material = SubResource("Mat_Earth_Deep")
+radius = 2.4
+height = 4.8
+
+[sub_resource type="StyleBoxFlat" id="Style_SpaceHUD"]
+bg_color = Color(0.05, 0.08, 0.12, 0.88)
+border_color = Color(0.2, 0.35, 0.55, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 18.0
+content_margin_top = 10.0
+content_margin_right = 18.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryBtn"]
+bg_color = Color(0.08, 0.12, 0.18, 0.85)
+border_color = Color(0.25, 0.35, 0.5, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+
+[node name="Helios4DeepSpace" type="Node3D"]
+script = ExtResource("1_deepspace")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Space")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.966, 0, -0.259, 0, 1, 0, 0.259, 0, 0.966, 20, 4, -40)
+light_color = Color(1, 0.98, 0.92, 1)
+light_energy = 2.0
+shadow_enabled = true
+
+[node name="SunMesh" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 8, -70)
+mesh = SubResource("Mesh_Sun_Deep")
+
+[node name="EarthMesh" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, -4, 30)
+mesh = SubResource("Mesh_Earth_Deep")
+
+[node name="ProbeNode" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0.966, 0.259, 0, -0.259, 0.966, 0, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.866, -0.05, 0.497, 0, 0.995, 0.1, -0.5, -0.087, 0.862, 2.2, 0.8, 3.8)
+current = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBanner" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 50.0
+grow_horizontal = 2
+theme_override_constants/separation = 16
+
+[node name="TitleBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopBanner"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/TopBanner/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 14
+text = "PHASE 3: SUNWARD DEEP SPACE TRANSFER"
+
+[node name="Sub" type="Label" parent="CanvasLayer/RootUI/TopBanner/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "Destination: Sun-Earth L1 Halo-Orbit Insertion (~1.5 Million km Sunward from Earth)"
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/TopBanner"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ValCruiseDay" type="Label" parent="CanvasLayer/RootUI/TopBanner"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 13
+text = "Day 12.0"
+
+[node name="LeftHUD" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 24.0
+offset_top = -140.0
+offset_right = 280.0
+offset_bottom = 140.0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_SpaceHUD")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/LeftHUD"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Lbl1" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 12
+text = "SUNWARD TRANSFER PROGRESS"
+
+[node name="BarProgress" type="ProgressBar" parent="CanvasLayer/RootUI/LeftHUD/VBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+value = 8.0
+show_percentage = false
+
+[node name="ValDistance" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "120,000 km / 1,500,000 km"
+
+[node name="Sep" type="HSeparator" parent="CanvasLayer/RootUI/LeftHUD/VBox"]
+layout_mode = 2
+
+[node name="HBoxProp" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftHUD/VBox"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox/HBoxProp"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Probe Fuel:"
+
+[node name="ValPropRemaining" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox/HBoxProp"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 11
+text = "320.0 kg"
+
+[node name="HBoxTraj" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftHUD/VBox"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox/HBoxTraj"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Trajectory Margin:"
+
+[node name="ValTrajAccuracy" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox/HBoxTraj"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "98.2%"
+
+[node name="HBoxSolar" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftHUD/VBox"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox/HBoxSolar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Solar Sun-Tracking:"
+
+[node name="ValSolarEff" type="Label" parent="CanvasLayer/RootUI/LeftHUD/VBox/HBoxSolar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 11
+text = "97% (Angle: 14°)"
+
+[node name="RightActions" type="VBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -120.0
+offset_right = -24.0
+offset_bottom = 120.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_constants/separation = 12
+
+[node name="AlignSolarBtn" type="Button" parent="CanvasLayer/RootUI/RightActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 11
+text = "⚡ SYSTEMS: ALIGN ARRAYS SUNWARD"
+
+[node name="ExecuteMCCBtn" type="Button" parent="CanvasLayer/RootUI/RightActions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 11
+text = "🧭 ASTROGATOR: EXECUTE MCC-1 BURN (-18 kg)"
+
+[node name="EnterCrisisBtn" type="Button" parent="CanvasLayer/RootUI/RightActions"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn")
+theme_override_font_sizes/font_size = 12
+text = "▲ SPACE WEATHER CRISIS ALERT →"

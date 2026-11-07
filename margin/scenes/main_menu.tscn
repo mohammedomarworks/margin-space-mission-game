@@ -21,14 +21,24 @@ ambient_light_color = Color(0.12, 0.16, 0.24, 1)
 ambient_light_energy = 0.9
 tonemap_mode = 2
 
-[sub_resource type="StandardMaterial3D" id="Mat_Moon_Menu"]
-albedo_color = Color(0.5, 0.52, 0.56, 1)
-roughness = 0.92
+[sub_resource type="StandardMaterial3D" id="Mat_Sun_Menu"]
+emission_enabled = true
+emission = Color(1.0, 0.82, 0.35, 1)
+emission_energy_multiplier = 4.0
 
-[sub_resource type="SphereMesh" id="Mesh_Moon_Menu"]
-material = SubResource("Mat_Moon_Menu")
-radius = 9.0
-height = 18.0
+[sub_resource type="SphereMesh" id="Mesh_Sun_Menu"]
+material = SubResource("Mat_Sun_Menu")
+radius = 4.0
+height = 8.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_Earth_Menu"]
+albedo_color = Color(0.15, 0.45, 0.85, 1)
+roughness = 0.7
+
+[sub_resource type="SphereMesh" id="Mesh_Earth_Menu"]
+material = SubResource("Mat_Earth_Menu")
+radius = 5.0
+height = 10.0
 
 [sub_resource type="StyleBoxFlat" id="Style_MenuCard"]
 bg_color = Color(0.06, 0.08, 0.12, 0.88)
@@ -42,33 +52,17 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 content_margin_left = 24.0
-content_margin_top = 24.0
+content_margin_top = 20.0
 content_margin_right = 24.0
-content_margin_bottom = 24.0
+content_margin_bottom = 20.0
 
-[sub_resource type="StyleBoxFlat" id="Style_FrontierBtn_Menu"]
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn_Menu"]
 bg_color = Color(0.12, 0.45, 0.75, 0.95)
 border_color = Color(0.35, 0.9, 1.0, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-content_margin_left = 20.0
-content_margin_top = 12.0
-content_margin_right = 20.0
-content_margin_bottom = 12.0
-
-[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn_Menu"]
-bg_color = Color(0.08, 0.38, 0.6, 0.95)
-border_color = Color(0.22, 0.74, 0.96, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -128,9 +122,13 @@ light_color = Color(0.4, 0.55, 0.78, 1)
 light_energy = 0.65
 omni_range = 18.0
 
-[node name="DistantMoon" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, -8, -22)
-mesh = SubResource("Mesh_Moon_Menu")
+[node name="DistantSun" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 6, -40)
+mesh = SubResource("Mesh_Sun_Menu")
+
+[node name="DistantEarth" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, -6, -26)
+mesh = SubResource("Mesh_Earth_Menu")
 
 [node name="Spacecraft3D" type="Node3D" parent="."]
 script = ExtResource("3_craft")
@@ -160,11 +158,11 @@ anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
 offset_left = 60.0
-offset_top = -220.0
-offset_right = 460.0
-offset_bottom = 220.0
+offset_top = -240.0
+offset_right = 480.0
+offset_bottom = 240.0
 grow_vertical = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 14
 
 [node name="TitleBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BrandLayout"]
 layout_mode = 2
@@ -179,14 +177,14 @@ text = "M A R G I N"
 [node name="Subtitle" type="Label" parent="CanvasLayer/RootUI/BrandLayout/TitleBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
-theme_override_font_sizes/font_size = 15
-text = "THE SPACE MISSION DESIGN GAME"
+theme_override_font_sizes/font_size = 14
+text = "COOPERATIVE 3D SPACEFLIGHT CAMPAIGN"
 
 [node name="Tagline" type="Label" parent="CanvasLayer/RootUI/BrandLayout/TitleBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
-theme_override_font_sizes/font_size = 12
-text = "Every Gram. Every Watt. Every Decision."
+theme_override_font_sizes/font_size = 11
+text = "Year 2038: Planetary Solar Early-Warning Operations"
 
 [node name="MissionBanner" type="PanelContainer" parent="CanvasLayer/RootUI/BrandLayout"]
 layout_mode = 2
@@ -198,69 +196,78 @@ theme_override_constants/separation = 4
 
 [node name="Badge" type="Label" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
 theme_override_font_sizes/font_size = 11
-text = "CURRENT CAMPAIGN MISSION:"
+text = "FLAGSHIP CAMPAIGN AUTHORIZATION:"
 
 [node name="MName" type="Label" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
-theme_override_font_sizes/font_size = 13
-text = "LUNAR SOUTH POLE — VOLATILE MAPPING"
+theme_override_font_sizes/font_size = 14
+text = "HELIOS-4: THE LAST LINE OF DEFENSE"
 
 [node name="MDesc" type="Label" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
 theme_override_font_sizes/font_size = 11
-text = "Map epithermal neutron flux depressions and characterize candidate hydrogen-rich regolith deposits in polar craters."
+text = "Deploy an uncrewed solar-weather early-warning spacecraft into a stable halo orbit near Sun-Earth L1 (~1.5M km sunward) to safeguard planetary orbital assets."
 autowrap_mode = 2
 
 [node name="MenuButtons" type="VBoxContainer" parent="CanvasLayer/RootUI/BrandLayout"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
-[node name="LunarFrontierBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
-custom_minimum_size = Vector2(0, 48)
-layout_mode = 2
-theme_override_styles/normal = SubResource("Style_FrontierBtn_Menu")
-theme_override_font_sizes/font_size = 14
-text = "► PLAY LUNAR FRONTIER (3D GAME)"
-
-[node name="StartMissionBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+[node name="NewCampaignBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryBtn_Menu")
 theme_override_font_sizes/font_size = 14
-text = "START MISSION →"
+text = "► 1. NEW CAMPAIGN (HELIOS-4)"
 
-[node name="MissionBriefingBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
-custom_minimum_size = Vector2(0, 38)
+[node name="ContinueCampaignBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
 theme_override_font_sizes/font_size = 13
-text = "MISSION BRIEFING"
+text = "2. CONTINUE CAMPAIGN"
 
-[node name="WorkshopDirectBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
-custom_minimum_size = Vector2(0, 38)
+[node name="QuickMissionsBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
 theme_override_font_sizes/font_size = 13
-text = "3D SPACECRAFT WORKSHOP"
+text = "3. QUICK MISSIONS"
 
 [node name="CreativeSandboxBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
 theme_override_font_sizes/font_size = 13
-text = "★ CREATIVE SANDBOX (UNRESTRICTED)"
+text = "4. CREATIVE SANDBOX"
 
-[node name="HowToPlayBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
-custom_minimum_size = Vector2(0, 38)
+[node name="SettingsHowToPlayBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
 theme_override_font_sizes/font_size = 13
-text = "HOW TO PLAY"
+text = "5. SETTINGS / HOW TO PLAY"
+
+[node name="LegacyButtonsContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/BrandLayout"]
+visible = false
+layout_mode = 2
+
+[node name="StartMissionBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/LegacyButtonsContainer"]
+layout_mode = 2
+text = "START MISSION →"
+
+[node name="LunarFrontierBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/LegacyButtonsContainer"]
+layout_mode = 2
+text = "► PLAY LUNAR FRONTIER"
 
 [node name="FooterDisclaimer" type="Label" parent="CanvasLayer/RootUI"]
 layout_mode = 1
@@ -274,8 +281,140 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.45, 0.5, 0.58, 0.8)
 theme_override_font_sizes/font_size = 10
-text = "An independent educational simulation. Not affiliated with or endorsed by NASA or JPL."
+text = "HELIOS-4: Educational Spaceflight Simulation • NASA DSCOVR/SOHO Heritage References • Simplified Physics Models"
 horizontal_alignment = 1
+
+[node name="QuickMissionsModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -230.0
+offset_right = 340.0
+offset_bottom = 230.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_ModalPanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ModalHeader" type="HBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/ModalHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 18
+text = "QUICK MISSIONS ARCHIVE"
+
+[node name="CloseQuickMissionsBtn" type="Button" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/ModalHeader"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+text = "✕"
+
+[node name="Subtitle" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 12
+text = "Select a standalone mission scenario or 3D surface exploration challenge:"
+
+[node name="CardLSP" type="PanelContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_MenuCard")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardLSP"]
+layout_mode = 2
+
+[node name="Info" type="VBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardLSP/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Name" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardLSP/HBox/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 13
+text = "1. LUNAR SOUTH POLE (LSP-01)"
+
+[node name="Desc" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardLSP/HBox/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Discovery-Class Polar Orbiter • Epithermal neutron volatile mapping in permanently shadowed craters."
+
+[node name="QuickLSPBtn" type="Button" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardLSP/HBox"]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn_Menu")
+theme_override_font_sizes/font_size = 12
+text = "LAUNCH →"
+
+[node name="CardECS" type="PanelContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_MenuCard")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardECS"]
+layout_mode = 2
+
+[node name="Info" type="VBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardECS/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Name" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardECS/HBox/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 13
+text = "2. EARTH CLIMATE SENTINEL (ECS-01)"
+
+[node name="Desc" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardECS/HBox/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "Sun-Synchronous LEO • Multispectral Radiometer, GHG Spectrometer & CryoSat-2 SIRAL Altimeter."
+
+[node name="QuickECSBtn" type="Button" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardECS/HBox"]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn_Menu")
+theme_override_font_sizes/font_size = 12
+text = "LAUNCH →"
+
+[node name="CardFrontier" type="PanelContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_MenuCard")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardFrontier"]
+layout_mode = 2
+
+[node name="Info" type="VBoxContainer" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardFrontier/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Name" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardFrontier/HBox/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 13
+text = "3. LUNAR FRONTIER: SHADOW RUN"
+
+[node name="Desc" type="Label" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardFrontier/HBox/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 11
+text = "3D Real-Time Exploration • Pilot the rocket-hopper into Shackleton crater to retrieve core samples."
+
+[node name="QuickFrontierBtn" type="Button" parent="CanvasLayer/RootUI/QuickMissionsModal/VBox/CardFrontier/HBox"]
+custom_minimum_size = Vector2(110, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryBtn_Menu")
+theme_override_font_sizes/font_size = 12
+text = "PLAY 3D →"
 
 [node name="HowToPlayModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
 unique_name_in_owner = true
@@ -286,10 +425,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -340.0
-offset_top = -240.0
-offset_right = 340.0
-offset_bottom = 240.0
+offset_left = -360.0
+offset_top = -250.0
+offset_right = 360.0
+offset_bottom = 250.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("Style_ModalPanel")
@@ -306,10 +445,10 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 18
-text = "HOW TO PLAY MARGIN"
+text = "MARGIN: HELIOS-4 CAMPAIGN MANUAL"
 
 [node name="CloseModalBtn" type="Button" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalHeader"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
 text = "✕"
 
@@ -327,43 +466,45 @@ theme_override_constants/separation = 12
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
 theme_override_font_sizes/font_size = 12
-text = "1. THE ENGINEERING CHALLENGE
-In space missions, there are no \"perfect\" spacecraft. Every component choice involves rigorous physical trade-offs. You are given a scientific goal, a launch mass limit, and a strict budget."
+text = "1. THE 2038 CRISIS & HELIOS-4
+A severe coronal mass ejection (CME) superstorm threatens Earth's power grids, orbital infrastructure, and telecommunications. Four specialists must design, launch, navigate, and commission the HELIOS-4 solar sentinel into a stable halo orbit at Sun-Earth L1 (~1.5 million km sunward)."
 autowrap_mode = 2
 
 [node name="P2" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll/ModalText"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
 theme_override_font_sizes/font_size = 12
-text = "2. NINE SUBSYSTEMS
-Configure your vehicle across Structure, Power, Battery, Propulsion, Comms, Computer, ADCS, Thermal, and Scientific Instruments. You can rotate and zoom around the 3D spacecraft to inspect individual modules."
+text = "2. FOUR PASS-AND-PLAY SPECIALIST ROLES
+• Propulsion Engineer: Engine thrust, propellant loading, staging separation, and throttle control.
+• Structural Architect: Structural mass, dynamic pressure corridor (Max-Q), and aerodynamic static margin.
+• Astrogator: Launch azimuth, gravity-turn pitch profile, transfer trajectory, and L1 halo-orbit insertion.
+• Systems Officer: Electrical balance, solar arrays, rad-hardened avionics, plasma analyzer, and early-warning telemetry."
 autowrap_mode = 2
 
 [node name="P3" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll/ModalText"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.93, 0.98, 1)
 theme_override_font_sizes/font_size = 12
-text = "3. SIX LIVE MARGINS
-Keep all six gauges positive:
-• Mass (must stay below 380 kg)
-• Power (sunlight surplus + battery eclipse DoD <= 70%)
-• Budget (must stay below $180.0M)
-• Data (downlink throughput must exceed sensor generation)
-• Comms (RF link margin >= +3.0 dB)
-• Orbit Lifetime (propulsion ΔV >= 150 m/s for 1 year)"
+text = "3. SCIENTIFIC PRINCIPLES & EDUCATIONAL DISCLAIMERS
+• Sun-Earth L1 is ~1.5 million km sunward from Earth (approx. 1% of the distance to the Sun), NOT the midpoint.
+• Halo orbits around L1 require continuous stationkeeping propellant because libration point collinear orbits are dynamically unstable.
+• The spacecraft is an uncrewed robotic probe: no crew oxygen or life-support is needed.
+• All rocket staging, dynamic pressure, and costs are calibrated educational game models."
 autowrap_mode = 2
 
 [node name="P4" type="Label" parent="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalScroll/ModalText"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 12
-text = "4. SIGNATURE FEATURE: TRADE-OFF ECHO
-Every time you swap a module, the Trade-Off Echo analyzes the exact impact on your margins and presents real-world aerospace insights."
+text = "4. NASA DONKI & REAL-WORLD SPACE WEATHER
+Real-world DONKI events (CCMC domain) can be viewed as educational benchmarks. In the 2038 campaign, the spacecraft's Faraday Cup and Magnetometer detect incoming solar storms to beam advance warnings (15–60 min notice) back to Earth."
 autowrap_mode = 2
 
-[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/LunarFrontierBtn" to="." method="_on_lunar_frontier_pressed"]
-[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/StartMissionBtn" to="." method="_on_start_mission_pressed"]
-[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/MissionBriefingBtn" to="." method="_on_mission_briefing_pressed"]
-[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/WorkshopDirectBtn" to="." method="_on_jump_to_workshop_pressed"]
-[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/HowToPlayBtn" to="." method="_on_how_to_play_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/NewCampaignBtn" to="." method="_on_new_campaign_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/ContinueCampaignBtn" to="." method="_on_continue_campaign_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/QuickMissionsBtn" to="." method="_on_quick_missions_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/CreativeSandboxBtn" to="." method="_on_creative_sandbox_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/SettingsHowToPlayBtn" to="." method="_on_how_to_play_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/LegacyButtonsContainer/StartMissionBtn" to="." method="_on_start_mission_pressed"]
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/LegacyButtonsContainer/LunarFrontierBtn" to="." method="_on_lunar_frontier_pressed"]
 [connection signal="pressed" from="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalHeader/CloseModalBtn" to="." method="_on_close_modal_pressed"]
