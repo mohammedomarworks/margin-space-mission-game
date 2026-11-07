@@ -44,6 +44,10 @@ func _ready() -> void:
 		if tab_prop: print("[Hangar] TabPropulsion center: ", tab_prop.get_global_rect().get_center())
 		var tab_struct = find_child("TabStructural", true, false)
 		if tab_struct: print("[Hangar] TabStructural center: ", tab_struct.get_global_rect().get_center())
+		var tab_astro = find_child("TabAstrogator", true, false)
+		if tab_astro: print("[Hangar] TabAstrogator center: ", tab_astro.get_global_rect().get_center())
+		var tab_sys = find_child("TabSystems", true, false)
+		if tab_sys: print("[Hangar] TabSystems center: ", tab_sys.get_global_rect().get_center())
 	, CONNECT_ONE_SHOT)
 
 func _process(delta: float) -> void:
@@ -122,6 +126,13 @@ func _setup_hardware_selector_signals() -> void:
 	# Propulsion: Booster Engine
 	var opt_s1_engine = find_child("OptStage1Engine", true, false) as OptionButton
 	if opt_s1_engine:
+		var eng = Helios4CampaignData.vehicle_config.get("stage1_engine", "booster_hydrolox_quad")
+		if eng == "booster_keralox_cluster":
+			opt_s1_engine.selected = 1
+		elif eng == "booster_strap_on_solids":
+			opt_s1_engine.selected = 2
+		else:
+			opt_s1_engine.selected = 0
 		opt_s1_engine.item_selected.connect(func(idx):
 			var v = Helios4CampaignData.vehicle_config
 			match idx:
@@ -140,29 +151,48 @@ func _setup_hardware_selector_signals() -> void:
 					v["stage1_thrust_kn"] = 5600.0
 					v["stage1_isp_s"] = 280.0
 					v["vehicle_cost_m"] = 62.0
+			Helios4CampaignData.record_team_decision(
+				Helios4CampaignData.ROLE_PROPULSION,
+				"Engine Selection",
+				"Selected %s (Thrust: %.0f kN, Isp: %.0fs)" % [v["stage1_engine"], v["stage1_thrust_kn"], v["stage1_isp_s"]]
+			)
 			_recalculate_and_refresh_ui()
 		)
 		
 	# Propulsion: Propellant Loading Slider
 	var sld_fuel = find_child("SldPropellantMass", true, false) as HSlider
 	if sld_fuel:
+		sld_fuel.value = Helios4CampaignData.vehicle_config.get("stage1_fuel_mass_kg", 24000.0)
 		sld_fuel.value_changed.connect(func(val):
 			Helios4CampaignData.vehicle_config["stage1_fuel_mass_kg"] = val
+			Helios4CampaignData.record_team_decision(
+				Helios4CampaignData.ROLE_PROPULSION,
+				"Propellant Loading",
+				"Adjusted stage 1 propellant load to %.0f kg" % val
+			)
 			_recalculate_and_refresh_ui()
 		)
 		
 	# Structural: Grid Fins Toggle
 	var chk_fins = find_child("ChkGridFins", true, false) as CheckBox
 	if chk_fins:
+		chk_fins.button_pressed = (Helios4CampaignData.vehicle_config.get("stage1_fins", "aero_grid_fins") != "none")
 		chk_fins.toggled.connect(func(enabled):
 			Helios4CampaignData.vehicle_config["stage1_fins"] = "aero_grid_fins" if enabled else "none"
 			Helios4CampaignData.vehicle_config["stage1_fin_mass_kg"] = 220.0 if enabled else 0.0
+			Helios4CampaignData.record_team_decision(
+				Helios4CampaignData.ROLE_STRUCTURAL,
+				"Aerodynamic Stabilizers",
+				"Aft grid fins %s (+220 kg tail mass for static margin)" % ("Enabled" if enabled else "Disabled")
+			)
 			_recalculate_and_refresh_ui()
 		)
 		
 	# Structural: Hull Material
 	var opt_hull = find_child("OptHullMaterial", true, false) as OptionButton
 	if opt_hull:
+		var struct = Helios4CampaignData.probe_config.get("bus_structure", "struct_carbon_composite")
+		opt_hull.selected = 1 if struct == "struct_al_li_alloy" else 0
 		opt_hull.item_selected.connect(func(idx):
 			var p = Helios4CampaignData.probe_config
 			match idx:
@@ -174,27 +204,53 @@ func _setup_hardware_selector_signals() -> void:
 					p["bus_structure"] = "struct_al_li_alloy"
 					p["structure_mass_kg"] = 230.0
 					p["structure_cost_m"] = 13.5
+			Helios4CampaignData.record_team_decision(
+				Helios4CampaignData.ROLE_STRUCTURAL,
+				"Bus Hull Material",
+				"Selected %s structure (Mass: %.0f kg)" % [p["bus_structure"], p["structure_mass_kg"]]
+			)
 			_recalculate_and_refresh_ui()
 		)
 		
 	# Astrogator: Trajectory Mode
 	var opt_traj = find_child("OptTrajectoryMode", true, false) as OptionButton
 	if opt_traj:
-		opt_traj.item_selected.connect(func(_idx):
+		var mode = Helios4CampaignData.vehicle_config.get("trajectory_mode", "direct_injection")
+		opt_traj.selected = 1 if mode == "phased_wsb" else 0
+		opt_traj.item_selected.connect(func(idx):
+			var v = Helios4CampaignData.vehicle_config
+			var m = "phased_wsb" if idx == 1 else "direct_injection"
+			v["trajectory_mode"] = m
+			Helios4CampaignData.record_team_decision(
+				Helios4CampaignData.ROLE_ASTROGATOR,
+				"Trajectory Optimization",
+				"Selected %s transfer mode (%s cruise)" % [
+					"Phased WSB" if idx == 1 else "Direct Injection",
+					"135-Day" if idx == 1 else "110-Day"
+				]
+			)
 			_recalculate_and_refresh_ui()
 		)
 		
 	# Systems: Solar Array Area Slider
 	var sld_solar = find_child("SldSolarArea", true, false) as HSlider
 	if sld_solar:
+		sld_solar.value = Helios4CampaignData.probe_config.get("solar_array_area_m2", 6.5)
 		sld_solar.value_changed.connect(func(val):
 			Helios4CampaignData.probe_config["solar_array_area_m2"] = val
+			Helios4CampaignData.record_team_decision(
+				Helios4CampaignData.ROLE_SYSTEMS,
+				"Solar Array Sizing",
+				"Configured solar array area to %.1f m²" % val
+			)
 			_recalculate_and_refresh_ui()
 		)
 		
 	# Systems: Rad-Hard Avionics Selection
 	var opt_avionics = find_child("OptAvionics", true, false) as OptionButton
 	if opt_avionics:
+		var comp = Helios4CampaignData.probe_config.get("computer_type", "comp_rad_hard_quad_core")
+		opt_avionics.selected = 1 if comp == "comp_dual_leon3" else 0
 		opt_avionics.item_selected.connect(func(idx):
 			var p = Helios4CampaignData.probe_config
 			match idx:
@@ -202,10 +258,15 @@ func _setup_hardware_selector_signals() -> void:
 					p["computer_type"] = "comp_rad_hard_quad_core"
 					p["avionics_power_w"] = 65.0
 					p["computer_cost_m"] = 16.0
-				1: # Dual Fault-Tolerant LEON3
+				1: # Dual Fault-TolerANT LEON3
 					p["computer_type"] = "comp_dual_leon3"
 					p["avionics_power_w"] = 52.0
 					p["computer_cost_m"] = 12.0
+			Helios4CampaignData.record_team_decision(
+				Helios4CampaignData.ROLE_SYSTEMS,
+				"Avionics Computer",
+				"Selected %s (Power: %.0f W)" % [p["computer_type"], p["avionics_power_w"]]
+			)
 			_recalculate_and_refresh_ui()
 		)
 

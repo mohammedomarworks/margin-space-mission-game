@@ -41,58 +41,11 @@ func _calculate_debrief_score() -> void:
 	var c_res = Helios4CampaignData.crisis_results
 	var l1_tel = Helios4CampaignData.l1_telemetry
 	
-	# 1. Launch & Staging Pillar (Max 25 pts)
-	var p1_score: float = 25.0
-	var stress = l_tel.get("structural_stress_pct", 0.0)
-	var traj_err = l_tel.get("trajectory_error_pct", 0.0)
-	p1_score = clamp(p1_score - (stress * 0.25) - (traj_err * 0.3), 5.0, 25.0)
-	
-	# 2. Crisis Survival Pillar (Max 25 pts)
-	var p2_score: float = 25.0
-	var deg = c_res.get("equipment_degradation_pct", 5.0)
-	var sci_bonus = c_res.get("science_bonus_pts", 10.0)
-	p2_score = clamp(p2_score - (deg * 0.4) + (sci_bonus * 0.3), 5.0, 25.0)
-	
-	# 3. L1 Halo-Orbit & Stationkeeping Pillar (Max 25 pts)
-	var p3_score: float = 25.0
-	var final_fuel = l1_tel.get("final_propellant_kg", 200.0)
-	if final_fuel < 35.0:
-		p3_score = 10.0
-	elif final_fuel < 80.0:
-		p3_score = 18.0
-	else:
-		p3_score = 25.0
-		
-	# 4. Early-Warning & Data Quality Pillar (Max 25 pts)
-	var p4_score: float = 25.0
-	var warning_sent = l1_tel.get("warning_packet_sent", true)
-	if not warning_sent:
-		p4_score = 0.0
-		is_success = false
-		
-	total_score = p1_score + p2_score + p3_score + p4_score
-	
-	if total_score >= 90.0:
-		letter_grade = "A+"
-	elif total_score >= 80.0:
-		letter_grade = "A"
-	elif total_score >= 70.0:
-		letter_grade = "B"
-	elif total_score >= 60.0:
-		letter_grade = "C"
-	else:
-		letter_grade = "F"
-		is_success = false
-		
-	Helios4CampaignData.final_debrief_data = {
-		"total_score": total_score,
-		"letter_grade": letter_grade,
-		"is_success": is_success,
-		"launch_pillar": p1_score,
-		"crisis_pillar": p2_score,
-		"l1_pillar": p3_score,
-		"warning_pillar": p4_score
-	}
+	var res = Helios4CampaignData.calculate_debrief_score(l_tel, c_res, l1_tel)
+	total_score = res["total_score"]
+	letter_grade = res["letter_grade"]
+	is_success = res["is_success"]
+	Helios4CampaignData.final_debrief_data = res
 
 func _populate_ui() -> void:
 	if is_success:
@@ -111,12 +64,28 @@ func _populate_ui() -> void:
 	var equip_health = 100.0 - c_res.get("equipment_degradation_pct", 5.0)
 	var rem_fuel = l1_tel.get("final_propellant_kg", 205.0)
 	
-	summary_text.text = """[b]SCIENTIFIC & OPERATIONAL DEBRIEF:[/b]
-• [color=#38bdf8]Target Orbit:[/color] Stable 3D Halo Orbit around Sun-Earth L1 (~1.5 Million km Sunward).
+	var p1 = Helios4CampaignData.final_debrief_data.get("launch_pillar", 25.0)
+	var p2 = Helios4CampaignData.final_debrief_data.get("crisis_pillar", 25.0)
+	var p3 = Helios4CampaignData.final_debrief_data.get("l1_pillar", 25.0)
+	var p4 = Helios4CampaignData.final_debrief_data.get("warning_pillar", 25.0)
+	
+	summary_text.text = """[b]SCIENTIFIC & OPERATIONAL AUDIT:[/b]
+• [color=#38bdf8]Target Orbit:[/color] Educational Periodic 3D Halo Orbit around Sun-Earth L1 (~1.5M km Sunward).
 • [color=#4ade80]Space Weather Warning Lead Time:[/color] [b]%.1f Minutes Advance Notice Delivered to Earth.[/b]
-• [color=#fbbf24]Stationkeeping Propellant Reserve:[/color] %.1f kg (Ensures >= 3-Year Extended Operational Baseline).
+• [color=#fbbf24]Stationkeeping Propellant Reserve:[/color] %.1f kg (Modeled ~15–30 m/s/yr baseline; educational game assumption).
 • [color=#c084fc]Subsystem Health:[/color] %.1f%% Sensor Suite Integrity (Rad-Hardened Avionics Nominal).
-• [color=#f87171]Heritage Benchmark:[/color] Validates NASA DSCOVR PlasMag operational architecture.""" % [lead_time, rem_fuel, equip_health]
+• [color=#f87171]Heritage Benchmark:[/color] Validates NASA DSCOVR PlasMag operational architecture.
+
+[b]EVALUATION BREAKDOWN & SCORING PILLARS:[/b]
+• [color=#fb923c]Launch & Staging (Pillar 1):[/color] %.1f / 25.0 pts
+• [color=#f87171]Deep-Space Hazard Survival (Pillar 2):[/color] %.1f / 25.0 pts
+• [color=#38bdf8]L1 Halo Orbit & Stationkeeping (Pillar 3):[/color] %.1f / 25.0 pts
+• [color=#4ade80]Early-Warning Telemetry Delivery (Pillar 4):[/color] %.1f / 25.0 pts
+• [color=#fbbf24][b]Total Score:[/b][/color] %.1f + %.1f + %.1f + %.1f = [b]%.1f / 100.0 PTS[/b]""" % [
+		lead_time, rem_fuel, equip_health,
+		p1, p2, p3, p4,
+		p1, p2, p3, p4, total_score
+	]
 
 	var names = Helios4CampaignData.team_player_names
 	var prop_name = names.get(Helios4CampaignData.ROLE_PROPULSION, "Specialist 1")
@@ -124,11 +93,39 @@ func _populate_ui() -> void:
 	var astro_name = names.get(Helios4CampaignData.ROLE_ASTROGATOR, "Specialist 3")
 	var sys_name = names.get(Helios4CampaignData.ROLE_SYSTEMS, "Specialist 4")
 	
+	var prop_decisions: Array = []
+	var struct_decisions: Array = []
+	var astro_decisions: Array = []
+	var sys_decisions: Array = []
+	
+	for d in Helios4CampaignData.team_decision_log:
+		var role = d.get("role", "")
+		var desc = d.get("description", "")
+		match role:
+			Helios4CampaignData.ROLE_PROPULSION:
+				prop_decisions.append(desc)
+			Helios4CampaignData.ROLE_STRUCTURAL:
+				struct_decisions.append(desc)
+			Helios4CampaignData.ROLE_ASTROGATOR:
+				astro_decisions.append(desc)
+			Helios4CampaignData.ROLE_SYSTEMS:
+				sys_decisions.append(desc)
+				
+	var prop_extra = (" [i]Logged: " + prop_decisions[-1] + "[/i]") if not prop_decisions.is_empty() else ""
+	var struct_extra = (" [i]Logged: " + struct_decisions[-1] + "[/i]") if not struct_decisions.is_empty() else ""
+	var astro_extra = (" [i]Logged: " + astro_decisions[-1] + "[/i]") if not astro_decisions.is_empty() else ""
+	var sys_extra = (" [i]Logged: " + sys_decisions[-1] + "[/i]") if not sys_decisions.is_empty() else ""
+
 	team_report_text.text = """[b]COOPERATIVE 4-OFFICER TEAM CONTRIBUTION REPORT:[/b]
-• [color=#fb923c]Propulsion Engineer [%s]:[/color] Controlled multi-stage ascent throttle, executed staging separation, and isolated damaged propellant manifold during micrometeoroid strike.
-• [color=#4ade80]Structural Architect [%s]:[/color] Maintained aerodynamic static margin > 1.2 calibers, monitored dynamic pressure through Max-Q (32 kPa), and audited spacecraft hull stress.
-• [color=#38bdf8]Astrogator [%s]:[/color] Programmed gravity-turn pitch schedule, calculated MCC-1 mid-course burn, and executed halo-orbit insertion capture at Sun-Earth L1.
-• [color=#e879f9]Systems Officer [%s]:[/color] Balanced solar power generation vs 165W electrical load, managed radiation safe mode, deployed magnetometer boom, and beamed the early-warning telemetry packet.""" % [prop_name, struct_name, astro_name, sys_name]
+• [color=#fb923c]Propulsion Engineer [%s]:[/color] Controlled multi-stage ascent throttle, executed staging separation, and isolated damaged propellant manifold during micrometeoroid strike.%s
+• [color=#4ade80]Structural Architect [%s]:[/color] Maintained aerodynamic static margin > 1.2 calibers, monitored dynamic pressure through Max-Q (32 kPa), and audited spacecraft hull stress.%s
+• [color=#38bdf8]Astrogator [%s]:[/color] Programmed trajectory pitch schedule, calculated MCC-1 mid-course burn, and executed halo-orbit insertion capture at Sun-Earth L1.%s
+• [color=#e879f9]Systems Officer [%s]:[/color] Balanced solar power generation vs electrical load, managed radiation safe mode, deployed magnetometer boom, and beamed the early-warning telemetry packet.%s""" % [
+		prop_name, prop_extra,
+		struct_name, struct_extra,
+		astro_name, astro_extra,
+		sys_name, sys_extra
+	]
 
 func _on_save_and_complete_pressed() -> void:
 	Helios4CampaignData.advance_to_stage(Helios4CampaignData.Stage.CAMPAIGN_COMPLETED)

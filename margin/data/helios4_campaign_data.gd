@@ -74,7 +74,7 @@ const STAGE_METADATA: Dictionary = {
 	Stage.PROLOGUE: {
 		"title": "PROLOGUE: THE 2038 CRISIS",
 		"subtitle": "Solar Superstorm Alert & Emergency Authorization",
-		"desc": "An extreme coronal mass ejection (CME) superstorm threatens Earth's power grids, navigation constellations, and satellite networks. An emergency mission — HELIOS-4 — is authorized to deploy a sentinel spacecraft to Sun-Earth L1."
+		"desc": "During an elevated solar-activity peak in 2038, existing space-weather early-warning sentinels at Sun-Earth L1 have degraded. Active Region AR-4890 threatens an extreme CME superstorm. An emergency mission — HELIOS-4 — is authorized to deploy a replacement sentinel to L1 before the CME erupts."
 	},
 	Stage.TEAM_ASSIGNMENT: {
 		"title": "TEAM ASSIGNMENT",
@@ -99,22 +99,22 @@ const STAGE_METADATA: Dictionary = {
 	Stage.PHASE_3_TRANSFER: {
 		"title": "PHASE 3: DEEP SPACE TRANSFER",
 		"subtitle": "1.5 Million Kilometers Sunward to Sun-Earth L1",
-		"desc": "Navigate the probe toward Sun-Earth L1. Orient solar arrays sunward, track DSN ground stations, and perform precision mid-course corrections."
+		"desc": "Navigate the probe toward Sun-Earth L1 while Active Region AR-4890 continues developing. Orient solar arrays sunward, track DSN ground stations, and perform precision mid-course corrections."
 	},
 	Stage.PHASE_4_CRISIS: {
 		"title": "PHASE 4: SPACE WEATHER EMERGENCY",
 		"subtitle": "Interactive Tactical Decision Scenarios",
-		"desc": "Survive deep-space hazards: intense solar proton flux, micrometeoroid propellant line leakage, and star tracker blackout."
+		"desc": "Survive deep-space precursor hazards: relativistic solar proton flux, micrometeoroid propellant line leakage, and star tracker blackout."
 	},
 	Stage.PHASE_5_L1_INSERTION: {
 		"title": "PHASE 5: L1 HALO-ORBIT INSERTION",
 		"subtitle": "Sun-Earth L1 Capture & Stationkeeping Lock",
-		"desc": "Execute the halo-orbit insertion burn around the unstable L1 libration point, verify orbital parameters, and secure stationkeeping propellant reserves."
+		"desc": "Execute the halo-orbit insertion burn around the unstable L1 saddle point, verify periodic 3D orbit parameters, and secure stationkeeping propellant reserves (modeled as an educational game assumption)."
 	},
 	Stage.PHASE_6_COMMISSIONING: {
 		"title": "PHASE 6: PROBE COMMISSIONING & WARNING TRANSMISSION",
 		"subtitle": "Science Instrument Activation & Earth Link",
-		"desc": "Deploy the magnetometer boom, activate the Faraday Cup plasma analyzer, calibrate instruments, and beam the first early-warning data packet to Earth."
+		"desc": "Deploy the magnetometer boom, activate the Faraday Cup plasma analyzer, establish the DSN carrier, and detect the arriving CME shockwave to beam the early-warning packet to Earth."
 	},
 	Stage.MISSION_DEBRIEF: {
 		"title": "MISSION DEBRIEF",
@@ -147,6 +147,16 @@ static var hangar_time_remaining: float = 600.0 # 10 minutes
 # Active Vehicle & Spacecraft Configuration
 static var vehicle_config: Dictionary = {}
 static var probe_config: Dictionary = {}
+
+# Cooperative Team Decision & Attribution History
+static var team_decision_log: Array = []
+
+static func record_team_decision(role_id: String, category: String, description: String) -> void:
+	team_decision_log.append({
+		"role": role_id,
+		"category": category,
+		"description": description
+	})
 
 # Flight Simulation Variables
 static var launch_telemetry: Dictionary = {}
@@ -184,6 +194,9 @@ static func get_default_vehicle_config() -> Dictionary:
 		"fairing_mass_kg": 420.0,
 		"fairing_diameter_m": 2.4,
 		"fairing_height_m": 4.8,
+		
+		# Astrogator Trajectory & Launch Window Selection
+		"trajectory_mode": "direct_injection", # "direct_injection" (110d) vs "phased_wsb" (135d)
 		
 		# Total vehicle cost
 		"vehicle_cost_m": 48.0
@@ -408,6 +421,13 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	var total_project_cost_m: float = v_cfg.get("vehicle_cost_m", 48.0) + total_probe_cost + 16.0 # $16M Ops/Ground Network
 	const BUDGET_CAP_M: float = 185.0
 	
+	# Astrogator Trajectory & Launch Window Selection
+	var traj_mode: String = v_cfg.get("trajectory_mode", "direct_injection")
+	var req_launch_dv: float = 8950.0 if traj_mode == "phased_wsb" else 9100.0
+	var req_probe_dv: float = 460.0 if traj_mode == "phased_wsb" else 420.0
+	var transfer_days: int = 135 if traj_mode == "phased_wsb" else 110
+	var traj_mode_name: String = "Phased WSB" if traj_mode == "phased_wsb" else "Direct Injection"
+
 	# --- ENGINEERING GATE CHECKS ---
 	var gate_checks: Array = []
 	
@@ -424,31 +444,27 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	})
 	
 	# Check 2: Launch Vehicle Delta-V to L1 Transfer Orbit
-	# Required to reach Sun-Earth L1 transfer from Earth pad: ~9,200 m/s (includes atmospheric loss & gravity drag)
-	const REQ_LAUNCH_DV: float = 9100.0
-	var launch_dv_valid: bool = (total_launch_delta_v >= REQ_LAUNCH_DV)
+	var launch_dv_valid: bool = (total_launch_delta_v >= req_launch_dv)
 	gate_checks.append({
 		"id": "launch_dv_check",
-		"name": "Launch Vehicle Trans-L1 Delta-V",
+		"name": "Launch Vehicle Trans-L1 Delta-V (%s)" % traj_mode_name,
 		"value_str": "%.0f m/s" % total_launch_delta_v,
-		"target_str": ">= 9,100 m/s",
+		"target_str": ">= %.0f m/s" % req_launch_dv,
 		"status": "PASS" if launch_dv_valid else "FAIL",
 		"role": ROLE_PROPULSION,
-		"advice": "Upper stage insertion into Sunward transfer trajectory confirmed." if launch_dv_valid else "Insufficient booster/upper-stage Delta-V to reach Earth-L1 transfer orbit."
+		"advice": ("Upper stage insertion into %s transfer confirmed." % ("weak-stability boundary (WSB) trajectory" if traj_mode == "phased_wsb" else "direct Sunward trajectory")) if launch_dv_valid else "Insufficient booster/upper-stage Delta-V to reach Earth-L1 transfer orbit."
 	})
 	
 	# Check 3: Probe Deep-Space Maneuver Delta-V (MCC + Halo Insertion + Stationkeeping)
-	# Required: ~420 m/s
-	const REQ_PROBE_DV: float = 420.0
-	var probe_dv_valid: bool = (delta_v_probe >= REQ_PROBE_DV)
+	var probe_dv_valid: bool = (delta_v_probe >= req_probe_dv)
 	gate_checks.append({
 		"id": "probe_dv_check",
-		"name": "Spacecraft Halo Insertion & Stationkeeping ΔV",
+		"name": "Spacecraft Halo Insertion & Stationkeeping ΔV (%s)" % traj_mode_name,
 		"value_str": "%.0f m/s" % delta_v_probe,
-		"target_str": ">= 420 m/s",
+		"target_str": ">= %.0f m/s" % req_probe_dv,
 		"status": "PASS" if probe_dv_valid else "FAIL",
 		"role": ROLE_ASTROGATOR,
-		"advice": "Ample propellant for MCC, L1 halo insertion, and 3-year stationkeeping." if probe_dv_valid else "Probe lacks propellant for halo insertion and stationkeeping at L1."
+		"advice": "Propellant reserve meets insertion and modeled stationkeeping budget (educational model)." if probe_dv_valid else "Probe lacks propellant for halo insertion and stationkeeping at L1 under selected trajectory mode."
 	})
 	
 	# Check 4: Aerodynamic Static Margin (CoM vs CoP)
@@ -510,8 +526,67 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"power_margin_w": power_margin_w,
 		"total_cost_m": total_project_cost_m,
 		"budget_cap_m": BUDGET_CAP_M,
+		"trajectory_mode": traj_mode,
+		"transfer_days": transfer_days,
+		"req_launch_dv": req_launch_dv,
+		"req_probe_dv": req_probe_dv,
 		"gate_checks": gate_checks,
 		"all_gate_checks_passed": all_passed
+	}
+
+# --- AUTHORITATIVE DEBRIEF SCORING FUNCTION ---
+
+static func calculate_debrief_score(l_tel: Dictionary, c_res: Dictionary, l1_tel: Dictionary) -> Dictionary:
+	# 1. Launch & Staging Pillar (Max 25.0 pts)
+	var stress: float = l_tel.get("structural_stress_pct", 0.0)
+	var traj_err: float = l_tel.get("trajectory_error_pct", 0.0)
+	var p1_score: float = snappedf(clamp(25.0 - (stress * 0.25) - (traj_err * 0.3), 5.0, 25.0), 0.1)
+	
+	# 2. Crisis Survival Pillar (Max 25.0 pts)
+	var deg: float = c_res.get("equipment_degradation_pct", 5.0)
+	var sci_bonus: float = c_res.get("science_bonus_pts", 10.0)
+	var p2_score: float = snappedf(clamp(25.0 - (deg * 0.4) + (sci_bonus * 0.3), 5.0, 25.0), 0.1)
+	
+	# 3. L1 Halo-Orbit & Stationkeeping Pillar (Max 25.0 pts)
+	var p3_score: float = 25.0
+	var final_fuel: float = l1_tel.get("final_propellant_kg", 200.0)
+	if final_fuel < 35.0:
+		p3_score = 10.0
+	elif final_fuel < 80.0:
+		p3_score = 18.0
+	else:
+		p3_score = 25.0
+	p3_score = snappedf(p3_score, 0.1)
+	
+	# 4. Early-Warning & Data Quality Pillar (Max 25.0 pts)
+	var warning_sent: bool = l1_tel.get("warning_packet_sent", true)
+	var p4_score: float = 25.0 if warning_sent else 0.0
+	p4_score = snappedf(p4_score, 0.1)
+	
+	var is_succ: bool = (p4_score > 0.0)
+	var total: float = snappedf(p1_score + p2_score + p3_score + p4_score, 0.1)
+	
+	var grade: String = "A+"
+	if total >= 90.0:
+		grade = "A+"
+	elif total >= 80.0:
+		grade = "A"
+	elif total >= 70.0:
+		grade = "B"
+	elif total >= 60.0:
+		grade = "C"
+	else:
+		grade = "F"
+		is_succ = false
+		
+	return {
+		"total_score": total,
+		"letter_grade": grade,
+		"is_success": is_succ,
+		"launch_pillar": p1_score,
+		"crisis_pillar": p2_score,
+		"l1_pillar": p3_score,
+		"warning_pillar": p4_score
 	}
 
 # --- PERSISTENCE: USER:// STORAGE ---
@@ -525,6 +600,7 @@ static func save_campaign_state() -> bool:
 		"highest_unlocked_stage": int(highest_unlocked_stage),
 		"player_count": player_count,
 		"team_player_names": team_player_names,
+		"team_decision_log": team_decision_log,
 		"vehicle_config": vehicle_config,
 		"probe_config": probe_config,
 		"launch_telemetry": launch_telemetry,
@@ -568,6 +644,8 @@ static func load_campaign_state() -> bool:
 	player_count = data.get("player_count", 1)
 	if data.has("team_player_names"):
 		team_player_names = data["team_player_names"]
+	if data.has("team_decision_log"):
+		team_decision_log = data["team_decision_log"]
 	if data.has("vehicle_config"):
 		vehicle_config = data["vehicle_config"]
 	if data.has("probe_config"):
@@ -599,6 +677,7 @@ static func reset_campaign() -> void:
 		ROLE_ASTROGATOR: "Specialist 3",
 		ROLE_SYSTEMS: "Specialist 4"
 	}
+	team_decision_log = []
 	active_role = ROLE_PROPULSION
 	vehicle_config = get_default_vehicle_config()
 	probe_config = get_default_probe_config()

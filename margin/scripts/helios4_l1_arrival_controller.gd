@@ -143,13 +143,13 @@ func _load_step(step: StageStep) -> void:
 			
 		StageStep.HOI_BURN:
 			status_banner.text = "HALO-ORBIT INSERTION BURN SUCCESSFUL"
-			step_desc.text = "Insertion burn complete (Δv = 280 m/s applied). Spacecraft captured into a stable 3D periodic halo orbit. Verifying stationkeeping propellant margins."
-			action_btn.text = "VERIFY 3-YEAR STATIONKEEPING RESERVES →"
+			step_desc.text = "Insertion burn complete (Δv = 280 m/s applied). Spacecraft captured into an educational periodic 3D halo orbit model. Verifying stationkeeping propellant margins."
+			action_btn.text = "VERIFY STATIONKEEPING RESERVES (EDUCATIONAL MODEL) →"
 			
 		StageStep.STATIONKEEPING_VERIFY:
 			var sk_ok = (propellant_kg >= 35.0)
 			status_banner.text = "● STATIONKEEPING RESERVES VALIDATED (%.1f kg REMAINING)" % propellant_kg if sk_ok else "▲ LOW STATIONKEEPING MARGIN"
-			step_desc.text = "L1 halo orbits are dynamically unstable and require regular stationkeeping burns every 90 days. Reserves confirm mission duration > 3 years."
+			step_desc.text = "Sun-Earth collinear Lagrange points are dynamically unstable saddle equilibria requiring active stationkeeping burns (~15–30 m/s/yr). Modeled propellant reserves support an extended 3-year baseline (educational game assumption)."
 			action_btn.text = "DEPLOY 4m MAGNETOMETER BOOM SUNWARD →"
 			
 		StageStep.BOOM_DEPLOY:
@@ -169,7 +169,7 @@ func _load_step(step: StageStep) -> void:
 			
 		StageStep.TRANSMIT_WARNING:
 			status_banner.text = "★ EARLY-WARNING DATA PACKET DELIVERED TO EARTH"
-			step_desc.text = "CRITICAL CME SHOCKWAVE DETECTED AT L1:\n• Solar Wind Velocity: 2,420 km/s (Severe shock)\n• Interplanetary Magnetic Field Bz: -31.5 nT (Extreme southward reconnection)\n• Proton Density: 46.2 p/cm³\n\nEARTH ADVANCE WARNING LEAD TIME: %.1f MINUTES\nEarth grid operators, satellite flight controllers, and aviation networks alerted." % lead_time_minutes
+			step_desc.text = "Following successful commissioning, the anticipated coronal mass ejection from Active Region AR-4890 has erupted from the Sun and its interplanetary shock front has reached L1:\n• Solar Wind Velocity: 2,420 km/s (Severe shock)\n• Interplanetary Magnetic Field Bz: -31.5 nT (Extreme southward reconnection)\n• Proton Density: 46.2 p/cm³\n\nEARTH ADVANCE WARNING LEAD TIME: %.1f MINUTES\nEarth grid operators, satellite flight controllers, and aviation networks alerted." % lead_time_minutes
 			action_btn.visible = false
 			proceed_debrief_btn.visible = true
 			get_tree().process_frame.connect(func():

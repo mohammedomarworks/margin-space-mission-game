@@ -225,11 +225,11 @@ server.listen(HTTP_PORT, async () => {
 
 			// Test DONKI benchmark catalog modal
 			const donkiCoord = trackedCoords['Prologue.DonkiBtn'] || { x: 343, y: 538 };
-			console.log(`  Clicking "VIEW DONKI LIVE REFERENCE" at (${donkiCoord.x}, ${donkiCoord.y})...`);
+			console.log(`  Clicking "DONKI REFERENCE CATALOGUE" at (${donkiCoord.x}, ${donkiCoord.y})...`);
 			await click(donkiCoord.x, donkiCoord.y);
 			await new Promise(r => setTimeout(r, 1200));
 			await capture('helios4_04_donki_catalog_modal.png');
-			console.log('  [PASS] DONKI Benchmark catalog modal loaded');
+			console.log('  [PASS] DONKI Benchmark reference catalog modal loaded (offline deterministic benchmark)');
 
 			// Close DONKI modal
 			const closeDonki = trackedCoords['Prologue.CloseDonkiBtn'] || { x: 1009, y: 108 };
@@ -272,6 +272,20 @@ server.listen(HTTP_PORT, async () => {
 			await click(tabStruct.x, tabStruct.y);
 			await new Promise(r => setTimeout(r, 800));
 			await capture('helios4_07_hangar_structural.png');
+
+			// Test Astrogator Workstation Tab
+			const tabAstro = trackedCoords['Hangar.TabAstrogator'] || { x: 526.5, y: 498.5 };
+			console.log(`  Switching to Astrogator Workstation Tab at (${tabAstro.x}, ${tabAstro.y})...`);
+			await click(tabAstro.x, tabAstro.y);
+			await new Promise(r => setTimeout(r, 800));
+			await capture('helios4_07b_hangar_astrogator.png');
+
+			// Test Systems Workstation Tab
+			const tabSys = trackedCoords['Hangar.TabSystems'] || { x: 700.5, y: 498.5 };
+			console.log(`  Switching to Systems Workstation Tab at (${tabSys.x}, ${tabSys.y})...`);
+			await click(tabSys.x, tabSys.y);
+			await new Promise(r => setTimeout(r, 800));
+			await capture('helios4_07c_hangar_systems.png');
 
 			// Step 4: Proceed to Engineering Readiness Review
 			const proceedFRR = trackedCoords['Hangar.ProceedToFRRBtn'] || { x: 1126.5, y: 498.5 };

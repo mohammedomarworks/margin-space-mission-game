@@ -55,10 +55,10 @@ func _ready() -> void:
 func _load_crisis_step(step: CrisisStep) -> void:
 	match step:
 		CrisisStep.EVENT_A_SOLAR_STORM:
-			step_title.text = "EVENT A: SOLAR PARTICLE EVENT (SPE) / RADIATION SURGE"
-			warning_banner.text = "▲ PROTON FLUX WARNING: High-energy solar proton event (>1,200 pfu at >10 MeV) sweeping past spacecraft bus."
+			step_title.text = "EVENT A: PRECURSOR SOLAR PARTICLE EVENT (SPE) / RADIATION SURGE"
+			warning_banner.text = "▲ PROTON FLUX WARNING: High-energy solar proton event (>1,200 pfu at >10 MeV) from flaring at Active Region AR-4890 sweeping past spacecraft bus."
 			warning_banner.add_theme_color_override("font_color", Color(0.98, 0.55, 0.15))
-			step_desc.text = "Intense solar energetic particles threaten unshielded sensor optics and high-voltage power lines. The crew must balance instrument survival against science data collection. Note: Changing spacecraft orientation does NOT deflect incoming relativistic protons."
+			step_desc.text = "Pre-storm flares at Active Region AR-4890 have accelerated relativistic protons along interplanetary magnetic field lines. While the critical CME shock front itself has not yet erupted toward Earth, this proton flux threatens unshielded sensor optics and high-voltage power lines. Changing spacecraft orientation does NOT deflect incoming relativistic protons."
 			
 			role_advice_label.text = "ADVISORY: Systems Officer advises Safe Mode to prevent single-event latchups. Astrogator verifies deep-space comm link remains stable."
 			
@@ -111,47 +111,56 @@ func _load_crisis_step(step: CrisisStep) -> void:
 func _make_choice(choice_idx: int) -> void:
 	match current_step:
 		CrisisStep.EVENT_A_SOLAR_STORM:
+			var title = ""
 			match choice_idx:
 				1: # Full Safe Mode
 					equipment_degradation_pct += 0.0
 					science_bonus_pts -= 12.0
-					decisions_log.append({"event": "Solar Storm", "choice": 1, "title": "Full Safe Mode", "role": Helios4CampaignData.ROLE_SYSTEMS})
+					title = "Full Safe Mode"
 				2: # Partial Protection
 					equipment_degradation_pct += 5.0
 					science_bonus_pts += 10.0
-					decisions_log.append({"event": "Solar Storm", "choice": 2, "title": "Partial Protection", "role": Helios4CampaignData.ROLE_SYSTEMS})
+					title = "Partial Protection"
 				3: # Continue Science
 					equipment_degradation_pct += 18.0
 					science_bonus_pts += 25.0
-					decisions_log.append({"event": "Solar Storm", "choice": 3, "title": "Continue Science", "role": Helios4CampaignData.ROLE_SYSTEMS})
+					title = "Continue Science"
+			decisions_log.append({"event": "Solar Storm", "choice": choice_idx, "title": title, "role": Helios4CampaignData.ROLE_SYSTEMS})
+			Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_SYSTEMS, "Precursor Solar Storm Mitigation", title)
 			current_step = CrisisStep.EVENT_B_MICROMETEOROID
 			_load_crisis_step(current_step)
 			
 		CrisisStep.EVENT_B_MICROMETEOROID:
+			var title = ""
 			match choice_idx:
 				1: # Rapid Isolation
 					propellant_lost_kg += 15.0
-					decisions_log.append({"event": "Micrometeoroid", "choice": 1, "title": "Rapid Isolation Valve", "role": Helios4CampaignData.ROLE_PROPULSION})
+					title = "Rapid Isolation Valve"
 				2: # Backup RCS
 					propellant_lost_kg += 38.0
-					decisions_log.append({"event": "Micrometeoroid", "choice": 2, "title": "Backup RCS Reroute", "role": Helios4CampaignData.ROLE_PROPULSION})
+					title = "Backup RCS Reroute"
 				3: # Blowdown
 					propellant_lost_kg += 75.0
-					decisions_log.append({"event": "Micrometeoroid", "choice": 3, "title": "Emergency Blowdown", "role": Helios4CampaignData.ROLE_PROPULSION})
+					title = "Emergency Blowdown"
+			decisions_log.append({"event": "Micrometeoroid", "choice": choice_idx, "title": title, "role": Helios4CampaignData.ROLE_PROPULSION})
+			Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_PROPULSION, "Propellant Line Rupture", title)
 			current_step = CrisisStep.EVENT_C_SENSOR_BLACKOUT
 			_load_crisis_step(current_step)
 			
 		CrisisStep.EVENT_C_SENSOR_BLACKOUT:
+			var title = ""
 			match choice_idx:
 				1: # IMU
 					attitude_accuracy_deg = 0.08
-					decisions_log.append({"event": "Sensor Blackout", "choice": 1, "title": "Inertial IMU Switch", "role": Helios4CampaignData.ROLE_ASTROGATOR})
+					title = "Inertial IMU Switch"
 				2: # Ground DSN
 					attitude_accuracy_deg = 0.02
-					decisions_log.append({"event": "Sensor Blackout", "choice": 2, "title": "DSN Radiometric Uplink", "role": Helios4CampaignData.ROLE_ASTROGATOR})
+					title = "DSN Radiometric Uplink"
 				3: # Manual RCS Challenge
 					attitude_accuracy_deg = 0.15
-					decisions_log.append({"event": "Sensor Blackout", "choice": 3, "title": "Manual RCS Kinematic Pulse", "role": Helios4CampaignData.ROLE_ASTROGATOR})
+					title = "Manual RCS Kinematic Pulse"
+			decisions_log.append({"event": "Sensor Blackout", "choice": choice_idx, "title": title, "role": Helios4CampaignData.ROLE_ASTROGATOR})
+			Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_ASTROGATOR, "Star Tracker Attitude Recovery", title)
 			current_step = CrisisStep.ALL_CRISES_RESOLVED
 			_load_crisis_step(current_step)
 

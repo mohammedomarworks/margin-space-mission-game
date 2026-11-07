@@ -191,17 +191,17 @@ static func _create_helios4_scenario():
 	s.max_eclipse_min = 0.0 # Quasi-continuous solar illumination (halo orbit prevents Earth eclipses)
 	s.ref_mcc_delta_v_ms = 45.0 # Mid-course correction maneuvers
 	s.ref_loi_delta_v_ms = 280.0 # Halo orbit insertion burn
-	s.ref_stationkeeping_delta_v_ms = 120.0 # 3-year stationkeeping budget (halo orbits are dynamically unstable)
+	s.ref_stationkeeping_delta_v_ms = 120.0 # Stationkeeping budget (~25–40 m/s/yr modeled as an educational game assumption)
 	s.required_delta_v_ms = 445.0 # Total probe ΔV
 	
 	s.default_orbit_id = "orbit_l1_halo"
 	s.default_transfer_id = "transfer_earth_l1"
 	s.default_vehicle_id = "lv_commercial_medium"
-	s.allowed_orbit_ids = ["orbit_l1_halo", "orbit_l1_lissajous"]
+	s.allowed_orbit_ids = ["orbit_l1_halo"]
 	s.allowed_transfer_ids = ["transfer_earth_l1", "transfer_wsb_l1"]
 	
-	s.scientific_goal = "Station an uncrewed solar-weather early-warning observatory in a stable halo orbit around Sun-Earth L1 to provide continuous plasma, magnetic field, and energetic particle warnings 15 to 60 minutes before CMEs impact Earth."
-	s.scientific_caution = "Sun-Earth L1 is approximately 1.5 million km sunward (only 1% of the distance to the Sun), not the midpoint. Halo orbits around L1 require continuous stationkeeping propellant because libration point collinear orbits are dynamically unstable. The spacecraft is uncrewed."
+	s.scientific_goal = "Station an uncrewed solar-weather early-warning replacement observatory in a periodic 3D halo orbit around Sun-Earth L1 to establish continuous plasma, magnetic field, and energetic particle warnings 15 to 60 minutes before upcoming CMEs reach Earth."
+	s.scientific_caution = "Sun-Earth L1 is approximately 1.5 million km sunward (only 1% of the distance to the Sun), not the midpoint. Collinear Lagrange points are dynamically unstable saddle equilibria; periodic 3D halo orbits require continuous stationkeeping burns (~15–30 m/s/yr; educational game model). The spacecraft is uncrewed."
 	s.target_system_name = "Solar Weather Monitors"
 	s.coverage_label = "L1 Early Warning Telemetry"
 	s.educational_notes = "Inspired by NASA's DSCOVR and SOHO missions. DSCOVR PlasMag instruments measure solar wind velocity, density, and magnetic field direction (especially Bz)."

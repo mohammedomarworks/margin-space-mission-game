@@ -2,15 +2,16 @@ class_name DonkiService
 extends RefCounted
 
 # ==============================================================================
-# NASA DONKI — SPACE-WEATHER REFERENCE & LIVE API CONNECTOR
-# Official CCMC Domain: https://ccmc.gsfc.nasa.gov/DONKI/ (Migrated Sept 30, 2026)
+# NASA DONKI — SPACE-WEATHER REFERENCE CATALOGUE & DETERMINISTIC BENCHMARKS
+# Official CCMC Domain: https://ccmc.gsfc.nasa.gov/DONKI/
 # Reference: Space Weather Database Of Notifications, Knowledge, Information
 #
-# IMPORTANT EDUCATIONAL DISTINCTION:
-# Real-world space weather data (CMEs, solar flares, geomagnetic storms) is
-# provided as an optional educational reference and live challenge mode.
-# The 2038 fictional HELIOS-4 campaign remains fully playable offline with
-# deterministic local fallbacks.
+# IMPORTANT SCIENTIFIC & ARCHITECTURAL DISTINCTION:
+# This module provides a deterministic offline reference catalogue of real
+# historical benchmarks (May 2024 Mother's Day storm, 2003 Halloween storm)
+# and hypothetical 2038 campaign scenarios based on NASA CCMC parameters.
+# It does NOT perform live network requests or claim live data integration.
+# No private API keys are stored or transmitted.
 # ==============================================================================
 
 const BASE_URL: String = "https://ccmc.gsfc.nasa.gov/DONKI/WS/get/"
@@ -21,9 +22,9 @@ static var OFFLINE_EVENT_CATALOG: Array = [
 	{
 		"event_id": "2038-CME-EXTREME-01",
 		"type": "CME",
-		"label": "2038 HELIOS-4 Campaign Superstorm (Carrington-Scale Scenario)",
+		"label": "2038 HELIOS-4 Campaign Scenario (Hypothetical Carrington-Scale Threat)",
 		"timestamp": "2038-10-14T06:22:00Z",
-		"source": "Active Region AR-4188 (Direct Solar Meridian)",
+		"source": "Active Region AR-4890 (Direct Solar Meridian)",
 		"cme_speed_kms": 2450.0,
 		"half_angle_deg": 85.0, # Fast Halo CME
 		"transit_time_hours": 16.5,
@@ -33,7 +34,7 @@ static var OFFLINE_EVENT_CATALOG: Array = [
 		"interplanetary_magnetic_field_bz_nt": -34.0, # Strong Southward IMF
 		"educational_risk_level": "CRITICAL (G5+)",
 		"game_severity": 5,
-		"impact_description": "Direct Earth-directed ultrafast halo CME. Compression of dayside magnetopause inside geosynchronous orbit (GEO). Extreme satellite surface charging and deep-dielectric discharge danger.",
+		"impact_description": "Hypothetical direct Earth-directed ultrafast halo CME erupting from AR-4890 after HELIOS-4 commissioning at L1. Dayside magnetopause compressed inside GEO. Advance warning packet delivered to Earth before arrival.",
 		"is_live_data": false
 	},
 	{

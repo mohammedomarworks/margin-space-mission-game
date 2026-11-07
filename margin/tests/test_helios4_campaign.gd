@@ -30,9 +30,11 @@ func _init() -> void:
 	test_scenario_registration_and_astrodynamics()
 	test_four_cooperative_roles()
 	test_hangar_multistage_physics_and_twr()
+	test_astrogator_trajectory_mode_and_team_log()
 	test_launch_max_q_and_staging()
 	test_deep_space_transfer_and_crises()
 	test_l1_halo_insertion_and_early_warning()
+	test_debrief_score_arithmetic()
 	test_campaign_persistence()
 	test_donki_space_weather_service()
 	
@@ -129,6 +131,33 @@ func test_hangar_multistage_physics_and_twr() -> void:
 	_assert_true(tel["total_cost_m"] <= tel["budget_cap_m"], "Total campaign cost is within $185.0M ceiling")
 	_assert_true(tel["all_gate_checks_passed"], "All engineering readiness review gate checks pass on default build")
 
+func test_astrogator_trajectory_mode_and_team_log() -> void:
+	print("\n[TEST 3B] Astrogator Trajectory Modes & Shared Team Decision Log")
+	var v_cfg = Helios4CampaignData.get_default_vehicle_config()
+	v_cfg["trajectory_mode"] = "direct_injection"
+	Helios4CampaignData.vehicle_config = v_cfg
+	
+	var tel_direct = Helios4CampaignData.calculate_hangar_telemetry()
+	_assert_true(tel_direct["req_launch_dv"] == 9100.0, "Direct injection requires 9,100 m/s launch Delta-V")
+	_assert_true(tel_direct["req_probe_dv"] == 420.0, "Direct injection requires 420 m/s probe capture/SK Delta-V")
+	_assert_true(tel_direct["transfer_days"] == 110, "Direct injection cruise duration is 110 days")
+	
+	v_cfg["trajectory_mode"] = "phased_wsb"
+	Helios4CampaignData.vehicle_config = v_cfg
+	var tel_wsb = Helios4CampaignData.calculate_hangar_telemetry()
+	_assert_true(tel_wsb["req_launch_dv"] == 8950.0, "Phased WSB transfer reduces launch Delta-V threshold to 8,950 m/s")
+	_assert_true(tel_wsb["req_probe_dv"] == 460.0, "Phased WSB transfer requires 460 m/s probe maneuver Delta-V")
+	_assert_true(tel_wsb["transfer_days"] == 135, "Phased WSB transfer cruise duration is 135 days")
+	
+	# Verify team decision logging
+	Helios4CampaignData.team_decision_log.clear()
+	Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_ASTROGATOR, "Trajectory Optimization", "Selected Phased WSB transfer mode (135-Day cruise)")
+	Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_PROPULSION, "Engine Selection", "Selected Hydrolox Quad")
+	
+	_assert_true(Helios4CampaignData.team_decision_log.size() == 2, "Team decision log recorded two specialist actions")
+	_assert_true(Helios4CampaignData.team_decision_log[0]["role"] == Helios4CampaignData.ROLE_ASTROGATOR, "Astrogator decision recorded in team history")
+	_assert_true(Helios4CampaignData.team_decision_log[1]["role"] == Helios4CampaignData.ROLE_PROPULSION, "Propulsion decision recorded in team history")
+
 func test_launch_max_q_and_staging() -> void:
 	print("\n[TEST 4] Phase 2 Launch, Max-Q Dynamic Pressure & Staging")
 	# Atmospheric density at 12 km: rho = rho_0 * exp(-12000 / 7500)
@@ -175,6 +204,40 @@ func test_l1_halo_insertion_and_early_warning() -> void:
 	
 	_assert_approx(lead_time_min, 10.33, 1.0, "Physics calculation of advance warning lead time (t = d / v) confirmed")
 	_assert_true(lead_time_min >= 10.0 and lead_time_min <= 60.0, "Advance warning lead time is in the authentic 15 to 60 minute operational window for solar storms")
+
+func test_debrief_score_arithmetic() -> void:
+	print("\n[TEST 6B] Authoritative Debrief Scoring Function & Pillar Arithmetic Consistency")
+	# Case 1: High-performance run with minor stress
+	var l_tel_1 = {"structural_stress_pct": 2.4, "trajectory_error_pct": 0.0}
+	var c_res_1 = {"equipment_degradation_pct": 5.0, "science_bonus_pts": 10.0}
+	var l1_tel_1 = {"final_propellant_kg": 205.0, "warning_packet_sent": true}
+	
+	var res1 = Helios4CampaignData.calculate_debrief_score(l_tel_1, c_res_1, l1_tel_1)
+	var expected_sum1 = snappedf(res1["launch_pillar"] + res1["crisis_pillar"] + res1["l1_pillar"] + res1["warning_pillar"], 0.1)
+	
+	_assert_approx(res1["total_score"], expected_sum1, 0.001, "Debrief category scores exactly sum to reported overall score (%.1f + %.1f + %.1f + %.1f == %.1f)" % [
+		res1["launch_pillar"], res1["crisis_pillar"], res1["l1_pillar"], res1["warning_pillar"], res1["total_score"]
+	])
+	_assert_true(res1["is_success"], "Mission marked as successful")
+	_assert_true(res1["letter_grade"] == "A+", "Total score >= 90 receives A+ grade")
+	
+	# Case 2: Degraded run with heavy damage and lower fuel
+	var l_tel_2 = {"structural_stress_pct": 12.0, "trajectory_error_pct": 4.0}
+	var c_res_2 = {"equipment_degradation_pct": 18.0, "science_bonus_pts": 0.0}
+	var l1_tel_2 = {"final_propellant_kg": 50.0, "warning_packet_sent": true}
+	
+	var res2 = Helios4CampaignData.calculate_debrief_score(l_tel_2, c_res_2, l1_tel_2)
+	var expected_sum2 = snappedf(res2["launch_pillar"] + res2["crisis_pillar"] + res2["l1_pillar"] + res2["warning_pillar"], 0.1)
+	
+	_assert_approx(res2["total_score"], expected_sum2, 0.001, "Degraded debrief category scores sum exactly to total score")
+	_assert_true(res2["l1_pillar"] == 18.0, "Propellant between 35 and 80 kg scores 18.0 pts")
+	
+	# Case 3: Failed early warning delivery
+	var l1_tel_3 = {"final_propellant_kg": 50.0, "warning_packet_sent": false}
+	var res3 = Helios4CampaignData.calculate_debrief_score(l_tel_2, c_res_2, l1_tel_3)
+	_assert_true(res3["warning_pillar"] == 0.0, "Failed warning transmission gives 0 pts on warning pillar")
+	_assert_true(not res3["is_success"], "Failed warning transmission marks mission as degraded/failed")
+	_assert_approx(res3["total_score"], snappedf(res3["launch_pillar"] + res3["crisis_pillar"] + res3["l1_pillar"] + res3["warning_pillar"], 0.1), 0.001, "Failed run category scores still sum exactly to total score")
 
 func test_campaign_persistence() -> void:
 	print("\n[TEST 7] Campaign State Persistence to user:// Storage")

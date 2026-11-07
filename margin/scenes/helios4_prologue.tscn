@@ -193,17 +193,17 @@ layout_mode = 2
 layout_mode = 2
 size_flags_vertical = 3
 bbcode_enabled = true
-text = "[color=#f87171][b]SITUATION ASSESSMENT (OCTOBER 2038):[/b][/color]
-Extreme Active Region AR-4188 has rotated into direct Sun-Earth alignment. Coronal imaging confirms the onset of an unprecedented coronal mass ejection (CME) shock front traveling toward Earth in excess of 2,400 km/s.
+text = "[color=#f87171][b]SITUATION ASSESSMENT (YEAR 2038 — SOLAR CYCLE MAXIMUM):[/b][/color]
+During an intense 2038 solar activity peak, heritage early-warning satellites stationed at Sun-Earth L1 have suffered critical electronic degradation. Simultaneously, hyperactive complex Active Region AR-4890 is exhibiting extreme magnetic shear, posing imminent superstorm CME risks, though the critical shockwave has not yet erupted.
 
 [color=#38bdf8][b]OPERATIONAL MISSION OBJECTIVE:[/b][/color]
-A specialized four-officer team is authorized to construct, launch, navigate, and commission the [b]HELIOS-4[/b] early-warning spacecraft into a stable [b]halo orbit at Sun-Earth L1[/b] (~1.5 million kilometers sunward from Earth).
+A specialized four-officer team is authorized to construct, launch, navigate, and commission the [b]HELIOS-4 replacement sentinel[/b] into a periodic 3D halo orbit at Sun-Earth L1 (~1.5 million km sunward). The observatory must establish full operational capability before the anticipated superstorm eruption reaches Earth.
 
 [color=#fbbf24][b]KEY SCIENTIFIC & ENGINEERING PRINCIPLES:[/b][/color]
 • [b]Sun-Earth L1 Location:[/b] L1 is located approximately 1.5 million km sunward (only ~1% of the distance from Earth to the Sun), [b]NOT[/b] the midpoint.
-• [b]Halo Orbit Dynamics:[/b] The spacecraft enters a periodic 3D halo orbit around the unstable L1 libration point. It does not stop at a fixed point, and requires continuous stationkeeping propellant.
-• [b]Uncrewed Vehicle:[/b] HELIOS-4 is an autonomous robotic probe. There is no human crew, life-support, or oxygen subsystem.
-• [b]NASA DSCOVR Heritage:[/b] Utilizing Faraday Cup plasma analyzers and triaxial fluxgate magnetometers to measure solar wind velocity, density, and magnetic field direction (Bz) to beam early warnings (15–60 min lead time) to Earth."
+• [b]Periodic 3D Halo Orbit:[/b] The probe operates in a periodic 3D halo orbit around the unstable L1 saddle point. It does not stop at a fixed point, requiring continuous stationkeeping maneuvers (~15–30 m/s/yr; educational game model).
+• [b]Uncrewed Vehicle:[/b] HELIOS-4 is an autonomous robotic probe. There is no human life-support or oxygen subsystem.
+• [b]NASA DSCOVR Heritage:[/b] Utilizing Faraday Cup plasma analyzers and fluxgate magnetometers to measure solar wind velocity, density, and magnetic field direction (Bz) to beam early warnings (15–60 min lead time) to Earth."
 
 [node name="ButtonGroup" type="HBoxContainer" parent="CanvasLayer/RootUI/CenterCard/VBox"]
 layout_mode = 2
@@ -214,7 +214,7 @@ custom_minimum_size = Vector2(240, 42)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn")
 theme_override_font_sizes/font_size = 12
-text = "VIEW DONKI LIVE REFERENCE"
+text = "DONKI REFERENCE CATALOGUE"
 
 [node name="Spacer" type="Control" parent="CanvasLayer/RootUI/CenterCard/VBox/ButtonGroup"]
 layout_mode = 2
@@ -256,7 +256,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.35, 0.85, 1.0, 1)
 theme_override_font_sizes/font_size = 16
-text = "NASA DONKI / CCMC SPACE WEATHER CATALOG"
+text = "NASA DONKI REFERENCE CATALOGUE (CACHED BENCHMARKS)"
 
 [node name="CloseDonkiBtn" type="Button" parent="CanvasLayer/RootUI/DonkiModal/VBox/HBox"]
 custom_minimum_size = Vector2(30, 30)
@@ -267,7 +267,7 @@ text = "✕"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
 theme_override_font_sizes/font_size = 11
-text = "Official CCMC Domain: https://ccmc.gsfc.nasa.gov/DONKI/ • Benchmark Space Weather Events:"
+text = "CCMC DONKI Reference Archive • Cached Space-Weather Benchmarks & Deterministic Scenarios (Offline Mode):"
 
 [node name="Scroll" type="ScrollContainer" parent="CanvasLayer/RootUI/DonkiModal/VBox"]
 layout_mode = 2
