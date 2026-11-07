@@ -5,7 +5,7 @@ const { spawn } = require('child_process');
 
 const HTTP_PORT = 8133;
 const CDP_PORT = 9263;
-const WEB_DIR = path.resolve(__dirname, '../../build/testing_web');
+const WEB_DIR = process.env.WEB_DIR || path.resolve(__dirname, '../../build/web');
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PROFILE_DIR = '/tmp/margin_frontier_qa_' + Date.now();
 const ARTIFACT_DIR = '/Users/omar/.gemini/antigravity/brain/8d4b5f52-e848-41d3-8332-b9e596076e00';
@@ -148,7 +148,7 @@ server.listen(HTTP_PORT, async () => {
 			await new Promise(r => setTimeout(r, 500));
 			try {
 				const check = await callCDP('Runtime.evaluate', {
-					expression: `document.getElementById('canvas') !== null && document.getElementById('status-container').style.display === 'none'`
+					expression: `document.getElementById('canvas') !== null && (document.getElementById('status') === null || document.getElementById('status').style.opacity === '0' || (document.getElementById('status-container') && document.getElementById('status-container').style.display === 'none'))`
 				});
 				if (check.result && check.result.value === true) {
 					ready = true;
