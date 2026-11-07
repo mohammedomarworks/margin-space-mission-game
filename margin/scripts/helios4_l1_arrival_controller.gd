@@ -47,12 +47,24 @@ var mag_boom_deployed: bool = false
 var faraday_cup_active: bool = false
 var earth_comm_linked: bool = false
 var warning_packet_sent: bool = false
-var lead_time_minutes: float = 42.5
+
+# Physical & Trajectory Constants
+const L1_DISTANCE_KM: float = 1500000.0
+var shock_velocity_km_s: float = 2420.0
+var lead_time_minutes: float = 0.0
+
+# Trajectory parameters for educational 3D parametric halo orbit model
+# Spatial displacement in all three axes: X (Sun-Earth axis), Y (in-plane), Z (out-of-plane)
+# Note: This is an educational parametric visualization, not a numerically integrated CR3BP orbit.
+const HALO_AX: float = 0.85
+const HALO_AY: float = 2.4
+const HALO_AZ: float = 3.4
 
 # Halo Orbit Animation
 var _halo_angle: float = 0.0
 
 func _ready() -> void:
+	lead_time_minutes = Helios4CampaignData.calculate_warning_lead_time_minutes(shock_velocity_km_s, L1_DISTANCE_KM)
 	var crisis_lost = Helios4CampaignData.crisis_results.get("propellant_lost_kg", 20.0)
 	var transfer_rem = Helios4CampaignData.transfer_telemetry.get("propellant_remaining_kg", 300.0)
 	propellant_kg = max(20.0, transfer_rem - crisis_lost)
@@ -71,15 +83,25 @@ func _ready() -> void:
 	, CONNECT_ONE_SHOT)
 
 func _process(delta: float) -> void:
-	# Animate probe orbiting in a 3D halo ellipse around L1
+	# Animate probe along educational 3D parametric halo orbit
 	_halo_angle += delta * 0.4
 	if probe_node and current_step >= StageStep.HOI_BURN:
-		# Halo orbit is elliptical in the Y-Z plane perpendicular to Sun-Earth X-axis
-		var halo_radius_y = 2.2
-		var halo_radius_z = 3.6
-		probe_node.position.y = sin(_halo_angle) * halo_radius_y
-		probe_node.position.z = cos(_halo_angle) * halo_radius_z
-		probe_node.rotation.y = -_halo_angle + deg_to_rad(90)
+		# Parametric 3D halo model with non-zero spatial variation across X, Y, and Z
+		var pos = Vector3(
+			-HALO_AX * cos(2.0 * _halo_angle),
+			HALO_AY * sin(_halo_angle),
+			HALO_AZ * cos(_halo_angle)
+		)
+		probe_node.position = pos
+		
+		# Align attitude along velocity tangent
+		var tan_vel = Vector3(
+			2.0 * HALO_AX * sin(2.0 * _halo_angle),
+			HALO_AY * cos(_halo_angle),
+			-HALO_AZ * sin(_halo_angle)
+		)
+		if tan_vel.length_squared() > 0.001:
+			probe_node.look_at(probe_node.position + tan_vel.normalized(), Vector3.UP)
 
 func _build_probe_visual() -> void:
 	if not probe_node:
@@ -120,36 +142,107 @@ func _build_probe_visual() -> void:
 func _update_halo_orbit_visual() -> void:
 	if not halo_ring:
 		return
-	var torus := TorusMesh.new()
-	torus.inner_radius = 2.8
-	torus.outer_radius = 3.2
-	halo_ring.mesh = torus
-	halo_ring.rotation_degrees = Vector3(0.0, 90.0, 0.0)
+	halo_ring.mesh = _generate_halo_tube_mesh(HALO_AX, HALO_AY, HALO_AZ, 0.06, 64, 8)
+	halo_ring.position = Vector3.ZERO
+	halo_ring.rotation_degrees = Vector3.ZERO
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.22, 0.74, 0.96, 0.6)
+	mat.albedo_color = Color(0.22, 0.74, 0.96, 0.65)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.emission_enabled = true
-	mat.emission = Color(0.15, 0.5, 0.8)
+	mat.emission = Color(0.18, 0.58, 0.92)
+	mat.emission_energy_multiplier = 1.5
 	halo_ring.material_override = mat
+
+func _generate_halo_tube_mesh(ax: float, ay: float, az: float, tube_radius: float = 0.06, num_curve_pts: int = 64, num_tube_sides: int = 8) -> ArrayMesh:
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var indices := PackedInt32Array()
+	
+	var curve_pts: Array[Vector3] = []
+	var tangents: Array[Vector3] = []
+	var normals_arr: Array[Vector3] = []
+	var binormals: Array[Vector3] = []
+	
+	for i in range(num_curve_pts):
+		var phi = (float(i) / float(num_curve_pts)) * TAU
+		var pt = Vector3(
+			-ax * cos(2.0 * phi),
+			ay * sin(phi),
+			az * cos(phi)
+		)
+		var tan = Vector3(
+			2.0 * ax * sin(2.0 * phi),
+			ay * cos(phi),
+			-az * sin(phi)
+		).normalized()
+		
+		var approx_up = Vector3.UP if abs(tan.dot(Vector3.UP)) < 0.9 else Vector3.FORWARD
+		var norm = tan.cross(approx_up).normalized()
+		var binorm = tan.cross(norm).normalized()
+		
+		curve_pts.append(pt)
+		tangents.append(tan)
+		normals_arr.append(norm)
+		binormals.append(binorm)
+		
+	for i in range(num_curve_pts):
+		var center = curve_pts[i]
+		var norm = normals_arr[i]
+		var binorm = binormals[i]
+		
+		for j in range(num_tube_sides):
+			var theta = (float(j) / float(num_tube_sides)) * TAU
+			var local_dir = (norm * cos(theta) + binorm * sin(theta)).normalized()
+			var v = center + local_dir * tube_radius
+			vertices.append(v)
+			normals.append(local_dir)
+			
+	for i in range(num_curve_pts):
+		var next_i = (i + 1) % num_curve_pts
+		for j in range(num_tube_sides):
+			var next_j = (j + 1) % num_tube_sides
+			
+			var idx00 = i * num_tube_sides + j
+			var idx01 = i * num_tube_sides + next_j
+			var idx10 = next_i * num_tube_sides + j
+			var idx11 = next_i * num_tube_sides + next_j
+			
+			indices.append(idx00)
+			indices.append(idx10)
+			indices.append(idx01)
+			
+			indices.append(idx01)
+			indices.append(idx10)
+			indices.append(idx11)
+			
+	var arrays = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = indices
+	
+	var arr_mesh = ArrayMesh.new()
+	arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return arr_mesh
 
 func _load_step(step: StageStep) -> void:
 	match step:
 		StageStep.APPROACH:
-			status_banner.text = "APPROACHING SUN-EARTH L1 LIBRATION POINT (1.5M km Sunward)"
-			step_desc.text = "The spacecraft has arrived at the Sun-Earth L1 saddle point. Astrogator must command the Halo-Orbit Insertion (HOI) burn to capture the probe into a periodic 3D halo orbit."
+			status_banner.text = "APPROACHING SUN-EARTH L1 REGION (1.5M km Sunward)"
+			step_desc.text = "The spacecraft has arrived near the Sun-Earth L1 region (1,500,000 km sunward). Astrogator must command the Halo-Orbit Insertion (HOI) burn to capture the probe into a closed 3D halo orbit path (educational parametric model; not full CR3BP propagation)."
 			action_btn.text = "EXECUTE HALO-ORBIT INSERTION BURN (-35 kg) →"
 			fuel_reserve_lbl.text = "Propellant: %.1f kg" % propellant_kg
-			warning_time_lbl.text = "Advance Lead Time: Calculating..."
+			warning_time_lbl.text = "Early Warning: %.2f min (d: 1.5M km | v: %.0f km/s)" % [lead_time_minutes, shock_velocity_km_s]
 			
 		StageStep.HOI_BURN:
 			status_banner.text = "HALO-ORBIT INSERTION BURN SUCCESSFUL"
-			step_desc.text = "Insertion burn complete (Δv = 280 m/s applied). Spacecraft captured into an educational periodic 3D halo orbit model. Verifying stationkeeping propellant margins."
-			action_btn.text = "VERIFY STATIONKEEPING RESERVES (EDUCATIONAL MODEL) →"
+			step_desc.text = "Insertion burn complete (Δv = 280 m/s applied). Spacecraft captured into educational 3D parametric halo orbit (non-zero spatial motion across X, Y, and Z axes). Verifying stationkeeping propellant margins."
+			action_btn.text = "VERIFY STATIONKEEPING RESERVES (EDUCATIONAL THRESHOLD) →"
 			
 		StageStep.STATIONKEEPING_VERIFY:
 			var sk_ok = (propellant_kg >= 35.0)
-			status_banner.text = "● STATIONKEEPING RESERVES VALIDATED (%.1f kg REMAINING)" % propellant_kg if sk_ok else "▲ LOW STATIONKEEPING MARGIN"
-			step_desc.text = "Sun-Earth collinear Lagrange points are dynamically unstable saddle equilibria requiring active stationkeeping burns (~15–30 m/s/yr). Modeled propellant reserves support an extended 3-year baseline (educational game assumption)."
+			status_banner.text = "● STATIONKEEPING RESERVE THRESHOLD VERIFIED (%.1f kg REMAINING)" % propellant_kg if sk_ok else "▲ BELOW ILLUSTRATIVE STATIONKEEPING THRESHOLD"
+			step_desc.text = "Collinear Lagrange points are dynamically unstable saddle equilibria requiring active stationkeeping maneuvers (~15–30 m/s/yr). Remaining propellant satisfies the > 35 kg illustrative reserve threshold (educational game model; actual operational lifetimes depend on tracking uncertainty and navigation dispersion rather than a guaranteed duration)."
 			action_btn.text = "DEPLOY 4m MAGNETOMETER BOOM SUNWARD →"
 			
 		StageStep.BOOM_DEPLOY:
@@ -164,12 +257,18 @@ func _load_step(step: StageStep) -> void:
 			
 		StageStep.EARTH_LINK:
 			status_banner.text = "★ DEEP SPACE NETWORK CARRIER LOCKED (GOLDSTONE & MADRID)"
-			step_desc.text = "High-gain X/Ka-band dish gimbaled directly toward Earth. RF Link margin +4.2 dB. Ready to package early-warning telemetry data packet."
+			step_desc.text = "High-gain X/Ka-band dish gimbaled directly toward Earth. RF Link margin +4.2 dB. Ready to transmit early-warning telemetry packet (Calculated lead time: %.2f min at %.0f km/s across 1,500,000 km distance)." % [lead_time_minutes, shock_velocity_km_s]
 			action_btn.text = "TRANSMIT EARLY-WARNING TELEMETRY PACKET →"
 			
 		StageStep.TRANSMIT_WARNING:
 			status_banner.text = "★ EARLY-WARNING DATA PACKET DELIVERED TO EARTH"
-			step_desc.text = "Following successful commissioning, the anticipated coronal mass ejection from Active Region AR-4890 has erupted from the Sun and its interplanetary shock front has reached L1:\n• Solar Wind Velocity: 2,420 km/s (Severe shock)\n• Interplanetary Magnetic Field Bz: -31.5 nT (Extreme southward reconnection)\n• Proton Density: 46.2 p/cm³\n\nEARTH ADVANCE WARNING LEAD TIME: %.1f MINUTES\nEarth grid operators, satellite flight controllers, and aviation networks alerted." % lead_time_minutes
+			step_desc.text = "Following successful commissioning, the anticipated coronal mass ejection from Active Region AR-4890 has erupted from the Sun and its interplanetary shock front has reached Sun-Earth L1:\n• CME Shock Velocity: %.0f km/s (Severe shock)\n• L1-to-Earth Distance: %.1f Million km (1,500,000 km)\n• Authoritative Early-Warning Lead Time: %.2f Minutes (t = d / v / 60)\n• Interplanetary Magnetic Field Bz: -31.5 nT (Extreme southward reconnection)\n• Proton Density: 46.2 p/cm³\n\nEARTH ADVANCE WARNING DELIVERED: %.2f MINUTES\nEarth grid operators, satellite flight controllers, and aviation networks alerted." % [
+				shock_velocity_km_s,
+				L1_DISTANCE_KM / 1000000.0,
+				lead_time_minutes,
+				lead_time_minutes
+			]
+			warning_time_lbl.text = "Advance Lead Time Delivered: %.2f min (d: 1.5M km | v: %.0f km/s)" % [lead_time_minutes, shock_velocity_km_s]
 			action_btn.visible = false
 			proceed_debrief_btn.visible = true
 			get_tree().process_frame.connect(func():
@@ -206,7 +305,7 @@ func _on_action_pressed() -> void:
 			
 		StageStep.EARTH_LINK:
 			warning_packet_sent = true
-			warning_time_lbl.text = "Advance Warning Lead Time: %.1f Minutes" % lead_time_minutes
+			warning_time_lbl.text = "Advance Warning Lead Time: %.2f Minutes" % lead_time_minutes
 			current_step = StageStep.TRANSMIT_WARNING
 			_load_step(current_step)
 
@@ -219,8 +318,9 @@ func _on_proceed_to_debrief_pressed() -> void:
 		"faraday_cup_active": faraday_cup_active,
 		"earth_comm_linked": earth_comm_linked,
 		"warning_packet_sent": warning_packet_sent,
+		"l1_distance_km": L1_DISTANCE_KM,
+		"solar_wind_speed_kms": shock_velocity_km_s,
 		"lead_time_minutes": lead_time_minutes,
-		"solar_wind_speed_kms": 2420.0,
 		"imf_bz_nt": -31.5
 	}
 	print("[L1Arrival] Commissioning successful! Advancing to Stage 6: Mission Debrief")

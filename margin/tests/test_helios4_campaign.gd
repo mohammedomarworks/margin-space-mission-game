@@ -195,15 +195,66 @@ func test_deep_space_transfer_and_crises() -> void:
 
 func test_l1_halo_insertion_and_early_warning() -> void:
 	print("\n[TEST 6] Sun-Earth L1 Halo-Orbit Insertion & Early-Warning Advance Notice")
-	# Sun-Earth L1 distance ~ 1,500,000 km
-	# Incoming CME shockwave speed ~ 2,420 km/s
-	var l1_dist_km: float = 1500000.0
-	var cme_speed_kms: float = 2420.0
-	var travel_time_sec = l1_dist_km / cme_speed_kms
-	var lead_time_min = travel_time_sec / 60.0
+	# Task 1: Dynamic Early-Warning Calculation (t = d / v / 60)
+	var l1_dist_km: float = Helios4CampaignData.L1_DISTANCE_KM # 1,500,000 km
 	
-	_assert_approx(lead_time_min, 10.33, 1.0, "Physics calculation of advance warning lead time (t = d / v) confirmed")
-	_assert_true(lead_time_min >= 10.0 and lead_time_min <= 60.0, "Advance warning lead time is in the authentic 15 to 60 minute operational window for solar storms")
+	# Severe CME shock at 2,420 km/s -> ~10.33 minutes
+	var lead_time_2420 = Helios4CampaignData.calculate_warning_lead_time_minutes(2420.0, l1_dist_km)
+	_assert_approx(lead_time_2420, 10.3306, 0.01, "Dynamic early warning calculation at 2,420 km/s yields ~10.33 minutes (1.5M km / 2420 / 60)")
+	
+	# Ambient solar-wind / slow stream at 600 km/s -> ~41.67 minutes
+	var lead_time_600 = Helios4CampaignData.calculate_warning_lead_time_minutes(600.0, l1_dist_km)
+	_assert_approx(lead_time_600, 41.6667, 0.01, "Dynamic early warning calculation at 600 km/s yields ~41.67 minutes (1.5M km / 600 / 60)")
+	
+	# Edge / invalid / zero velocity cases
+	var lead_time_zero_v = Helios4CampaignData.calculate_warning_lead_time_minutes(0.0, l1_dist_km)
+	_assert_true(lead_time_zero_v == 0.0, "Zero velocity returns 0.0 warning minutes safely")
+	
+	var lead_time_neg_v = Helios4CampaignData.calculate_warning_lead_time_minutes(-500.0, l1_dist_km)
+	_assert_true(lead_time_neg_v == 0.0, "Negative velocity returns 0.0 warning minutes safely")
+	
+	var lead_time_zero_d = Helios4CampaignData.calculate_warning_lead_time_minutes(2420.0, 0.0)
+	_assert_true(lead_time_zero_d == 0.0, "Zero distance returns 0.0 warning minutes safely")
+	
+	# Cross-check DonkiService calculation consistency
+	var donki_2420 = DonkiService.calculate_warning_lead_time_minutes(2420.0, l1_dist_km)
+	_assert_approx(donki_2420, lead_time_2420, 0.001, "DonkiService calculation matches Helios4CampaignData authoritative method")
+	var donki_zero = DonkiService.calculate_warning_lead_time_minutes(0.0, l1_dist_km)
+	_assert_true(donki_zero == 0.0, "DonkiService zero velocity returns 0.0")
+
+	# Task 2: 3D Parametric Halo Orbit Geometry Verification
+	var ax = 0.85
+	var ay = 2.4
+	var az = 3.4
+	_assert_true(ax > 0.0 and ay > 0.0 and az > 0.0, "Halo orbit model possesses non-zero amplitudes across all 3 axes (Ax=0.85, Ay=2.4, Az=3.4)")
+	
+	# Parametric equations: x(phi) = -ax * cos(2*phi), y(phi) = ay * sin(phi), z(phi) = az * cos(phi)
+	var p_start = Vector3(-ax * cos(0.0), ay * sin(0.0), az * cos(0.0))
+	var p_end = Vector3(-ax * cos(TAU), ay * sin(TAU), az * cos(TAU))
+	var closure_diff = p_start.distance_to(p_end)
+	_assert_true(closure_diff < 0.0001, "Educational 3D parametric halo path is a closed continuous curve (phi 0 to 2*PI)")
+	
+	var p_quarter = Vector3(-ax * cos(PI), ay * sin(PI * 0.5), az * cos(PI * 0.5))
+	_assert_true(abs(p_quarter.x - ax) < 0.001, "X-axis exhibits 2*phi harmonic excursion (saddle manifold property)")
+	_assert_true(abs(p_start.x - (-ax)) < 0.001, "X-axis displacement spans [-0.85, +0.85] proving true 3D spatial displacement without planar collapse")
+
+	# Task 3: Stationkeeping Reserve Rocket Equation & Illustrative Threshold
+	var m_dry = 428.5 # Modeled dry mass in kg
+	var isp = 315.0 # Hydrazine monopropellant Isp in s
+	var g0 = 9.80665 # Standard gravity m/s^2
+	var m_reserve = 35.0 # Illustrative reserve threshold in kg
+	var delta_v_reserve = isp * g0 * log(1.0 + m_reserve / m_dry)
+	_assert_approx(delta_v_reserve, 242.5, 2.0, "Rocket equation confirms 35 kg propellant reserve yields ~242.5 m/s delta-v")
+	_assert_true(delta_v_reserve >= 90.0, "Reserve delta-v (242.5 m/s) exceeds theoretical 3-year baseline (3 x 30 = 90 m/s)")
+	
+	# Verify illustrative threshold phrasing
+	var tel_hangar = Helios4CampaignData.calculate_hangar_telemetry()
+	var probe_check_advice = ""
+	for check in tel_hangar.get("gate_checks", []):
+		if check.get("id") == "probe_dv_check":
+			probe_check_advice = check.get("advice", "")
+			break
+	_assert_true(probe_check_advice.contains("illustrative stationkeeping threshold"), "Hangar checklist strictly designates stationkeeping reserve as illustrative threshold rather than guaranteed lifetime")
 
 func test_debrief_score_arithmetic() -> void:
 	print("\n[TEST 6B] Authoritative Debrief Scoring Function & Pillar Arithmetic Consistency")

@@ -167,6 +167,13 @@ static var final_debrief_data: Dictionary = {}
 
 # Save File Path
 const SAVE_PATH: String = "user://helios4_campaign.json"
+const L1_DISTANCE_KM: float = 1500000.0
+
+# Authoritative early-warning calculation: warning_minutes = distance_km / shock_velocity_km_per_s / 60
+static func calculate_warning_lead_time_minutes(shock_velocity_km_s: float, distance_km: float = L1_DISTANCE_KM) -> float:
+	if shock_velocity_km_s <= 0.0 or distance_km <= 0.0:
+		return 0.0
+	return distance_km / shock_velocity_km_s / 60.0
 
 # --- DEFAULT CONFIGURATIONS ---
 
@@ -464,7 +471,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"target_str": ">= %.0f m/s" % req_probe_dv,
 		"status": "PASS" if probe_dv_valid else "FAIL",
 		"role": ROLE_ASTROGATOR,
-		"advice": "Propellant reserve meets insertion and modeled stationkeeping budget (educational model)." if probe_dv_valid else "Probe lacks propellant for halo insertion and stationkeeping at L1 under selected trajectory mode."
+		"advice": "Propellant reserve meets insertion and illustrative stationkeeping threshold (educational game model)." if probe_dv_valid else "Probe lacks propellant for halo insertion and illustrative stationkeeping threshold at L1 under selected trajectory mode."
 	})
 	
 	# Check 4: Aerodynamic Static Margin (CoM vs CoP)

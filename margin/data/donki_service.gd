@@ -160,9 +160,8 @@ static func evaluate_space_weather_threat(speed_kms: float, bz_nt: float, flare_
 
 # Sun-Earth L1 is ~1.5 million km sunward from Earth.
 # When a CME shockwave passes L1, the time it takes to travel the remaining 1.5 million km to Earth is:
-# t = d / v
-static func calculate_warning_lead_time_minutes(speed_kms: float) -> float:
-	const L1_DISTANCE_KM: float = 1500000.0
-	var speed = max(100.0, speed_kms)
-	var travel_time_seconds = L1_DISTANCE_KM / speed
-	return travel_time_seconds / 60.0
+# warning_minutes = distance_km / shock_velocity_km_per_s / 60
+static func calculate_warning_lead_time_minutes(speed_kms: float, distance_km: float = 1500000.0) -> float:
+	if speed_kms <= 0.0 or distance_km <= 0.0:
+		return 0.0
+	return distance_km / speed_kms / 60.0

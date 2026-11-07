@@ -201,7 +201,7 @@ static func _create_helios4_scenario():
 	s.allowed_transfer_ids = ["transfer_earth_l1", "transfer_wsb_l1"]
 	
 	s.scientific_goal = "Station an uncrewed solar-weather early-warning replacement observatory in a periodic 3D halo orbit around Sun-Earth L1 to establish continuous plasma, magnetic field, and energetic particle warnings 15 to 60 minutes before upcoming CMEs reach Earth."
-	s.scientific_caution = "Sun-Earth L1 is approximately 1.5 million km sunward (only 1% of the distance to the Sun), not the midpoint. Collinear Lagrange points are dynamically unstable saddle equilibria; periodic 3D halo orbits require continuous stationkeeping burns (~15–30 m/s/yr; educational game model). The spacecraft is uncrewed."
+	s.scientific_caution = "Sun-Earth L1 is approximately 1.5 million km sunward (only 1% of the distance to the Sun), not the midpoint. Collinear Lagrange points are dynamically unstable saddle equilibria; periodic 3D halo orbits require continuous stationkeeping burns (~15–30 m/s/yr; educational game model with illustrative reserve thresholds rather than a guaranteed lifetime). The spacecraft is uncrewed."
 	s.target_system_name = "Solar Weather Monitors"
 	s.coverage_label = "L1 Early Warning Telemetry"
 	s.educational_notes = "Inspired by NASA's DSCOVR and SOHO missions. DSCOVR PlasMag instruments measure solar wind velocity, density, and magnetic field direction (especially Bz)."

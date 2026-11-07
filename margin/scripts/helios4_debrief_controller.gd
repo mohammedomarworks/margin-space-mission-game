@@ -60,7 +60,9 @@ func _populate_ui() -> void:
 	
 	var c_res = Helios4CampaignData.crisis_results
 	var l1_tel = Helios4CampaignData.l1_telemetry
-	var lead_time = l1_tel.get("lead_time_minutes", 42.5)
+	var lead_time = l1_tel.get("lead_time_minutes", 10.33)
+	var shock_speed = l1_tel.get("solar_wind_speed_kms", 2420.0)
+	var l1_dist = l1_tel.get("l1_distance_km", Helios4CampaignData.L1_DISTANCE_KM)
 	var equip_health = 100.0 - c_res.get("equipment_degradation_pct", 5.0)
 	var rem_fuel = l1_tel.get("final_propellant_kg", 205.0)
 	
@@ -70,9 +72,9 @@ func _populate_ui() -> void:
 	var p4 = Helios4CampaignData.final_debrief_data.get("warning_pillar", 25.0)
 	
 	summary_text.text = """[b]SCIENTIFIC & OPERATIONAL AUDIT:[/b]
-• [color=#38bdf8]Target Orbit:[/color] Educational Periodic 3D Halo Orbit around Sun-Earth L1 (~1.5M km Sunward).
-• [color=#4ade80]Space Weather Warning Lead Time:[/color] [b]%.1f Minutes Advance Notice Delivered to Earth.[/b]
-• [color=#fbbf24]Stationkeeping Propellant Reserve:[/color] %.1f kg (Modeled ~15–30 m/s/yr baseline; educational game assumption).
+• [color=#38bdf8]Target Orbit:[/color] Educational 3D Parametric Halo Orbit around Sun-Earth L1 (Closed 3D model: x, y, z; ~1.5M km Sunward; simplified educational visualization).
+• [color=#4ade80]Space Weather Warning Lead Time:[/color] [b]%.2f Minutes Advance Notice Delivered to Earth[/b] (Shock Speed: %.0f km/s • Baseline Distance: %.1fM km; t = d / v / 60).
+• [color=#fbbf24]Stationkeeping Propellant Reserve:[/color] %.1f kg (Exceeds > 35 kg illustrative threshold; modeled ~15–30 m/s/yr educational assumption, not a guaranteed operational lifetime).
 • [color=#c084fc]Subsystem Health:[/color] %.1f%% Sensor Suite Integrity (Rad-Hardened Avionics Nominal).
 • [color=#f87171]Heritage Benchmark:[/color] Validates NASA DSCOVR PlasMag operational architecture.
 
@@ -82,7 +84,8 @@ func _populate_ui() -> void:
 • [color=#38bdf8]L1 Halo Orbit & Stationkeeping (Pillar 3):[/color] %.1f / 25.0 pts
 • [color=#4ade80]Early-Warning Telemetry Delivery (Pillar 4):[/color] %.1f / 25.0 pts
 • [color=#fbbf24][b]Total Score:[/b][/color] %.1f + %.1f + %.1f + %.1f = [b]%.1f / 100.0 PTS[/b]""" % [
-		lead_time, rem_fuel, equip_health,
+		lead_time, shock_speed, l1_dist / 1000000.0,
+		rem_fuel, equip_health,
 		p1, p2, p3, p4,
 		p1, p2, p3, p4, total_score
 	]
