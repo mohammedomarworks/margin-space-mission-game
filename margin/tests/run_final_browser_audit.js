@@ -5,7 +5,7 @@ const { spawn } = require('child_process');
 
 const HTTP_PORT = 8138;
 const CDP_PORT = 9268;
-const WEB_DIR = path.resolve(__dirname, '../../build/web_test');
+const WEB_DIR = path.resolve(__dirname, '../../build/web');
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PROFILE_DIR = '/tmp/margin_final_audit_' + Date.now();
 const ARTIFACT_DIR = '/Users/omar/.gemini/antigravity/brain/8d4b5f52-e848-41d3-8332-b9e596076e00';

@@ -22,16 +22,16 @@ MARGIN features multiple operational mission scenarios, interactive emergency de
 #### Scenario B: Earth Climate Sentinel (ECS-01)
 - **Target Orbit:** Sun-Synchronous Orbit (selected educational reference orbit: 705 km polar SSO, 98.2° inclination, 10:30 AM descending node; modeled on the Landsat/EOS morning constellation, not a universal requirement for all Earth observation missions).
 - **Core Objective:** Monitor 6 critical planetary sentinels across the Earth system:
-  1. *Amazon Basin:* Deforestation & carbon flux monitoring.
-  2. *Greenland Ice Sheet:* Elevation change and summer melt dynamics.
-  3. *Sahara Mineral Dust Belt:* Transatlantic aerosol transport.
-  4. *Antarctic Ross Ice Shelf:* Rift propagation & calving dynamics.
-  5. *Indo-Pacific Warm Pool:* ENSO thermal anomaly tracking.
-  6. *North Atlantic Surface Indicators for AMOC Research:* Monitors surface sea temperature anomalies and altimetry indicators. (Note: A single satellite with optical/SAR payloads cannot measure full-depth AMOC transport; satellite surface observations provide valuable indicators but cannot replace the in-situ oceanographic mooring arrays, such as RAPID/OSNAP, required for sustained AMOC monitoring).
+  1. *Greenland Ice Sheet (Summit):* 3,200m Ice Elevation / Melt Albedo.
+  2. *Antarctic Peninsula (Larsen C):* Ice Shelf Freeboard / Calving Flux.
+  3. *Amazon Basin Carbon Sink:* Vegetation Index (NDVI) / CO2 Column.
+  4. *Sahel Desertification Boundary:* Soil Moisture & Aridity Gradient.
+  5. *North Atlantic Surface Indicators for AMOC Research:* Monitors sea surface temperature anomalies and ocean surface roughness. (Note: The mission does not model a dedicated microwave ocean radar altimeter for direct steric dynamic-height measurements; orbital optical and SAR surface observations provide indirect indicators or proxies, but cannot directly measure full-depth Atlantic Meridional Overturning Circulation (AMOC) volume transport, which requires sustained deep-water in-situ mooring networks such as RAPID/OSNAP and numerical ocean modeling).
+  6. *Siberian Tundra Permafrost:* Atmospheric Methane (XCH4) Column.
 - **Dedicated Earth Observation Payloads:**
-  - *Multispectral Climate Radiometer:* 12-band VIS/NIR/TIR instrument for aerosol optical depth and sea surface temperature (28 kg, 65W, \$14.5M).
-  - *GHG Imaging Spectrometer:* Hyper-spectral shortwave infrared sensor for CO2 and CH4 column plumes (36 kg, 92W, \$21.0M).
-  - *Polarimetric Ice Sounding SAR:* L-band polarimetric synthetic aperture radar for sub-surface ice shelf structure (58 kg, 135W, \$28.5M).
+  - *Multispectral Climate Radiometer:* 12-band VIS/NIR/SWIR pushbroom radiometer for cryospheric albedo, vegetation indices, and sea surface skin temperature (32 kg, 52W, \$24.0M).
+  - *GHG Imaging Spectrometer:* High-resolution diffraction grating spectrometer for CO2 and CH4 column plumes (44 kg, 78W, \$36.0M).
+  - *Polarimetric Ice Sounding SAR:* Ku-band polarimetric Synthetic Aperture Radar for ice sheet elevation change and sea ice freeboard thickness (58 kg, 135W, \$42.0M). Note: Does not model a dedicated microwave ocean radar altimeter for dynamic sea-surface height.
 - **Mission Constraints:** \$140.0M scenario budget cap, 550.0 kg launch envelope, 75.0-point composite success threshold.
 - **Dedicated Polar Launch Vehicles:** Polar Small Rideshare (380 kg SSO cap, \$12.0M), Sun-Sync Medium Booster (720 kg SSO cap, \$26.0M), Polar Heavy Dedicated (1400 kg SSO cap, \$52.0M).
 
@@ -173,7 +173,7 @@ To maintain clear separation between published literature and simulation mechani
    - **Launch Vehicle Family:** Launch vehicle pricing (\$12.0M to \$65.0M) and payload capacities (TLI/SSO/LEO) are educational approximations representing distinct commercial launch classes.
    - **Operational Costs & Emergency Events:** Emergency event cost penalties (e.g. \$0.5M commercial antenna pass fees), radiation degradation percentages (-7.5% SOH), and battery thermal penalties are stylized educational gameplay mechanics.
    - **Reference Orbit Selection:** The 705 km altitude / 98.2° inclination Sun-Synchronous Orbit (SSO) is a selected educational reference orbit modeled on the Landsat/Earth Observing System morning constellation architecture; it is not a universal requirement for all Earth observation missions.
-   - **AMOC Observational Scope:** Satellite surface skin temperature and altimetry observations provide valuable surface indicators for ocean dynamics, but do not directly measure full-depth Atlantic Meridional Overturning Circulation (AMOC) volume transport; sustained AMOC monitoring fundamentally requires deep-water in-situ mooring networks (e.g. RAPID/OSNAP).
+   - **AMOC Observational Scope & Ocean Altimetry:** Satellite surface skin temperature and SAR ocean roughness observations provide valuable indirect surface indicators for subpolar gyre dynamics, but do not directly measure steric dynamic height (the mission does not model a dedicated microwave ocean radar altimeter) or full-depth Atlantic Meridional Overturning Circulation (AMOC) volume transport; sustained AMOC monitoring fundamentally requires deep-water in-situ mooring networks (e.g. RAPID/OSNAP) and ocean circulation modeling.
    - **Volatile Proxies:** Regolith hydrogen enhancement detected via neutron flux moderation is modeled strictly as a scientific proxy for volatile concentration and does not constitute definitive proof of surface water ice at every surveyed crater.
 
 ---

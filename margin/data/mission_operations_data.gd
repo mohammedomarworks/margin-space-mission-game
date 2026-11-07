@@ -117,8 +117,8 @@ static func get_all_climate_sentinels() -> Dictionary:
 			"baseline_metric": "3,200m Ice Elevation / Melt Albedo",
 			"confidence": "High (Summit Station Ground-Truth)",
 			"science_weight": 1.40,
-			"description": "Interior ice sheet reservoir. Satellite radar altimetry and multispectral radiometry track surface melt extent and ice sheet thinning rates.",
-			"scientific_proxy_note": "Radar elevation loss serves as a proxy for ice sheet volume balance; firn compaction requires modeling corrections."
+			"description": "Interior ice sheet reservoir. Satellite SAR ice sounding and multispectral radiometry track surface melt extent, margin retreat, and ice sheet elevation changes.",
+			"scientific_proxy_note": "Ice surface elevation change serves as a proxy for ice sheet volume balance; firn compaction and radar penetration depth require modeling corrections."
 		},
 		"sentinel_antarctic_peninsula": {
 			"id": "sentinel_antarctic_peninsula",
@@ -127,10 +127,10 @@ static func get_all_climate_sentinels() -> Dictionary:
 			"lon_deg": -62.5,
 			"diameter_km": 850.0,
 			"baseline_metric": "Ice Shelf Freeboard / Calving Flux",
-			"confidence": "High (CryoSat-2 Altimetry Heritage)",
+			"confidence": "High (CryoSat-2 SAR Heritage)",
 			"science_weight": 1.45,
-			"description": "Vulnerable polar ice shelf barrier monitoring grounding-line stability and major tabular iceberg calving detachment.",
-			"scientific_proxy_note": "Radar freeboard height proxy measures floating ice shelf thickness; tidal flexure and firn air content introduce modeling uncertainty."
+			"description": "Vulnerable polar ice shelf barrier monitoring grounding-line stability, rift propagation, and major tabular iceberg calving detachment.",
+			"scientific_proxy_note": "SAR interferometric freeboard height serves as a proxy for floating ice shelf thickness; tidal flexure and firn air content introduce modeling uncertainty."
 		},
 		"sentinel_amazon_basin": {
 			"id": "sentinel_amazon_basin",
@@ -162,11 +162,11 @@ static func get_all_climate_sentinels() -> Dictionary:
 			"lat_deg": 57.0,
 			"lon_deg": -35.0,
 			"diameter_km": 1500.0,
-			"baseline_metric": "Surface Sea Temperature & Altimetry Indicators",
+			"baseline_metric": "Sea Surface Temperature & Ocean Surface Roughness",
 			"confidence": "High (Surface Proxy / Sentinel-3 Heritage)",
 			"science_weight": 1.25,
-			"description": "Monitors sea surface temperature anomalies and steric height gradients in the subpolar gyre. Note: A single satellite with optical/SAR payloads does not measure full-depth AMOC volume transport; orbital surface observations provide valuable indicators but cannot replace dedicated in-situ mooring arrays (e.g. RAPID/OSNAP) required for sustained AMOC monitoring.",
-			"scientific_proxy_note": "Surface skin temperature and radar topography serve as surface proxy indicators for subpolar gyre dynamics; full-depth ocean transport requires in-situ oceanographic sensor networks."
+			"description": "Monitors sea surface temperature anomalies, thermal skin gradients, and ocean surface roughness in the subpolar gyre. Note: Does not model a dedicated microwave ocean radar altimeter for direct steric dynamic-height measurements. Orbital optical and SAR observations provide indirect surface indicators only, and cannot measure full-depth Atlantic Meridional Overturning Circulation (AMOC) volume transport, which requires sustained deep-water in-situ mooring networks (e.g. RAPID/OSNAP) and ocean circulation modeling.",
+			"scientific_proxy_note": "Surface skin temperature anomalies and ocean roughness serve as indirect surface proxy indicators for subpolar gyre dynamics. Direct steric dynamic height is not measured, and evaluating full-depth AMOC transport fundamentally requires in-situ oceanographic sensor arrays (e.g. RAPID/OSNAP) and deep-ocean circulation models."
 		},
 		"sentinel_siberian_permafrost": {
 			"id": "sentinel_siberian_permafrost",

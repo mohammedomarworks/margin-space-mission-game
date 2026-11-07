@@ -132,7 +132,12 @@ static func compare_missions(report_a: Dictionary, report_b: Dictionary) -> Dict
 
 # --- REAL NASA BENCHMARK COMPARISONS VS SIMULATION ---
 
-static func get_nasa_benchmarks() -> Dictionary:
+static func get_nasa_benchmarks(scenario_id: String = "") -> Dictionary:
+	if scenario_id == "earth_climate_sentinel":
+		return get_earth_climate_benchmarks()
+	return get_lunar_benchmarks()
+
+static func get_lunar_benchmarks() -> Dictionary:
 	return {
 		"lunar_prospector": {
 			"mission": "NASA Lunar Prospector (1998)",
@@ -169,5 +174,45 @@ static func get_nasa_benchmarks() -> Dictionary:
 			"key_findings": "Directly confirmed 5.5 ± 1.5 wt% pure water ice vapor and hydroxyl (OH) along with volatiles (CO, NH3, CH4) in the Cabeus impact ejecta plume.",
 			"caution_distinction": "LCROSS provided ground-truth kinetic verification for Cabeus crater. Orbital neutron spectrometers measure hydrogen proxies; LCROSS verified actual volatile chemistry at that specific impact site.",
 			"source_url": "https://www.nasa.gov/mission/lcross/"
+		}
+	}
+
+static func get_earth_climate_benchmarks() -> Dictionary:
+	return {
+		"esa_sentinel_3": {
+			"mission": "ESA Sentinel-3 (2016)",
+			"type": "Copernicus Operational Earth Observation",
+			"cost_m": 550.0,
+			"dry_mass_kg": 1150.0,
+			"wet_mass_kg": 1250.0,
+			"instrument": "OLCI (Ocean & Land Colour) / SLSTR (Sea Surface Temp)",
+			"orbit_km": "814.5 km Sun-Synchronous, 98.65° inclination",
+			"key_findings": "Operational monitoring of ocean surface skin temperatures, vegetation indices, and coastal water turbidity.",
+			"caution_distinction": "Optical and thermal radiometers measure ocean skin temperature and chlorophyll proxies. They provide surface indicators only and cannot measure full-depth AMOC transport.",
+			"source_url": "https://sentinels.copernicus.eu/web/sentinel/missions/sentinel-3"
+		},
+		"nasa_oco_2": {
+			"mission": "NASA Orbiting Carbon Observatory-2 (2014)",
+			"type": "Earth System Science Pathfinder",
+			"cost_m": 468.0,
+			"dry_mass_kg": 454.0,
+			"wet_mass_kg": 454.0,
+			"instrument": "High-Resolution 3-Band Grating Spectrometer (O2-A, CO2)",
+			"orbit_km": "705 km Sun-Synchronous, 98.2° inclination",
+			"key_findings": "High-precision column-averaged CO2 mole fraction (XCO2) mapping continental sinks and emissions.",
+			"caution_distinction": "Atmospheric column spectrometry measures total gas columns; deriving surface carbon sources requires atmospheric transport inversion modeling.",
+			"source_url": "https://ocov2.jpl.nasa.gov/"
+		},
+		"esa_cryosat_2": {
+			"mission": "ESA CryoSat-2 (2010)",
+			"type": "Earth Explorer Opportunity Mission",
+			"cost_m": 175.0,
+			"dry_mass_kg": 669.0,
+			"wet_mass_kg": 720.0,
+			"instrument": "SIRAL (SAR Interferometric Radar Altimeter, Ku-band)",
+			"orbit_km": "720 km Polar, 92.0° inclination",
+			"key_findings": "Pioneered Ku-band SAR interferometry for polar ice sheets and sea ice freeboard thickness profiling.",
+			"caution_distinction": "SIRAL is an active microwave ice sounder and freeboard altimeter. It is not an ocean dynamic topography altimeter (such as Jason-3 or Sentinel-6) and does not measure steric sea-surface height. Measuring full-depth AMOC transport fundamentally requires in-situ oceanographic mooring arrays (e.g. RAPID / OSNAP) and numerical ocean modeling.",
+			"source_url": "https://earth.esa.int/eogateway/missions/cryosat"
 		}
 	}

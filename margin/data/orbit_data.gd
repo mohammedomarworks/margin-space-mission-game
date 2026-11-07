@@ -179,7 +179,7 @@ static func get_all_orbits() -> Dictionary:
 			
 			"science_multiplier": 1.25,
 			"spatial_resolution_rating": "Ultra-High Resolution (450 km nadir proximity)",
-			"description": "Lower 450 km polar orbit delivering sharper radar altimetry and optical resolution over coastal ice margins, but flying through denser thermosphere.",
+			"description": "Lower 450 km polar orbit delivering sharper SAR ice sounding and optical resolution over coastal ice margins, but flying through denser thermosphere.",
 			"coverage_summary": "High-latitude polar coverage every 93.5 minutes with rapid repeating ground tracks.",
 			"eclipse_summary": "Eclipse duration is ~36 minutes per revolution.",
 			"propulsion_summary": "Requires 110 m/s total ΔV due to 85 m/s annual atmospheric drag makeup burns.",

@@ -341,21 +341,31 @@ func _animate_score_reveal() -> void:
 	).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func _populate_science_tab() -> void:
-	sci_total_label.text = "Total Scientific Achievement: %0.1f points | Avg Polar Survey Coverage: %0.1f%% | Volatile Reservoirs Identified: %d / 6" % [
-		report.get("final_science_score", 0.0),
-		report.get("avg_polar_coverage_pct", 0.0),
-		report.get("hydrogen_candidates_found", 0)
-	]
+	var scen_id: String = report.get("scenario_id", MissionScenario.get_active_scenario_id())
+	var is_earth: bool = (scen_id == "earth_climate_sentinel")
 	
-	# Populate 6 crater cards
+	if is_earth:
+		sci_total_label.text = "Total Scientific Achievement: %0.1f points | Avg Global Coverage: %0.1f%% | Climate Sentinels Fully Monitored: %d / 6" % [
+			report.get("final_science_score", 0.0),
+			report.get("avg_polar_coverage_pct", 0.0),
+			report.get("hydrogen_candidates_found", 0)
+		]
+	else:
+		sci_total_label.text = "Total Scientific Achievement: %0.1f points | Avg Polar Survey Coverage: %0.1f%% | Volatile Reservoirs Identified: %d / 6" % [
+			report.get("final_science_score", 0.0),
+			report.get("avg_polar_coverage_pct", 0.0),
+			report.get("hydrogen_candidates_found", 0)
+		]
+	
+	# Populate 6 target cards
 	for child in craters_grid_container.get_children():
 		child.queue_free()
 	
-	var all_craters = MissionOperationsData.get_all_craters()
+	var all_targets = MissionOperationsData.get_targets_for_scenario(scen_id)
 	var cov_map: Dictionary = report.get("crater_coverage", {})
 	
-	for c_id in all_craters:
-		var c = all_craters[c_id]
+	for c_id in all_targets:
+		var c = all_targets[c_id]
 		var cov: float = cov_map.get(c_id, 0.0)
 		
 		var card := PanelContainer.new()
@@ -368,13 +378,18 @@ func _populate_science_tab() -> void:
 		
 		var h_top := HBoxContainer.new()
 		var name_lbl := Label.new()
-		name_lbl.text = "%s (%0.1f°S, %0.1f°E)" % [c["name"], abs(c["lat_deg"]), c["lon_deg"]]
+		if is_earth:
+			var lat_hemi: String = "N" if c["lat_deg"] >= 0.0 else "S"
+			var lon_hemi: String = "E" if c["lon_deg"] >= 0.0 else "W"
+			name_lbl.text = "%s (%0.1f°%s, %0.1f°%s)" % [c["name"], abs(c["lat_deg"]), lat_hemi, abs(c["lon_deg"]), lon_hemi]
+		else:
+			name_lbl.text = "%s (%0.1f°S, %0.1f°E)" % [c["name"], abs(c["lat_deg"]), c["lon_deg"]]
 		name_lbl.add_theme_font_size_override("font_size", 11)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h_top.add_child(name_lbl)
 		
 		var cov_lbl := Label.new()
-		cov_lbl.text = "%0.1f%% Mapped" % cov
+		cov_lbl.text = ("%0.1f%% Monitored" if is_earth else "%0.1f%% Mapped") % cov
 		cov_lbl.add_theme_font_size_override("font_size", 11)
 		cov_lbl.add_theme_color_override("font_color", Color(0.2, 0.85, 0.45) if cov >= 50.0 else Color(0.22, 0.74, 0.96))
 		h_top.add_child(cov_lbl)
@@ -388,13 +403,16 @@ func _populate_science_tab() -> void:
 		vbox.add_child(bar)
 		
 		var specs_lbl := Label.new()
-		specs_lbl.text = "Diameter: %0.0f km | Depth: %0.1f km | PSR Area: %0.0f km²" % [c["diameter_km"], c["depth_km"], c["psr_area_km2"]]
+		if is_earth:
+			specs_lbl.text = "Diameter: %0.0f km | Science Weight: %0.2f× | Metric: %s" % [c["diameter_km"], c.get("science_weight", 1.0), c.get("baseline_metric", "")]
+		else:
+			specs_lbl.text = "Diameter: %0.0f km | Depth: %0.1f km | PSR Area: %0.0f km²" % [c.get("diameter_km", 0.0), c.get("depth_km", 0.0), c.get("psr_area_km2", 0.0)]
 		specs_lbl.add_theme_font_size_override("font_size", 9)
 		specs_lbl.add_theme_color_override("font_color", Color(0.75, 0.8, 0.88))
 		vbox.add_child(specs_lbl)
 		
 		var note_lbl := Label.new()
-		note_lbl.text = "Proxy Observation: " + c["scientific_proxy_note"]
+		note_lbl.text = "Proxy Observation: " + c.get("scientific_proxy_note", "")
 		note_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		note_lbl.add_theme_font_size_override("font_size", 9)
 		note_lbl.add_theme_color_override("font_color", Color(0.65, 0.7, 0.8))
@@ -406,7 +424,7 @@ func _populate_science_tab() -> void:
 	for child in nasa_benchmarks_container.get_children():
 		child.queue_free()
 	
-	var benchmarks: Dictionary = MissionEvaluationData.get_nasa_benchmarks()
+	var benchmarks: Dictionary = MissionEvaluationData.get_nasa_benchmarks(scen_id)
 	for b_id in benchmarks:
 		var b = benchmarks[b_id]
 		var card := PanelContainer.new()
