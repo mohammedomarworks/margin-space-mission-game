@@ -1,6 +1,9 @@
 class_name WorkshopController
 extends Node3D
 
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+const TeamData = preload("res://margin/data/team_data.gd")
+
 @onready var spacecraft: Spacecraft3D = $Spacecraft3D
 @onready var orbit_cam: OrbitCamera = $OrbitCamera
 @onready var sun_light: DirectionalLight3D = $SunLight
@@ -246,6 +249,10 @@ func _on_configuration_changed(cat: ComponentDatabase.Category, old_comp: Dictio
 	# Update 3D model
 	spacecraft.update_component(cat, new_comp["id"])
 	
+	# Decision attribution
+	var role_id: String = TeamData.ROLE_SCIENCE if cat == ComponentDatabase.Category.INSTRUMENTS else TeamData.ROLE_SYSTEMS
+	TeamData.log_decision(role_id, "Spacecraft Workshop", "Equipped " + new_comp.get("name", ""), "$%0.1fM | %0.1f kg" % [new_comp.get("cost_m", 0.0), new_comp.get("mass_kg", 0.0)])
+	
 	# Refresh cards to update "EQUIPPED" status
 	_populate_component_cards()
 	
@@ -254,9 +261,12 @@ func _on_configuration_changed(cat: ComponentDatabase.Category, old_comp: Dictio
 
 func _show_trade_off_echo(cat: ComponentDatabase.Category, old_comp: Dictionary, new_comp: Dictionary) -> void:
 	var analysis: Dictionary = TradeOffEcho.analyze_tradeoff(cat, old_comp, new_comp)
+	var role_id: String = TeamData.ROLE_SCIENCE if cat == ComponentDatabase.Category.INSTRUMENTS else TeamData.ROLE_SYSTEMS
+	var role_info = TeamData.get_role_info(role_id)
+	var player_name = TeamData.get_player_name_for_role(role_id)
 	
 	echo_title.text = "TRADE-OFF ECHO: %s" % analysis["new_name"].to_upper()
-	echo_category.text = "SUBSYSTEM: %s (Replaced: %s)" % [analysis["category_name"].to_upper(), analysis["old_name"]]
+	echo_category.text = "SUBSYSTEM: %s | Lead: %s [%s]" % [analysis["category_name"].to_upper(), role_info["title"], player_name]
 	
 	for child in echo_positives_container.get_children():
 		echo_positives_container.remove_child(child)
@@ -298,17 +308,20 @@ func _on_telemetry_updated(t: Dictionary) -> void:
 	_update_telemetry_ui(t)
 
 func _update_telemetry_ui(t: Dictionary) -> void:
+	var mass_limit: float = MissionData.get_active_mass_limit_kg()
+	var budget_cap: float = MissionData.get_active_budget_cap_m()
+	
 	# Top bar readouts
-	top_mass_label.text = "Mass: %0.1f / %0.0f kg" % [t["wet_mass_kg"], MissionData.MASS_LIMIT_KG]
-	top_cost_label.text = "Cost: $%0.1fM / $%0.0fM" % [t["total_cost_m"], MissionData.BUDGET_CAP_M]
+	top_mass_label.text = "Mass: %0.1f / %0.0f kg" % [t["wet_mass_kg"], mass_limit]
+	top_cost_label.text = "Cost: $%0.1fM / $%0.0fM" % [t["total_cost_m"], budget_cap]
 	top_power_label.text = "Power: %+0.0f W" % t["net_power_w"]
 	top_science_label.text = "Science: %0.0f pts" % t["science_score"]
 	
 	# 1. Mass Indicator
-	mass_val_label.text = "%0.1f kg / %0.0f kg" % [t["wet_mass_kg"], MissionData.MASS_LIMIT_KG]
+	mass_val_label.text = "%0.1f kg / %0.0f kg" % [t["wet_mass_kg"], mass_limit]
 	var m_pct: float = t["mass_margin_pct"]
 	mass_margin_label.text = "%+0.1f%% Margin" % m_pct
-	mass_bar.max_value = MissionData.MASS_LIMIT_KG
+	mass_bar.max_value = mass_limit
 	mass_bar.value = t["wet_mass_kg"]
 	_set_indicator_color(mass_margin_label, mass_bar, m_pct > 15.0, m_pct >= 0.0)
 	
@@ -321,10 +334,10 @@ func _update_telemetry_ui(t: Dictionary) -> void:
 	_set_indicator_color(power_margin_label, power_bar, t["net_power_w"] > 50.0 and t["eclipse_dod_pct"] <= 55.0, t["net_power_w"] >= 0.0 and t["eclipse_dod_pct"] <= 70.0)
 	
 	# 3. Budget Indicator
-	budget_val_label.text = "$%0.1fM / $%0.0fM" % [t["total_cost_m"], MissionData.BUDGET_CAP_M]
+	budget_val_label.text = "$%0.1fM / $%0.0fM" % [t["total_cost_m"], budget_cap]
 	var b_pct: float = t["budget_margin_pct"]
 	budget_margin_label.text = "%+0.1f%% Margin" % b_pct
-	budget_bar.max_value = MissionData.BUDGET_CAP_M
+	budget_bar.max_value = budget_cap
 	budget_bar.value = t["total_cost_m"]
 	_set_indicator_color(budget_margin_label, budget_bar, b_pct > 10.0, b_pct >= 0.0)
 	
@@ -352,7 +365,20 @@ func _update_telemetry_ui(t: Dictionary) -> void:
 	_set_indicator_color(lifetime_margin_label, lifetime_bar, l_pct > 20.0, l_pct >= 0.0)
 	
 	# Overall Qualification Card
-	if t["all_qualified"]:
+	if MissionScenario.is_sandbox_active():
+		qual_title_label.text = "CREATIVE SANDBOX MODE [UNRESTRICTED EXPERIMENTAL]"
+		qual_title_label.add_theme_color_override("font_color", Color(0.95, 0.75, 0.2))
+		qual_desc_label.text = "All fiscal caps, mass envelopes, and flight restrictions disengaged for experimental spacecraft prototyping."
+		qual_science_label.text = "Simulated Science: %0.0f pts | Bus Reliability: %0.1f%% | Wet Mass: %0.1f kg" % [
+			t["science_score"], t["system_reliability_pct"], t["wet_mass_kg"]
+		]
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.18, 0.14, 0.05, 0.88)
+		style.border_color = Color(0.95, 0.75, 0.2, 0.9)
+		style.set_border_width_all(1)
+		style.set_corner_radius_all(6)
+		qual_status_panel.add_theme_stylebox_override("panel", style)
+	elif t["all_qualified"]:
 		qual_title_label.text = "ENGINEERING MARGINS PASS"
 		qual_title_label.add_theme_color_override("font_color", Color(0.2, 0.9, 0.45))
 		qual_desc_label.text = "All mass, budget, power, comms, and orbital lifetime constraints are fully satisfied."
@@ -392,6 +418,17 @@ func _on_reset_build_pressed() -> void:
 	spacecraft.update_spacecraft(state.current_components)
 	_populate_component_cards()
 	orbit_cam.reset_view()
+
+func save_sandbox_spacecraft(file_path: String = "user://sandbox_spacecraft.json") -> bool:
+	return state.save_to_file(file_path)
+
+func load_sandbox_spacecraft(file_path: String = "user://sandbox_spacecraft.json") -> bool:
+	var success = state.load_from_file(file_path)
+	if success:
+		spacecraft.update_spacecraft(state.current_components)
+		_populate_component_cards()
+		_update_telemetry_ui(state.calculate_telemetry())
+	return success
 
 func _on_mission_briefing_pressed() -> void:
 	get_tree().change_scene_to_file("res://margin/scenes/mission_briefing.tscn")

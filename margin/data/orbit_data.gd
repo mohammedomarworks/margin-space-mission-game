@@ -124,8 +124,80 @@ static func get_all_orbits() -> Dictionary:
 			"loi_low_energy_citation": "Low-energy capture into 200 km circular requires ~630 m/s braking retro-burn.",
 			"loi_direct_citation": "Direct 200 km circular insertion requires ~795 m/s braking retro-burn.",
 			"stationkeeping_note": "45 m/s is an educational game assumption for 200 km altitude where mascon perturbation gradients are reduced."
+		},
+		"orbit_earth_sso": {
+			"id": "orbit_earth_sso",
+			"name": "Sun-Synchronous LEO Orbit (SSO 705 km)",
+			"tag": "Repeatable Solar Lighting / 10:30 LTDN",
+			"target_body": "Earth",
+			"orbit_type": "Sun-Synchronous Low Earth Orbit (e = 0.001, i = 98.2°)",
+			"perilune_km": 705.0,
+			"apolune_km": 705.0,
+			"avg_altitude_km": 705.0,
+			"period_min": 98.8,
+			"max_eclipse_min": 35.0,
+			
+			"mcc_delta_v_ms": 5.0,
+			"loi_delta_v_ms": 45.0,
+			"stationkeeping_delta_v_ms": 25.0,
+			"required_delta_v_ms": 75.0,
+			"loi_low_energy_ms": 45.0,
+			"loi_direct_ms": 45.0,
+			"required_low_energy_ms": 75.0,
+			"required_direct_ms": 75.0,
+			
+			"science_multiplier": 1.10,
+			"spatial_resolution_rating": "Optimal Climate Imaging (10:30 AM local solar illumination)",
+			"description": "Flies at 705 km altitude with 98.2° retrograde inclination. Earth's oblate equatorial bulge (J2) precesses the orbital plane at ~0.9856°/day, matching Earth's mean orbital rate around the Sun.",
+			"coverage_summary": "Global coverage with identical local solar time crossing (10:30 LTDN) on every pass, eliminating sun-angle calibration errors.",
+			"eclipse_summary": "Orbital eclipse is limited to 35 minutes per 98.8-minute orbit; solar panels enjoy ~65% sunlight duty cycle.",
+			"propulsion_summary": "Requires 75 m/s total ΔV (5 MCC + 45 circularization + 25 annual drag makeup).",
+			"educational_tradeoff": "Sun-synchronous nodal precession creates identical shadow angles, which is critical for measuring seasonal ice-sheet albedo and vegetation indices without solar illumination bias.",
+			"geometry_type": "circular_earth_sso"
+		},
+		"orbit_earth_polar_leo": {
+			"id": "orbit_earth_polar_leo",
+			"name": "Low Polar Earth Orbit (450 km)",
+			"tag": "Ultra-High Spatial Resolution / High Drag",
+			"target_body": "Earth",
+			"orbit_type": "Low Polar Earth Orbit (e = 0.000, i = 90.0°)",
+			"perilune_km": 450.0,
+			"apolune_km": 450.0,
+			"avg_altitude_km": 450.0,
+			"period_min": 93.5,
+			"max_eclipse_min": 36.0,
+			
+			"mcc_delta_v_ms": 5.0,
+			"loi_delta_v_ms": 20.0,
+			"stationkeeping_delta_v_ms": 85.0,
+			"required_delta_v_ms": 110.0,
+			"loi_low_energy_ms": 20.0,
+			"loi_direct_ms": 20.0,
+			"required_low_energy_ms": 110.0,
+			"required_direct_ms": 110.0,
+			
+			"science_multiplier": 1.25,
+			"spatial_resolution_rating": "Ultra-High Resolution (450 km nadir proximity)",
+			"description": "Lower 450 km polar orbit delivering sharper radar altimetry and optical resolution over coastal ice margins, but flying through denser thermosphere.",
+			"coverage_summary": "High-latitude polar coverage every 93.5 minutes with rapid repeating ground tracks.",
+			"eclipse_summary": "Eclipse duration is ~36 minutes per revolution.",
+			"propulsion_summary": "Requires 110 m/s total ΔV due to 85 m/s annual atmospheric drag makeup burns.",
+			"educational_tradeoff": "Closer proximity (+25% science) comes at the cost of 3.4x higher propulsion expenditure against thermospheric drag.",
+			"geometry_type": "circular_earth_leo"
 		}
 	}
+
+static func get_orbits_for_scenario(scenario_id: String) -> Dictionary:
+	var all_orbs = get_all_orbits()
+	var filtered: Dictionary = {}
+	if scenario_id == "earth_climate_sentinel" or scenario_id == "ecs_01":
+		filtered["orbit_earth_sso"] = all_orbs["orbit_earth_sso"]
+		filtered["orbit_earth_polar_leo"] = all_orbs["orbit_earth_polar_leo"]
+	else:
+		filtered["orbit_low_circular"] = all_orbs["orbit_low_circular"]
+		filtered["orbit_elliptical_frozen"] = all_orbs["orbit_elliptical_frozen"]
+		filtered["orbit_high_circular"] = all_orbs["orbit_high_circular"]
+	return filtered
 
 static func get_orbit(id: String) -> Dictionary:
 	var orbits = get_all_orbits()

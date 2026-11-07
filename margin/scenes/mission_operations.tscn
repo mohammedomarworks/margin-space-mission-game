@@ -557,6 +557,94 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 10
 text = "RESET"
 
+[node name="EmergencyModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -220.0
+offset_right = 300.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_Modal")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/EmergencyModal"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="EmergencyHeader" type="HBoxContainer" parent="CanvasLayer/RootUI/EmergencyModal/VBox"]
+layout_mode = 2
+
+[node name="EmergencyBadge" type="Label" parent="CanvasLayer/RootUI/EmergencyModal/VBox/EmergencyHeader"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.35, 0.25, 1)
+theme_override_font_sizes/font_size = 12
+text = "⚠ EMERGENCY DIRECTIVE REQUIRED"
+
+[node name="EmergencyTitleLabel" type="Label" parent="CanvasLayer/RootUI/EmergencyModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "SOLAR PARTICLE STORM DETECTED"
+autowrap_mode = 3
+
+[node name="EmergencyScenarioLabel" type="Label" parent="CanvasLayer/RootUI/EmergencyModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 11
+text = "A coronal mass ejection is impacting cislunar space. Spacecraft systems at risk."
+autowrap_mode = 3
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/RootUI/EmergencyModal/VBox"]
+layout_mode = 2
+
+[node name="ChoiceContainer" type="VBoxContainer" parent="CanvasLayer/RootUI/EmergencyModal/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ImpactPreviewCard" type="PanelContainer" parent="CanvasLayer/RootUI/EmergencyModal/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_Card")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/EmergencyModal/VBox/ImpactPreviewCard"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PreviewTitle" type="Label" parent="CanvasLayer/RootUI/EmergencyModal/VBox/ImpactPreviewCard/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 10
+text = "RESOURCE IMPACT PREVIEW"
+
+[node name="ImpactPreviewLabel" type="Label" parent="CanvasLayer/RootUI/EmergencyModal/VBox/ImpactPreviewCard/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "Select an operational directive above to review predicted telemetry impact."
+autowrap_mode = 3
+
+[node name="EmergencyActions" type="HBoxContainer" parent="CanvasLayer/RootUI/EmergencyModal/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="ConfirmDirectiveBtn" type="Button" parent="CanvasLayer/RootUI/EmergencyModal/VBox/EmergencyActions"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
+theme_override_font_sizes/font_size = 12
+text = "CONFIRM OPERATIONAL DIRECTIVE"
+
 [node name="CampaignModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
 unique_name_in_owner = true
 visible = false

@@ -1,6 +1,8 @@
 class_name LaunchVehicleDatabase
 extends RefCounted
 
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+
 # ==============================================================================
 # EDUCATIONAL LAUNCH VEHICLE PROFILES
 # Note: These launch vehicle options are illustrative educational game models designed
@@ -15,6 +17,8 @@ static func get_all_vehicles() -> Dictionary:
 			"name": "Small Lunar Rideshare Profile",
 			"tier": "Secondary Rideshare / ESPA Slot",
 			"tli_payload_capacity_kg": 260.0, # Maximum wet mass injected to Trans-Lunar Trajectory
+			"leo_payload_capacity_kg": 650.0, # LEO capability envelope
+			"payload_capacity_kg": 260.0,
 			"fairing_volume_m3": 1.60,
 			"fairing_max_diameter_m": 1.20,
 			"fairing_max_height_m": 1.50,
@@ -31,6 +35,8 @@ static func get_all_vehicles() -> Dictionary:
 			"name": "Medium Commercial EELV-Class",
 			"tier": "Dedicated Medium-Lift Launcher",
 			"tli_payload_capacity_kg": 450.0,
+			"leo_payload_capacity_kg": 2800.0,
+			"payload_capacity_kg": 450.0,
 			"fairing_volume_m3": 5.80,
 			"fairing_max_diameter_m": 1.80,
 			"fairing_max_height_m": 2.60,
@@ -47,6 +53,8 @@ static func get_all_vehicles() -> Dictionary:
 			"name": "Heavy Exploration Dedicated Launcher",
 			"tier": "Heavy-Lift System",
 			"tli_payload_capacity_kg": 850.0,
+			"leo_payload_capacity_kg": 8500.0,
+			"payload_capacity_kg": 850.0,
 			"fairing_volume_m3": 22.0,
 			"fairing_max_diameter_m": 3.20,
 			"fairing_max_height_m": 4.20,
@@ -75,3 +83,11 @@ static func get_vehicle(id: String) -> Dictionary:
 
 static func get_default_vehicle_id() -> String:
 	return "lv_commercial_medium"
+
+static func get_vehicle_payload_capacity(vehicle_id: String, scenario_id: String = "") -> float:
+	var v = get_vehicle(vehicle_id)
+	if scenario_id == "":
+		scenario_id = MissionScenario.get_active_scenario_id()
+	if scenario_id == "earth_climate_sentinel" or scenario_id == "ecs_01":
+		return v.get("leo_payload_capacity_kg", v.get("tli_payload_capacity_kg", 450.0))
+	return v.get("tli_payload_capacity_kg", 450.0)

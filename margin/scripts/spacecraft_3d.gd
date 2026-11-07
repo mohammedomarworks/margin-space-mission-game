@@ -681,3 +681,65 @@ func _build_instruments(root: Node3D, variant: String) -> void:
 			ir.position = Vector3(0.0, 0.86, -0.15)
 			ir.material_override = SpacecraftMaterials.get_mat("sensor_lens")
 			root.add_child(ir)
+		
+		"inst_radiometer":
+			# Optical Multi-Spectral Climate Radiometer housing + nadir telescope
+			var rbox := MeshInstance3D.new()
+			var b := BoxMesh.new()
+			b.size = Vector3(0.52, 0.18, 0.32)
+			rbox.mesh = b
+			rbox.position = Vector3(0.0, 0.70, -0.15)
+			rbox.material_override = SpacecraftMaterials.get_mat("sensor_body")
+			root.add_child(rbox)
+			
+			var telescope := MeshInstance3D.new()
+			var tcyl := CylinderMesh.new()
+			tcyl.top_radius = 0.12
+			tcyl.bottom_radius = 0.09
+			tcyl.height = 0.28
+			telescope.mesh = tcyl
+			telescope.position = Vector3(0.0, 0.90, -0.15)
+			telescope.material_override = SpacecraftMaterials.get_mat("sensor_lens")
+			root.add_child(telescope)
+		
+		"inst_ghg_spectrometer":
+			# Greenhouse Gas Grating Spectrometer body + dual optical collimator slits
+			var sbox := MeshInstance3D.new()
+			var b2 := BoxMesh.new()
+			b2.size = Vector3(0.60, 0.22, 0.38)
+			sbox.mesh = b2
+			sbox.position = Vector3(0.0, 0.72, -0.15)
+			sbox.material_override = SpacecraftMaterials.get_mat("gold_mli")
+			root.add_child(sbox)
+			
+			for x in [-0.15, 0.15]:
+				var slit := MeshInstance3D.new()
+				var c := CylinderMesh.new()
+				c.top_radius = 0.06
+				c.bottom_radius = 0.06
+				c.height = 0.24
+				slit.mesh = c
+				slit.position = Vector3(x, 0.92, -0.15)
+				slit.material_override = SpacecraftMaterials.get_mat("sensor_lens")
+				root.add_child(slit)
+		
+		"inst_ice_sar":
+			# SAR Interferometric Antenna Boom
+			var mast := MeshInstance3D.new()
+			var mbox := BoxMesh.new()
+			mbox.size = Vector3(0.85, 0.06, 0.18)
+			mast.mesh = mbox
+			mast.position = Vector3(0.0, 0.75, -0.15)
+			mast.material_override = SpacecraftMaterials.get_mat("carbon_fiber")
+			root.add_child(mast)
+			
+			for x in [-0.35, 0.35]:
+				var horn := MeshInstance3D.new()
+				var hc := CylinderMesh.new()
+				hc.top_radius = 0.08
+				hc.bottom_radius = 0.03
+				hc.height = 0.20
+				horn.mesh = hc
+				horn.position = Vector3(x, 0.88, -0.15)
+				horn.material_override = SpacecraftMaterials.get_mat("antenna_feed")
+				root.add_child(horn)

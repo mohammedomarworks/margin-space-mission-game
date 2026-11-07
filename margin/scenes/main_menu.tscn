@@ -247,6 +247,14 @@ theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
 theme_override_font_sizes/font_size = 13
 text = "3D SPACECRAFT WORKSHOP"
 
+[node name="CreativeSandboxBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
+theme_override_font_sizes/font_size = 13
+text = "★ CREATIVE SANDBOX (UNRESTRICTED)"
+
 [node name="HowToPlayBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2

@@ -1,6 +1,8 @@
 class_name MissionData
 extends RefCounted
 
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+
 # --- GAME SCENARIO CONSTRAINTS ---
 # Note: The following budget, mass, and duration figures are educational game scenario
 # constraints designed for gameplay balance, not certified NASA mission requirements or
@@ -59,3 +61,37 @@ const REF_LRO_LEND_URL: String = "https://lunar.gsfc.nasa.gov/lend.html"
 
 const REF_MINI_RF_NAME: String = "LRO Miniature Radio Frequency (Mini-RF) Polarimetric Synthetic Aperture Radar"
 const REF_MINI_RF_URL: String = "https://www.nasa.gov/mission/mini-rf/"
+
+# --- DYNAMIC SCENARIO PROXIES ---
+static func get_active_id() -> String:
+	return MissionScenario.get_active_scenario().id
+
+static func get_active_title() -> String:
+	return MissionScenario.get_active_scenario().title
+
+static func get_active_subtitle() -> String:
+	return MissionScenario.get_active_scenario().subtitle
+
+static func get_active_target_body() -> String:
+	return MissionScenario.get_active_scenario().target_body
+
+static func get_active_budget_cap_m() -> float:
+	return MissionScenario.get_active_scenario().budget_cap_m
+
+static func get_active_mass_limit_kg() -> float:
+	return MissionScenario.get_active_scenario().mass_limit_kg
+
+static func get_active_duration_days() -> int:
+	return MissionScenario.get_active_scenario().duration_days
+
+static func get_active_min_science_points() -> float:
+	return MissionScenario.get_active_scenario().min_science_points
+
+static func get_active_required_delta_v_ms() -> float:
+	return MissionScenario.get_active_scenario().required_delta_v_ms
+
+static func get_active_scientific_goal() -> String:
+	return MissionScenario.get_active_scenario().scientific_goal
+
+static func get_active_scientific_caution() -> String:
+	return MissionScenario.get_active_scenario().scientific_caution

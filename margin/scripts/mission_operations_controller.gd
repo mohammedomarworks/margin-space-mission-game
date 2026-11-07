@@ -6,6 +6,8 @@ const MissionOperationsData = preload("res://margin/data/mission_operations_data
 const SpacecraftState = preload("res://margin/scripts/spacecraft_state.gd")
 const ComponentDatabase = preload("res://margin/data/component_data.gd")
 const MarginTheme = preload("res://margin/ui/margin_theme.gd")
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+const TeamData = preload("res://margin/data/team_data.gd")
 
 # ==============================================================================
 # MARGIN: MISSION OPERATIONS CONTROLLER (MILESTONE 3)
@@ -58,11 +60,21 @@ const MarginTheme = preload("res://margin/ui/margin_theme.gd")
 @onready var summary_battery_label: Label = %SummaryBatteryLabel
 @onready var summary_budget_label: Label = %SummaryBudgetLabel
 
+# UI References - Emergency Decision Modal
+@onready var emergency_modal: PanelContainer = %EmergencyModal
+@onready var emergency_title_label: Label = %EmergencyTitleLabel
+@onready var emergency_scenario_label: Label = %EmergencyScenarioLabel
+@onready var choice_container: VBoxContainer = %ChoiceContainer
+@onready var impact_preview_label: Label = %ImpactPreviewLabel
+@onready var confirm_directive_btn: Button = %ConfirmDirectiveBtn
+
 # Simulator Engine & State
 var sim: MissionSimulator
 var state: SpacecraftState
 var selected_mode_id: String = "mode_nominal"
 var selected_target_crater_id: String = "crater_shackleton"
+var _selected_emergency_choice_id: String = ""
+var _emergency_choice_buttons: Dictionary = {}
 
 # 3D Animation Variables
 var _orbit_angle: float = 0.0
@@ -95,6 +107,10 @@ func _ready() -> void:
 	sim.mission_terminated.connect(_on_mission_terminated)
 	
 	# Setup visual environment
+	var active_targets = MissionOperationsData.get_targets_for_scenario()
+	if active_targets.size() > 0:
+		selected_target_crater_id = active_targets.keys()[0]
+
 	_setup_3d_moon_and_craters()
 	_setup_orbit_trajectory_mesh()
 	_setup_mode_buttons()
@@ -103,6 +119,10 @@ func _ready() -> void:
 	
 	# Initial UI Refresh
 	campaign_modal.visible = false
+	if emergency_modal:
+		emergency_modal.visible = false
+	if confirm_directive_btn and not confirm_directive_btn.pressed.is_connected(_on_confirm_directive_pressed):
+		confirm_directive_btn.pressed.connect(_on_confirm_directive_pressed)
 	_refresh_ui()
 	
 	# Append initial commissioning log
@@ -152,17 +172,30 @@ func _process(delta: float) -> void:
 # --- 3D Scene Setup ---
 
 func _setup_3d_moon_and_craters() -> void:
-	# Instantiate visual 3D pins/markers for each of the 6 lunar south-polar craters
+	var is_earth: bool = (MissionScenario.get_active_scenario_id() == "earth_climate_sentinel")
+	if moon_mesh:
+		var body_mat := StandardMaterial3D.new()
+		if is_earth:
+			body_mat.albedo_color = Color(0.12, 0.36, 0.65) # Deep Earth ocean blue
+			body_mat.roughness = 0.55
+			body_mat.rim_enabled = true
+			body_mat.rim = 0.6
+			body_mat.rim_tint = 0.5
+		else:
+			body_mat.albedo_color = Color(0.65, 0.67, 0.70) # Lunar regolith grey
+			body_mat.roughness = 0.95
+		moon_mesh.material_override = body_mat
+
+	# Instantiate visual 3D pins/markers for each target
 	var moon_r: float = 2.2
-	var all_craters = MissionOperationsData.get_all_craters()
+	var all_targets = MissionOperationsData.get_targets_for_scenario()
 	
-	for c_id in all_craters:
-		var c_data = all_craters[c_id]
+	for c_id in all_targets:
+		var c_data = all_targets[c_id]
 		var lat_rad: float = deg_to_rad(c_data["lat_deg"])
 		var lon_rad: float = deg_to_rad(c_data["lon_deg"])
 		
-		# Spherical to Cartesian coords on Moon surface
-		# South pole is -Y
+		# Spherical to Cartesian coords
 		var py: float = moon_r * sin(lat_rad)
 		var r_horiz: float = moon_r * cos(lat_rad)
 		var pz: float = r_horiz * cos(lon_rad)
@@ -176,9 +209,9 @@ func _setup_3d_moon_and_craters() -> void:
 		marker.mesh = cyl
 		
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.22, 0.74, 0.96, 0.85)
+		mat.albedo_color = Color(0.2, 0.9, 0.5, 0.85) if is_earth else Color(0.22, 0.74, 0.96, 0.85)
 		mat.emission_enabled = true
-		mat.emission = Color(0.15, 0.6, 0.9)
+		mat.emission = Color(0.1, 0.8, 0.4) if is_earth else Color(0.15, 0.6, 0.9)
 		mat.emission_energy_multiplier = 1.2
 		marker.material_override = mat
 		
@@ -243,9 +276,9 @@ func _setup_crater_selectors() -> void:
 		child.queue_free()
 	_crater_buttons.clear()
 	
-	var craters = MissionOperationsData.get_all_craters()
-	for c_id in craters:
-		var c_data: Dictionary = craters[c_id]
+	var all_targets = MissionOperationsData.get_targets_for_scenario()
+	for c_id in all_targets:
+		var c_data: Dictionary = all_targets[c_id]
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(130, 32)
 		btn.text = c_data["name"]
@@ -262,9 +295,9 @@ func _setup_crater_tracking_ui() -> void:
 	_crater_progress_bars.clear()
 	_crater_status_labels.clear()
 	
-	var craters = MissionOperationsData.get_all_craters()
-	for c_id in craters:
-		var c_data: Dictionary = craters[c_id]
+	var all_targets = MissionOperationsData.get_targets_for_scenario()
+	for c_id in all_targets:
+		var c_data: Dictionary = all_targets[c_id]
 		
 		var card := PanelContainer.new()
 		card.add_theme_stylebox_override("panel", MarginTheme.create_card_style(false))
@@ -275,7 +308,8 @@ func _setup_crater_tracking_ui() -> void:
 		
 		var h_header := HBoxContainer.new()
 		var name_lbl := Label.new()
-		name_lbl.text = "%s (%0.1f°S)" % [c_data["name"], abs(c_data["lat_deg"])]
+		var lat_str = "%0.1f°S" % abs(c_data["lat_deg"]) if c_data["lat_deg"] < 0 else "%0.1f°N" % c_data["lat_deg"]
+		name_lbl.text = "%s (%s)" % [c_data["name"], lat_str]
 		name_lbl.add_theme_font_size_override("font_size", 11)
 		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h_header.add_child(name_lbl)
@@ -295,7 +329,7 @@ func _setup_crater_tracking_ui() -> void:
 		vbox.add_child(bar)
 		
 		var status_lbl := Label.new()
-		status_lbl.text = "Status: Baseline cosmic-ray calibration pass"
+		status_lbl.text = "Status: Calibration baseline pass"
 		status_lbl.add_theme_font_size_override("font_size", 9)
 		status_lbl.add_theme_color_override("font_color", Color(0.65, 0.7, 0.78))
 		status_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -310,10 +344,12 @@ func _setup_crater_tracking_ui() -> void:
 func _select_mode(mode_id: String) -> void:
 	selected_mode_id = mode_id
 	_update_mode_button_styles()
+	TeamData.log_decision(TeamData.ROLE_DIRECTOR, "Mission Operations", "Mode: " + MissionOperationsData.get_mode(mode_id)["name"], MissionOperationsData.get_mode(mode_id)["tag"])
 
 func _select_target_crater(crater_id: String) -> void:
 	selected_target_crater_id = crater_id
 	_update_crater_button_styles()
+	TeamData.log_decision(TeamData.ROLE_SCIENCE, "Mission Operations", "Target: " + MissionOperationsData.get_target(crater_id)["name"], "Prioritized observation")
 	
 	# Focus camera or marker visual highlight
 	for c_id in _crater_marker_nodes:
@@ -353,14 +389,91 @@ func _on_execute_window_pressed() -> void:
 	if sim.is_completed or sim.is_terminated:
 		return
 	
+	var emerg: Dictionary = sim.get_current_emergency_event()
+	if not emerg.is_empty():
+		_show_emergency_modal(emerg)
+		return
+	
+	_execute_window_step("")
+
+func _show_emergency_modal(emerg: Dictionary) -> void:
+	if not emergency_modal:
+		_execute_window_step("")
+		return
+	
+	emergency_modal.visible = true
+	emergency_title_label.text = emerg.get("title", "EMERGENCY DIRECTIVE REQUIRED")
+	emergency_scenario_label.text = emerg.get("scenario", "")
+	
+	for child in choice_container.get_children():
+		child.queue_free()
+	_emergency_choice_buttons.clear()
+	
+	var choices: Array = emerg.get("choices", [])
+	var default_ch_id: String = emerg.get("default_choice_id", "")
+	if default_ch_id == "" and choices.size() > 0:
+		default_ch_id = choices[0]["id"]
+	
+	_selected_emergency_choice_id = default_ch_id
+	
+	for ch in choices:
+		var btn := Button.new()
+		btn.custom_minimum_size = Vector2(0, 48)
+		btn.text = "%s — [%s]\n%s" % [ch["name"], ch["tag"], ch["description"]]
+		btn.add_theme_font_size_override("font_size", 10)
+		btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		btn.pressed.connect(func(): _select_emergency_choice(ch))
+		choice_container.add_child(btn)
+		_emergency_choice_buttons[ch["id"]] = btn
+	
+	_update_emergency_choice_styles()
+	_update_impact_preview()
+
+func _select_emergency_choice(choice: Dictionary) -> void:
+	_selected_emergency_choice_id = choice["id"]
+	_update_emergency_choice_styles()
+	_update_impact_preview()
+
+func _update_emergency_choice_styles() -> void:
+	for ch_id in _emergency_choice_buttons:
+		var btn: Button = _emergency_choice_buttons[ch_id]
+		if ch_id == _selected_emergency_choice_id:
+			btn.add_theme_color_override("font_color", Color(0.22, 0.74, 0.96))
+		else:
+			btn.remove_theme_color_override("font_color")
+
+func _update_impact_preview() -> void:
+	var emerg: Dictionary = sim.get_current_emergency_event()
+	for ch in emerg.get("choices", []):
+		if ch["id"] == _selected_emergency_choice_id:
+			impact_preview_label.text = "PROJECTED OUTCOME: " + ch["impact_summary"]
+			return
+	impact_preview_label.text = "Select an operational directive above to review predicted telemetry impact."
+
+func _on_confirm_directive_pressed() -> void:
+	if emergency_modal:
+		emergency_modal.visible = false
+	_execute_window_step(_selected_emergency_choice_id)
+
+func _execute_window_step(emergency_choice_id: String) -> void:
 	execute_window_btn.disabled = true
 	
-	var report: Dictionary = sim.advance_window(selected_mode_id, selected_target_crater_id)
+	var report: Dictionary = sim.advance_window(selected_mode_id, selected_target_crater_id, emergency_choice_id)
 	_refresh_ui()
 	
 	# Log reporting
 	var win_num: int = report.get("window", sim.current_window - 1)
 	_append_log("--- MONTH %d COMPLETED (%s) ---" % [win_num, report["event_name"]], Color(0.22, 0.74, 0.96))
+	if report.has("emergency_decision"):
+		var dec = report["emergency_decision"]
+		_append_log("DIRECTIVE CONFIRMED: %s [%s]" % [dec["name"], dec["impact_summary"]], Color(1.0, 0.85, 0.3))
+		var r_id = TeamData.ROLE_DIRECTOR
+		var d_id: String = dec.get("id", "")
+		if d_id.contains("pass") or d_id.contains("downlink") or d_id.contains("store"):
+			r_id = TeamData.ROLE_FLIGHT_COMMS
+		elif d_id.contains("load") or d_id.contains("shed") or d_id.contains("power"):
+			r_id = TeamData.ROLE_SYSTEMS
+		TeamData.log_decision(r_id, "Mission Operations", "Directive: " + dec.get("name", ""), dec.get("impact_summary", ""))
 	_append_log("Target: %s (%0.1f%% coverage) | Mode: %s" % [report["target_crater_name"], report.get("target_crater_coverage", 0.0), report["mode_name"]], Color(0.85, 0.9, 0.95))
 	_append_log("Power: Net %+0.1fW | Eclipse DoD: %0.1f%% | Batt SOH: %0.1f%%" % [report["net_sunlight_power_w"], report["battery_dod_pct"], report["battery_health_pct"]], Color(0.7, 0.8, 0.9))
 	_append_log("Comms: Downlinked %0.1f Gbit | Buffer: %0.1f Gbit" % [report["data_downlinked_gbit"], report["data_buffer_gbit"]], Color(0.7, 0.8, 0.9))
@@ -404,9 +517,10 @@ func _refresh_ui() -> void:
 	top_data_label.text = "Buffer: %0.0f/%0.0f Gbit (Down: %0.0f)" % [t["data_buffer_gbit"], t["data_buffer_capacity_gbit"], t["data_downlinked_total_gbit"]]
 	
 	# Ground station name rotates deterministically based on window
-	var dsn_stations = ["Goldstone (34m)", "Madrid (70m)", "Canberra (34m)", "Goldstone (70m)"]
+	var is_earth: bool = (MissionScenario.get_active_scenario_id() == "earth_climate_sentinel")
+	var dsn_stations = ["Svalbard (SG-3)", "McMurdo (MGS)", "TrollSat (Antarctica)", "Fairbanks (ASF)"] if is_earth else ["Goldstone (34m)", "Madrid (70m)", "Canberra (34m)", "Goldstone (70m)"]
 	var dsn_st = dsn_stations[cur_win % dsn_stations.size()]
-	top_dsn_label.text = "DSN: %s" % dsn_st
+	top_dsn_label.text = ("GS: " if is_earth else "DSN: ") + dsn_st
 	top_budget_label.text = "Budget: $%0.1fM" % t["budget_remaining_m"]
 	top_science_label.text = "Science: %0.1f pts" % t["science_score_total"]
 	
@@ -419,10 +533,10 @@ func _refresh_ui() -> void:
 	else:
 		event_title_label.text = "CAMPAIGN COMPLETED"
 		event_condition_label.text = "All 12 monthly operational windows concluded."
-		event_flavor_label.text = "The lunar polar volatile survey dataset is preserved and ready for flight debrief."
+		event_flavor_label.text = "The earth climate sentinel monitoring dataset is preserved and ready for flight debrief." if is_earth else "The lunar polar volatile survey dataset is preserved and ready for flight debrief."
 		event_recommendation_label.text = "Inspect the Mission Campaign Performance Debrief below."
 	
-	# Right Panel Crater Coverage Bars
+	# Right Panel Target Coverage Bars
 	for c_id in sim.crater_coverage:
 		var cov: float = sim.crater_coverage[c_id]
 		if _crater_progress_bars.has(c_id):
@@ -433,19 +547,25 @@ func _refresh_ui() -> void:
 			
 			var c_data = MissionOperationsData.get_crater(c_id)
 			if cov >= 80.0:
-				dict["status"].text = "Confirmed Proxy: -%0.1f%% epithermal flux depression [%s]" % [c_data["baseline_depression_pct"], c_data["confidence"]]
+				if is_earth:
+					dict["status"].text = "Confirmed Proxy: %s [%s]" % [c_data.get("baseline_metric", "Nominal"), c_data.get("confidence", "Nominal")]
+				else:
+					dict["status"].text = "Confirmed Proxy: -%0.1f%% epithermal flux depression [%s]" % [c_data.get("baseline_depression_pct", 20.0), c_data.get("confidence", "Nominal")]
 				dict["status"].add_theme_color_override("font_color", Color(0.2, 0.85, 0.45))
 			elif cov >= 45.0:
-				dict["status"].text = "Candidate Proxy Detected: Moderate neutron depression signature"
+				dict["status"].text = "Candidate Proxy Detected: High signal-to-noise observation" if is_earth else "Candidate Proxy Detected: Moderate neutron depression signature"
 				dict["status"].add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 			elif cov > 0.0:
-				dict["status"].text = "In-progress survey pass: Integrating neutron counts"
+				dict["status"].text = "In-progress observation pass: Integrating sensor swath" if is_earth else "In-progress survey pass: Integrating neutron counts"
 				dict["status"].add_theme_color_override("font_color", Color(0.65, 0.7, 0.78))
 			else:
 				dict["status"].text = "Awaiting primary orbital ground tracks"
 				dict["status"].add_theme_color_override("font_color", Color(0.45, 0.5, 0.58))
 	
-	candidate_counter_label.text = "Candidate Volatile Reservoirs Identified: %d / 6" % sim.hydrogen_candidates_found
+	if is_earth:
+		candidate_counter_label.text = "Climate Sentinels Fully Monitored: %d / 6" % sim.hydrogen_candidates_found
+	else:
+		candidate_counter_label.text = "Candidate Volatile Reservoirs Identified: %d / 6" % sim.hydrogen_candidates_found
 
 func _append_log(msg: String, color: Color = Color(0.85, 0.9, 0.95)) -> void:
 	var lbl := Label.new()

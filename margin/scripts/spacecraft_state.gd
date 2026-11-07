@@ -1,6 +1,8 @@
 class_name SpacecraftState
 extends RefCounted
 
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+
 signal configuration_changed(category: ComponentDatabase.Category, old_comp: Dictionary, new_comp: Dictionary)
 signal telemetry_updated(telemetry: Dictionary)
 
@@ -35,6 +37,45 @@ func get_component_id(category: ComponentDatabase.Category) -> String:
 func get_component(category: ComponentDatabase.Category) -> Dictionary:
 	var id: String = get_component_id(category)
 	return ComponentDatabase.get_component(id)
+
+func save_to_file(file_path: String = "user://sandbox_spacecraft.json") -> bool:
+	var save_data = {
+		"components": {},
+		"saved_at": Time.get_datetime_string_from_system()
+	}
+	for cat in current_components:
+		save_data["components"][str(cat)] = current_components[cat]
+		
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	if not file:
+		return false
+	file.store_string(JSON.stringify(save_data, "\t"))
+	file.close()
+	return true
+
+func load_from_file(file_path: String = "user://sandbox_spacecraft.json") -> bool:
+	if not FileAccess.file_exists(file_path):
+		return false
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	if not file:
+		return false
+	var text = file.get_as_text()
+	file.close()
+	
+	var json = JSON.new()
+	if json.parse(text) != OK:
+		return false
+	var data = json.get_data()
+	if not data is Dictionary or not data.has("components"):
+		return false
+		
+	var comps: Dictionary = data["components"]
+	for cat_str in comps:
+		var cat_int = int(cat_str)
+		current_components[cat_int] = comps[cat_str]
+		
+	recalculate_and_emit()
+	return true
 
 func calculate_telemetry() -> Dictionary:
 	var dry_mass: float = 0.0
@@ -147,34 +188,36 @@ func calculate_telemetry() -> Dictionary:
 	var net_sunlight_power_w: float = power_gen_w - power_load_w
 	
 	# Orbital eclipse calculation: maximum duration spacecraft spends in the Moon's shadow cone (up to 48 min)
-	var eclipse_energy_required_wh: float = power_load_w * (MissionData.MAX_ORBITAL_ECLIPSE_MIN / 60.0)
+	var scenario = MissionScenario.get_active_scenario()
+	var budget_cap_m: float = scenario.budget_cap_m
+	var mass_limit_kg: float = scenario.mass_limit_kg
+	var min_sci_points: float = scenario.min_science_points
+	var scenario_req_dv_ms: float = scenario.required_delta_v_ms
+	var scenario_max_eclipse_min: float = scenario.max_eclipse_min
+
+	var eclipse_energy_required_wh: float = power_load_w * (scenario_max_eclipse_min / 60.0)
 	var eclipse_dod_pct: float = (eclipse_energy_required_wh / max(battery_wh, 1.0)) * 100.0
 	var eclipse_battery_margin_pct: float = ((0.70 * battery_wh) - eclipse_energy_required_wh) / (0.70 * battery_wh) * 100.0
 	
 	# Delta-V and mission maneuvers calculation:
-	# Reference 100 km circular lunar mission baseline (Low-Energy ballistic transfer example):
-	# - 20.0 m/s for translunar mid-course corrections (MCC game assumption)
-	# - 669.5 m/s for Lunar Orbit Insertion retro-burn (NASA/JPL cited 84-day WSB polar transfer example)
-	# - 150.0 m/s for 1-year low-orbit mascon stationkeeping (educational game assumption)
-	# Baseline Total = 839.5 m/s (Direct transfer requires 1110.0 m/s with cited 0.94 km/s Apollo-11-like LOI)
-	var delta_v_reserve_ms: float = delta_v_ms - MissionData.REQUIRED_DELTA_V_MS
-	var delta_v_margin_pct: float = (delta_v_reserve_ms / MissionData.REQUIRED_DELTA_V_MS) * 100.0
+	var delta_v_reserve_ms: float = delta_v_ms - scenario_req_dv_ms
+	var delta_v_margin_pct: float = (delta_v_reserve_ms / max(1.0, scenario_req_dv_ms)) * 100.0
 	
-	# Remaining ΔV available for stationkeeping after executing 20 m/s MCC and 669.5 m/s LOI (baseline):
-	var remaining_sk_dv: float = max(0.0, delta_v_ms - (MissionData.REF_MCC_DELTA_V_MS + MissionData.JPL_REF_LOW_ENERGY_LOI_MS))
-	var achievable_lifetime_days: float = (remaining_sk_dv / MissionData.REF_STATIONKEEPING_DELTA_V_MS) * float(MissionData.NOMINAL_DURATION_DAYS)
-	var lifetime_margin_pct: float = ((achievable_lifetime_days - float(MissionData.NOMINAL_DURATION_DAYS)) / float(MissionData.NOMINAL_DURATION_DAYS)) * 100.0
-	var lifetime_qualified: bool = delta_v_ms >= MissionData.REQUIRED_DELTA_V_MS
+	# Remaining ΔV available for stationkeeping:
+	var remaining_sk_dv: float = max(0.0, delta_v_ms - (scenario.ref_mcc_delta_v_ms + scenario.ref_loi_delta_v_ms))
+	var achievable_lifetime_days: float = (remaining_sk_dv / max(1.0, scenario.ref_stationkeeping_delta_v_ms)) * float(scenario.duration_days)
+	var lifetime_margin_pct: float = ((achievable_lifetime_days - float(scenario.duration_days)) / float(scenario.duration_days)) * 100.0
+	var lifetime_qualified: bool = delta_v_ms >= scenario_req_dv_ms
 	
 	# Six Resource Margins:
 	# 1. Mass Margin
-	var mass_margin_pct: float = ((MissionData.MASS_LIMIT_KG - wet_mass) / MissionData.MASS_LIMIT_KG) * 100.0
+	var mass_margin_pct: float = ((mass_limit_kg - wet_mass) / mass_limit_kg) * 100.0
 	
 	# 2. Power Margin (Sunlight surplus)
 	var power_margin_pct: float = ((power_gen_w - power_load_w) / max(power_load_w, 1.0)) * 100.0
 	
 	# 3. Budget Margin
-	var budget_margin_pct: float = ((MissionData.BUDGET_CAP_M - total_cost) / MissionData.BUDGET_CAP_M) * 100.0
+	var budget_margin_pct: float = ((budget_cap_m - total_cost) / budget_cap_m) * 100.0
 	
 	# 4. Data Margin (Downlink headroom)
 	var data_margin_pct: float = ((downlink_gbit_day - data_gen_gbit_day) / max(downlink_gbit_day, 0.1)) * 100.0
@@ -186,34 +229,34 @@ func calculate_telemetry() -> Dictionary:
 	var system_reliability_pct: float = reliability_accum * 100.0
 	
 	# Qualification checks
-	var mass_qualified: bool = wet_mass <= MissionData.MASS_LIMIT_KG
-	var budget_qualified: bool = total_cost <= MissionData.BUDGET_CAP_M
+	var mass_qualified: bool = wet_mass <= mass_limit_kg
+	var budget_qualified: bool = total_cost <= budget_cap_m
 	var power_qualified: bool = net_sunlight_power_w >= 0.0 and eclipse_dod_pct <= 70.0
 	var data_qualified: bool = downlink_gbit_day >= data_gen_gbit_day
 	var comms_qualified: bool = link_margin_db >= 3.0
-	var science_qualified: bool = science_score >= MissionData.MIN_SCIENCE_POINTS
+	var science_qualified: bool = science_score >= min_sci_points
 	
 	var all_qualified: bool = (mass_qualified and budget_qualified and power_qualified 
 		and data_qualified and comms_qualified and lifetime_qualified and science_qualified)
 	
 	var deficits: Array[String] = []
 	if not mass_qualified:
-		deficits.append("Mass exceeds launcher limit (%0.1f kg > %0.1f kg)" % [wet_mass, MissionData.MASS_LIMIT_KG])
+		deficits.append("Mass exceeds launcher limit (%0.1f kg > %0.1f kg)" % [wet_mass, mass_limit_kg])
 	if not budget_qualified:
-		deficits.append("Budget exceeds cap ($%0.1fM > $%0.1fM)" % [total_cost, MissionData.BUDGET_CAP_M])
+		deficits.append("Budget exceeds cap ($%0.1fM > $%0.1fM)" % [total_cost, budget_cap_m])
 	if not power_qualified:
 		if net_sunlight_power_w < 0.0:
 			deficits.append("Power deficit in sunlight (%0.1f W deficit)" % [abs(net_sunlight_power_w)])
 		if eclipse_dod_pct > 70.0:
-			deficits.append("Battery Depth of Discharge exceeds 70%% limit during spacecraft lunar orbital eclipse (%0.1f%% DoD)" % [eclipse_dod_pct])
+			deficits.append("Battery Depth of Discharge exceeds 70%% limit during orbital eclipse (%0.1f%% DoD)" % [eclipse_dod_pct])
 	if not data_qualified:
 		deficits.append("Downlink bottleneck: %0.1f Gbit/day generated vs %0.1f Gbit/day bandwidth" % [data_gen_gbit_day, downlink_gbit_day])
 	if not comms_qualified:
 		deficits.append("Link margin below 3.0 dB closure threshold (%0.1f dB)" % [link_margin_db])
 	if not lifetime_qualified:
-		deficits.append("Insufficient onboard ΔV for mission maneuvers (%0.0f m/s < %0.0f m/s baseline: 20 m/s MCC + 669.5 m/s LOI [JPL ref example] + 150 m/s stationkeeping)" % [delta_v_ms, MissionData.REQUIRED_DELTA_V_MS])
+		deficits.append("Insufficient onboard ΔV for mission maneuvers (%0.0f m/s < %0.0f m/s baseline: %0.0f m/s MCC + %0.1f m/s LOI + %0.0f m/s stationkeeping)" % [delta_v_ms, scenario_req_dv_ms, scenario.ref_mcc_delta_v_ms, scenario.ref_loi_delta_v_ms, scenario.ref_stationkeeping_delta_v_ms])
 	if not science_qualified:
-		deficits.append("Science score below minimum mission criteria (%0.1f < %0.1f pts)" % [science_score, MissionData.MIN_SCIENCE_POINTS])
+		deficits.append("Science score below minimum mission criteria (%0.1f < %0.1f pts)" % [science_score, min_sci_points])
 	
 	return {
 		"wet_mass_kg": wet_mass,

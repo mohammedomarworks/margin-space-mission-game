@@ -10,6 +10,8 @@ const SpacecraftState = preload("res://margin/scripts/spacecraft_state.gd")
 const ComponentDatabase = preload("res://margin/data/component_data.gd")
 const MissionData = preload("res://margin/data/mission_data.gd")
 const MissionOperationsData = preload("res://margin/data/mission_operations_data.gd")
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+const TeamData = preload("res://margin/data/team_data.gd")
 
 # 8 Category Weights (Sum = 1.00)
 const WEIGHT_SCIENCE: float = 0.25
@@ -298,6 +300,10 @@ static func evaluate_mission(
 	var outcome_name: String = "MISSION SUCCESSFUL"
 	var outcome_reasons: Array[String] = []
 	
+	var active_scen = MissionScenario.get_active_scenario()
+	var min_p1_succ: float = 70.0 if active_scen.id == "earth_climate_sentinel" else 65.0
+	var min_total_succ: float = 75.0 if active_scen.id == "earth_climate_sentinel" else 70.0
+	
 	if is_terminated:
 		outcome = "FAILURE"
 		outcome_name = "MISSION FAILED"
@@ -309,21 +315,25 @@ static func evaluate_mission(
 	elif p1_score < 35.0:
 		outcome = "FAILURE"
 		outcome_name = "MISSION FAILED"
-		outcome_reasons.append("Primary scientific objective unfulfilled: Scientific achievement score (%0.1f pts) failed minimum Discovery-class survey standard." % p1_score)
-	elif total_weighted_score < 70.0 or p1_score < 65.0 or windows_completed < 12:
+		outcome_reasons.append("Primary scientific objective unfulfilled: Scientific achievement score (%0.1f pts) failed minimum mission standard." % p1_score)
+	elif total_weighted_score < min_total_succ or p1_score < min_p1_succ or windows_completed < 12:
 		outcome = "PARTIAL_SUCCESS"
 		outcome_name = "PARTIAL MISSION SUCCESS"
 		if windows_completed < 12:
 			outcome_reasons.append("Premature end of operations: Completed %d of 12 scheduled flight windows." % windows_completed)
-		if p1_score < 65.0:
-			outcome_reasons.append("Scientific return was constrained (%0.1f pts); some high-priority polar craters were under-surveyed." % p1_score)
-		if total_weighted_score < 70.0:
+		if p1_score < min_p1_succ:
+			outcome_reasons.append("Scientific return was constrained (%0.1f pts); target observation coverage below requirement." % p1_score)
+		if total_weighted_score < min_total_succ:
 			outcome_reasons.append("Engineering margins were tight (%0.1f weighted composite pts); operating reserves depleted." % total_weighted_score)
 	else:
 		outcome = "SUCCESS"
 		outcome_name = "MISSION SUCCESSFUL"
-		outcome_reasons.append("Primary volatile mapping objectives completed across all 12 operational windows.")
-		outcome_reasons.append("Robust scientific yield: Identified %d confirmed hydrogen proxy crater sectors." % hydrogen_found)
+		if active_scen.id == "earth_climate_sentinel":
+			outcome_reasons.append("Primary Earth climate monitoring objectives completed across all 12 operational windows.")
+			outcome_reasons.append("Robust scientific yield: Fully observed %d global climate sentinel zones." % hydrogen_found)
+		else:
+			outcome_reasons.append("Primary volatile mapping objectives completed across all 12 operational windows.")
+			outcome_reasons.append("Robust scientific yield: Identified %d confirmed hydrogen proxy crater sectors." % hydrogen_found)
 		outcome_reasons.append("Positive spacecraft flight margins maintained: +%0.0f m/s ΔV reserve and %0.1f%% battery SOH." % [dv_remaining, battery_health])
 
 	# Letter Grade
@@ -364,6 +374,7 @@ static func evaluate_mission(
 		"pillars": pillars,
 		"engineering_findings": findings,
 		"team_contributions": team,
+		"team_coordination": TeamData.generate_coordination_report(summary, {"team_contributions": team}),
 		
 		# Telemetry Echo
 		"mission_name": summary.get("mission_name", "Lunar South Pole Survey"),
@@ -491,6 +502,63 @@ static func _generate_engineering_audit(
 			"impact_type": "warning",
 			"detail": "Spacecraft concluded primary mission near propellant exhaustion. Gravitational mascon perturbations consumed nearly all allocated propellant."
 		})
+	
+	# Emergency Operational Directives Audit
+	var emerg_list: Array = summary.get("emergency_decisions", [])
+	for dec in emerg_list:
+		var ev_id: String = dec.get("event_id", "")
+		var ch_id: String = dec.get("choice_id", "")
+		if ev_id == "event_solar_storm":
+			if ch_id == "choice_safe_mode":
+				findings.append({
+					"subsystem": "Flight Operations & Thermal",
+					"decision": "Executed Emergency Safe Mode During Solar Particle Storm",
+					"verdict": "PRUDENT VEHICLE CONSERVATION",
+					"impact_type": "positive",
+					"detail": "Protected spectrometer detectors and star trackers from high-energy proton flux degradation at the cost of a temporary observation pause."
+				})
+			else:
+				findings.append({
+					"subsystem": "Flight Operations & Thermal",
+					"decision": "Continued Science Operations Through Solar Storm",
+					"verdict": "AGGRESSIVE SCIENCE / HARDWARE WEAR",
+					"impact_type": "warning",
+					"detail": "Preserved orbital observation continuity during coronal mass ejection, but incurred sensor degradation (-7.5% equipment health) and persistent noise."
+				})
+		elif ev_id == "event_dsn_outage":
+			if ch_id == "choice_backup_comm":
+				findings.append({
+					"subsystem": "Communications & Ground Networks",
+					"decision": "Activated Commercial S-Band Relay During DSN Outage",
+					"verdict": "BUFFER PRESERVATION",
+					"impact_type": "positive",
+					"detail": "Successfully mitigated solid-state recorder overflow by expending +$0.5M operations budget to secure commercial backup ground passes."
+				})
+			else:
+				findings.append({
+					"subsystem": "Communications & Ground Networks",
+					"decision": "Buffered Science Data Onboard During DSN Madrid Outage",
+					"verdict": "CONSERVATIVE BUDGET / ELEVATED BUFFER RISK",
+					"impact_type": "neutral",
+					"detail": "Saved operations funds by holding spectra in onboard memory, but sharply increased recorder occupancy heading into subsequent mapping passes."
+				})
+		elif ev_id == "event_battery_emergency":
+			if ch_id == "choice_shed_load":
+				findings.append({
+					"subsystem": "Electrical Power Subsystem (EPS)",
+					"decision": "Shed Non-Critical Loads During Deep Eclipse Emergency",
+					"verdict": "BATTERY PRESERVATION",
+					"impact_type": "positive",
+					"detail": "Duty-cycled payload electronics during shadow transit, maintaining battery Depth-of-Discharge within safe limits and preserving cell longevity."
+				})
+			else:
+				findings.append({
+					"subsystem": "Electrical Power Subsystem (EPS)",
+					"decision": "Maintained Full Science Load Through Deep Eclipse Emergency",
+					"verdict": "HIGH ELECTRICAL STRESS",
+					"impact_type": "warning",
+					"detail": "Preserved observation rates during shadow pass, but subjected battery to severe Depth-of-Discharge (>85% DoD), accelerating cell capacity degradation."
+				})
 	
 	# 5. Primary Positive and Negative Drivers
 	var best_pillar: Dictionary = pillars[0]
