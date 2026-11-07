@@ -4,10 +4,10 @@
 [ext_resource type="Script" path="res://margin/scripts/helios4_rocket_3d.gd" id="2_rocket"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_Hangar"]
-sky_top_color = Color(0.015, 0.02, 0.035, 1)
-sky_horizon_color = Color(0.03, 0.045, 0.07, 1)
-ground_bottom_color = Color(0.01, 0.015, 0.02, 1)
-ground_horizon_color = Color(0.02, 0.03, 0.045, 1)
+sky_top_color = Color(0.025, 0.035, 0.055, 1)
+sky_horizon_color = Color(0.05, 0.08, 0.13, 1)
+ground_bottom_color = Color(0.015, 0.02, 0.03, 1)
+ground_horizon_color = Color(0.035, 0.055, 0.085, 1)
 
 [sub_resource type="Sky" id="Sky_Hangar"]
 sky_material = SubResource("SkyMat_Hangar")
@@ -16,13 +16,17 @@ sky_material = SubResource("SkyMat_Hangar")
 background_mode = 2
 sky = SubResource("Sky_Hangar")
 ambient_light_source = 2
-ambient_light_color = Color(0.16, 0.2, 0.28, 1)
-ambient_light_energy = 1.15
+ambient_light_color = Color(0.13, 0.17, 0.25, 1)
+ambient_light_energy = 1.05
 tonemap_mode = 3
 glow_enabled = true
-glow_intensity = 0.85
-glow_bloom = 0.18
+glow_intensity = 0.8
+glow_bloom = 0.15
 glow_blend_mode = 0
+fog_enabled = true
+fog_light_color = Color(0.07, 0.10, 0.16, 1)
+fog_density = 0.0065
+fog_sky_affect = 0.4
 
 [sub_resource type="StyleBoxFlat" id="Style_HangarCard"]
 bg_color = Color(0.04, 0.06, 0.09, 0.88)
@@ -159,22 +163,46 @@ script = ExtResource("1_hangar")
 environment = SubResource("Env_Hangar")
 
 [node name="MainLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866, -0.28, 0.41, 0, 0.825, 0.565, -0.5, -0.49, 0.71, 10, 20, 12)
+transform = Transform3D(0.866, -0.28, 0.41, 0, 0.825, 0.565, -0.5, -0.49, 0.71, 14, 24, 16)
 light_color = Color(0.96, 0.98, 1, 1)
 light_energy = 1.85
 shadow_enabled = true
 
 [node name="RimLight" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 12, -8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 18, -16)
 light_color = Color(0.35, 0.65, 0.95, 1)
 light_energy = 1.5
-omni_range = 28.0
+omni_range = 45.0
 
 [node name="WarmPadFill" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 10)
 light_color = Color(1, 0.82, 0.55, 1)
-light_energy = 0.9
-omni_range = 18.0
+light_energy = 0.95
+omni_range = 22.0
+
+[node name="RearDoorLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12, -26)
+light_color = Color(1.0, 0.75, 0.3, 1)
+light_energy = 1.2
+omni_range = 30.0
+
+[node name="HighbayCeilingLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 28, 0)
+light_color = Color(0.75, 0.88, 1.0, 1)
+light_energy = 1.1
+omni_range = 40.0
+
+[node name="LeftRocketWorklight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 9.0, 4.5)
+light_color = Color(0.85, 0.92, 1.0, 1)
+light_energy = 1.6
+omni_range = 24.0
+
+[node name="RightRocketWorklight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 9.0, 4.5)
+light_color = Color(0.95, 0.94, 0.90, 1)
+light_energy = 1.6
+omni_range = 24.0
 
 [node name="Rocket3D" type="Node3D" parent="."]
 unique_name_in_owner = true

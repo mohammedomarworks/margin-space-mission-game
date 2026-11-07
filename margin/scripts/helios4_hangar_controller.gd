@@ -29,6 +29,7 @@ var _cam_pitch: float = 6.0
 var _cam_distance: float = 17.5
 var _cam_target: Vector3 = Vector3(0.0, 7.5, 0.0)
 var _is_dragging: bool = false
+var _is_right_dragging: bool = false
 var _drag_start: Vector2 = Vector2.ZERO
 
 # Timer State
@@ -565,17 +566,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			_is_dragging = event.pressed
 			_drag_start = event.position
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			_is_right_dragging = event.pressed
+			_drag_start = event.position
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			_cam_distance = clamp(_cam_distance - 0.75, 4.0, 30.0)
+			_cam_distance = clamp(_cam_distance - 0.75, 4.0, 32.0)
 			_update_camera_transform()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_cam_distance = clamp(_cam_distance + 0.75, 4.0, 30.0)
+			_cam_distance = clamp(_cam_distance + 0.75, 4.0, 32.0)
 			_update_camera_transform()
-	elif event is InputEventMouseMotion and _is_dragging:
-		var delta = event.relative
-		_cam_yaw -= delta.x * 0.35
-		_cam_pitch = clamp(_cam_pitch + delta.y * 0.35, -25.0, 75.0)
-		_update_camera_transform()
+	elif event is InputEventMouseMotion:
+		if _is_dragging:
+			var delta = event.relative
+			_cam_yaw -= delta.x * 0.35
+			_cam_pitch = clamp(_cam_pitch + delta.y * 0.35, -25.0, 75.0)
+			_update_camera_transform()
+		elif _is_right_dragging:
+			var delta = event.relative
+			_cam_distance = clamp(_cam_distance + delta.y * 0.08, 4.0, 32.0)
+			_update_camera_transform()
 
 func _on_proceed_to_review_pressed() -> void:
 	print("[Hangar] Transitioning to Flight Readiness Review Gate")

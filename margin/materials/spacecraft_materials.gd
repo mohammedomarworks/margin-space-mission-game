@@ -238,6 +238,76 @@ static func get_mat(name: String) -> StandardMaterial3D:
 			mat.emission_energy_multiplier = 3.5
 			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		
+		# --- ENVIRONMENT ART PASS: HIGH-FIDELITY AEROSPACE FACILITY ---
+		"hangar_wall_dark":
+			mat.albedo_color = Color(0.06, 0.08, 0.11)
+			mat.metallic = 0.75
+			mat.roughness = 0.42
+			mat.rim_enabled = true
+			mat.rim = 0.2
+		
+		"hangar_door_steel":
+			mat.albedo_color = Color(0.12, 0.14, 0.18)
+			mat.metallic = 0.85
+			mat.roughness = 0.32
+			mat.rim_enabled = true
+			mat.rim = 0.3
+		
+		"hangar_truss_steel":
+			mat.albedo_color = Color(0.14, 0.16, 0.20)
+			mat.metallic = 0.90
+			mat.roughness = 0.28
+		
+		"hangar_control_room_glass":
+			mat.albedo_color = Color(0.15, 0.45, 0.65)
+			mat.metallic = 0.2
+			mat.roughness = 0.1
+			mat.emission_enabled = true
+			mat.emission = Color(0.2, 0.6, 0.8)
+			mat.emission_energy_multiplier = 1.6
+		
+		"hangar_catwalk_grate":
+			mat.albedo_color = Color(0.18, 0.20, 0.24)
+			mat.metallic = 0.88
+			mat.roughness = 0.38
+		
+		"vent_duct_galvanized":
+			mat.albedo_color = Color(0.42, 0.45, 0.50)
+			mat.metallic = 0.85
+			mat.roughness = 0.35
+		
+		"pipe_cryo_insulation":
+			mat.albedo_color = Color(0.85, 0.88, 0.92)
+			mat.metallic = 0.55
+			mat.roughness = 0.28
+		
+		"industrial_crane_safety":
+			mat.albedo_color = Color(0.95, 0.52, 0.05)
+			mat.metallic = 0.45
+			mat.roughness = 0.38
+		
+		"worklight_fixture":
+			mat.albedo_color = Color(1.0, 0.75, 0.25)
+			mat.emission_enabled = true
+			mat.emission = Color(1.0, 0.75, 0.2)
+			mat.emission_energy_multiplier = 4.0
+		
+		"highbay_light_fixture":
+			mat.albedo_color = Color(0.85, 0.92, 1.0)
+			mat.emission_enabled = true
+			mat.emission = Color(0.8, 0.9, 1.0)
+			mat.emission_energy_multiplier = 4.5
+		
+		"hazard_line_white":
+			mat.albedo_color = Color(0.90, 0.92, 0.95)
+			mat.metallic = 0.2
+			mat.roughness = 0.4
+		
+		"drain_grate":
+			mat.albedo_color = Color(0.12, 0.13, 0.16)
+			mat.metallic = 0.90
+			mat.roughness = 0.35
 	
 	_materials[name] = mat
 	return mat
