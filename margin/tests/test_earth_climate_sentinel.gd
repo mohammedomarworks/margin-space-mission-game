@@ -79,9 +79,11 @@ func test_earth_instruments() -> void:
 	_assert_true(not inst_ghg.is_empty(), "GHG Spectrometer exists")
 	_assert_true(inst_ghg.get("heritage_name", "").contains("OCO-2"), "GHG Spectrometer cites OCO-2 heritage")
 	
-	var inst_sar = ComponentDatabase.get_component("inst_polarimetric_ice_sar")
-	_assert_true(not inst_sar.is_empty(), "Polarimetric Ice SAR exists")
-	_assert_true(inst_sar.get("heritage_name", "").contains("CryoSat-2"), "Ice SAR cites CryoSat-2 heritage")
+	var inst_alt = ComponentDatabase.get_component("inst_polarimetric_ice_sar")
+	_assert_true(not inst_alt.is_empty(), "Cryosphere Altimeter exists")
+	_assert_true(inst_alt.get("name", "") == "Ku-band SAR Interferometric Cryosphere Altimeter (CryoSat-2 SIRAL-inspired)", "Cryosphere Altimeter has exact SIRAL-inspired name")
+	_assert_true(not inst_alt.get("name", "").contains("Polarimetric"), "Cryosphere Altimeter does not claim to be polarimetric")
+	_assert_true(inst_alt.get("heritage_name", "").contains("CryoSat-2"), "Cryosphere Altimeter cites CryoSat-2 heritage")
 
 func test_earth_orbits_and_transfers() -> void:
 	print("\n[TEST 3] Earth Orbits and Direct Ascent Transfers")

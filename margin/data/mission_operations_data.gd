@@ -127,10 +127,10 @@ static func get_all_climate_sentinels() -> Dictionary:
 			"lon_deg": -62.5,
 			"diameter_km": 850.0,
 			"baseline_metric": "Ice Shelf Freeboard / Calving Flux",
-			"confidence": "High (CryoSat-2 SAR Heritage)",
+			"confidence": "High (CryoSat-2 SIRAL Altimetry Heritage)",
 			"science_weight": 1.45,
 			"description": "Vulnerable polar ice shelf barrier monitoring grounding-line stability, rift propagation, and major tabular iceberg calving detachment.",
-			"scientific_proxy_note": "SAR interferometric freeboard height serves as a proxy for floating ice shelf thickness; tidal flexure and firn air content introduce modeling uncertainty."
+			"scientific_proxy_note": "SAR interferometric altimetry freeboard serves as a proxy for floating ice shelf thickness; tidal flexure and firn air content introduce modeling uncertainty."
 		},
 		"sentinel_amazon_basin": {
 			"id": "sentinel_amazon_basin",

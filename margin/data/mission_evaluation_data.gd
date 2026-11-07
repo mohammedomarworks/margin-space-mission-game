@@ -212,7 +212,7 @@ static func get_earth_climate_benchmarks() -> Dictionary:
 			"instrument": "SIRAL (SAR Interferometric Radar Altimeter, Ku-band)",
 			"orbit_km": "720 km Polar, 92.0° inclination",
 			"key_findings": "Pioneered Ku-band SAR interferometry for polar ice sheets and sea ice freeboard thickness profiling.",
-			"caution_distinction": "SIRAL is an active microwave ice sounder and freeboard altimeter. It is not an ocean dynamic topography altimeter (such as Jason-3 or Sentinel-6) and does not measure steric sea-surface height. Measuring full-depth AMOC transport fundamentally requires in-situ oceanographic mooring arrays (e.g. RAPID / OSNAP) and numerical ocean modeling.",
+			"caution_distinction": "Modeled on CryoSat-2 SIRAL's ice-focused SAR and interferometric radar altimetry heritage. It is a dedicated cryosphere altimeter, not a polarimetric SAR or open-ocean dynamic topography altimeter (such as Jason-3 or Sentinel-6), and does not measure steric sea-surface height or full-depth AMOC transport. Educational mass (58 kg), power (-135 W), and cost ($42.0M) in MARGIN are gameplay estimates rather than actual CryoSat-2 spacecraft specifications.",
 			"source_url": "https://earth.esa.int/eogateway/missions/cryosat"
 		}
 	}

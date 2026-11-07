@@ -658,8 +658,8 @@ static func get_all_components() -> Dictionary:
 		"inst_polarimetric_ice_sar": {
 			"id": "inst_polarimetric_ice_sar",
 			"category": Category.INSTRUMENTS,
-			"name": "Polarimetric Ice Sounding SAR (CryoSat-2 Heritage)",
-			"tier": "Active Microwave Cryosphere Sensor",
+			"name": "Ku-band SAR Interferometric Cryosphere Altimeter (CryoSat-2 SIRAL-inspired)",
+			"tier": "Active Microwave Cryosphere Altimeter",
 			"mass_kg": 58.0,
 			"cost_m": 42.0,
 			"power_w": -135.0,
@@ -671,10 +671,10 @@ static func get_all_components() -> Dictionary:
 			"stowed_vol_m3": 0.42,
 			"heritage_name": "ESA CryoSat-2 SAR Interferometric Radar Altimeter (SIRAL)",
 			"heritage_url": "https://earth.esa.int/eogateway/missions/cryosat",
-			"description": "Ku-band polarimetric Synthetic Aperture Radar (SAR) tracking ice sheet elevation change, glacier terminus velocity, and polar sea ice freeboard thickness through cloud cover.",
-			"tradeoff_positive": "Unmatched cryospheric survey precision independent of solar illumination or polar cloud weather (98 science pts).",
-			"tradeoff_negative": "Heaviest sensor suite (58 kg), massive 135 W transmitter load, and enormous 24 Gbit/day data stream.",
-			"engineering_insight": "Synthetic Aperture Radar (SAR) mode sharpens along-track footprint to 250m, enabling steep coastal ice margin profiling. Dedicated ocean radar altimetry for dynamic sea-surface height is not modeled.",
+			"description": "Ku-band SAR interferometric radar altimeter modeled on CryoSat-2 SIRAL heritage, tracking ice sheet elevation changes, steep ice margin slopes, and polar sea ice freeboard thickness through cloud cover.",
+			"tradeoff_positive": "Unmatched cryospheric altimetry precision independent of solar illumination or polar cloud cover (98 science pts).",
+			"tradeoff_negative": "Demands substantial satellite resources (58 kg, -135 W power, 24 Gbit/day data stream) in this educational simulation model.",
+			"engineering_insight": "Modeled on CryoSat-2 SIRAL's along-track SAR and cross-track interferometry for ice topography and sea ice freeboard. Educational mass (58 kg), power (-135 W), and cost ($42.0M) are balanced gameplay estimates rather than actual flight specifications. Does not model a dedicated microwave ocean radar altimeter for dynamic sea-surface height or full-depth AMOC transport.",
 			"visual_variant": "inst_ice_sar"
 		}
 	}
