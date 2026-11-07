@@ -32,5 +32,6 @@ ehthumbs.db
 *.pem
 
 # Include web build output for Vercel deployment
+/build/testing_web/
 !build/web/
 !build/web/**

@@ -46,6 +46,22 @@ content_margin_top = 24.0
 content_margin_right = 24.0
 content_margin_bottom = 24.0
 
+[sub_resource type="StyleBoxFlat" id="Style_FrontierBtn_Menu"]
+bg_color = Color(0.12, 0.45, 0.75, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
 [sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn_Menu"]
 bg_color = Color(0.08, 0.38, 0.6, 0.95)
 border_color = Color(0.22, 0.74, 0.96, 1)
@@ -203,6 +219,13 @@ autowrap_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 10
 
+[node name="LunarFrontierBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_FrontierBtn_Menu")
+theme_override_font_sizes/font_size = 14
+text = "► PLAY LUNAR FRONTIER (3D GAME)"
+
 [node name="StartMissionBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
@@ -330,6 +353,7 @@ text = "4. SIGNATURE FEATURE: TRADE-OFF ECHO
 Every time you swap a module, the Trade-Off Echo analyzes the exact impact on your margins and presents real-world aerospace insights."
 autowrap_mode = 2
 
+[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/LunarFrontierBtn" to="." method="_on_lunar_frontier_pressed"]
 [connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/StartMissionBtn" to="." method="_on_start_mission_pressed"]
 [connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/MissionBriefingBtn" to="." method="_on_mission_briefing_pressed"]
 [connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/WorkshopDirectBtn" to="." method="_on_jump_to_workshop_pressed"]
