@@ -1,6 +1,8 @@
 # MARGIN — THE SPACE MISSION DESIGN GAME
 ### *Every Gram. Every Watt. Every Decision.*
 
+🎮 **Live Web Deployment:** [https://margin-space-mission-game.vercel.app/](https://margin-space-mission-game.vercel.app/)
+
 **MARGIN** is a 3D interactive aerospace engineering and mission management simulation built in Godot Engine 4.7. Designed in the spirit of the NASA Space Mission Design Game challenge, MARGIN puts players in command of designing, launching, operating, and debriefing an authentic Discovery-class lunar orbital survey mission.
 
 Unlike generic arcade flight games or static web dashboards, MARGIN simulates real mission trade-offs, Tsiolkovsky orbital mechanics, epithermal neutron moderation astrophysics, solar array geometry, battery Depth-of-Discharge (DoD) during lunar orbital eclipses, and Deep Space Network (DSN) telemetry link margins.
@@ -240,6 +242,8 @@ node margin/tests/run_full_browser_qa.js
 ---
 
 ## 🌐 Deploying to Vercel
+
+**Live Production URL:** [https://margin-space-mission-game.vercel.app/](https://margin-space-mission-game.vercel.app/)
 
 The project includes a ready-to-deploy `vercel.json` configured for Godot 4 Web exports with optimized HTTP headers:
 
