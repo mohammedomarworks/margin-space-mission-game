@@ -15,47 +15,91 @@ sky_material = SubResource("SkyMat_L1")
 background_mode = 2
 sky = SubResource("Sky_L1")
 ambient_light_source = 2
-ambient_light_color = Color(0.18, 0.22, 0.3, 1)
+ambient_light_color = Color(0.18, 0.22, 0.32, 1)
+ambient_light_energy = 0.9
 tonemap_mode = 2
 
-[sub_resource type="StandardMaterial3D" id="Mat_Sun_L1"]
+[sub_resource type="StandardMaterial3D" id="Mat_SunCore_L1"]
 emission_enabled = true
-emission = Color(1.0, 0.85, 0.4, 1)
-emission_energy_multiplier = 4.8
+emission = Color(1.0, 0.9, 0.5, 1)
+emission_energy_multiplier = 5.5
 
-[sub_resource type="SphereMesh" id="Mesh_Sun_L1"]
-material = SubResource("Mat_Sun_L1")
-radius = 9.0
-height = 18.0
+[sub_resource type="SphereMesh" id="Mesh_SunCore_L1"]
+material = SubResource("Mat_SunCore_L1")
+radius = 12.0
+height = 24.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_SunCorona_L1"]
+transparency = 1
+albedo_color = Color(1, 0.75, 0.2, 0.25)
+emission_enabled = true
+emission = Color(1, 0.7, 0.15, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="SphereMesh" id="Mesh_SunCorona_L1"]
+material = SubResource("Mat_SunCorona_L1")
+radius = 18.0
+height = 36.0
 
 [sub_resource type="StandardMaterial3D" id="Mat_Earth_L1"]
-albedo_color = Color(0.15, 0.4, 0.8, 1)
+albedo_color = Color(0.12, 0.35, 0.72, 1)
 roughness = 0.65
 
 [sub_resource type="SphereMesh" id="Mesh_Earth_L1"]
 material = SubResource("Mat_Earth_L1")
-radius = 1.8
-height = 3.6
+radius = 3.5
+height = 7.0
 
-[sub_resource type="StyleBoxFlat" id="Style_ArrivalCard"]
-bg_color = Color(0.05, 0.07, 0.12, 0.92)
-border_color = Color(0.22, 0.74, 0.96, 0.8)
+[sub_resource type="StandardMaterial3D" id="Mat_Atmosphere_L1"]
+transparency = 1
+albedo_color = Color(0.25, 0.75, 1.0, 0.35)
+emission_enabled = true
+emission = Color(0.2, 0.7, 1.0, 1)
+emission_energy_multiplier = 2.5
+rim_enabled = true
+rim = 0.85
+rim_tint = 0.8
+
+[sub_resource type="SphereMesh" id="Mesh_Atmosphere_L1"]
+material = SubResource("Mat_Atmosphere_L1")
+radius = 3.7
+height = 7.4
+
+[sub_resource type="StyleBoxFlat" id="Style_ObjectivePanel"]
+bg_color = Color(0.04, 0.07, 0.12, 0.94)
+border_color = Color(0.22, 0.74, 0.96, 0.85)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-content_margin_left = 24.0
-content_margin_top = 18.0
-content_margin_right = 24.0
-content_margin_bottom = 18.0
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 18.0
+content_margin_top = 10.0
+content_margin_right = 18.0
+content_margin_bottom = 10.0
 
-[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn"]
-bg_color = Color(0.12, 0.52, 0.82, 0.95)
-border_color = Color(0.35, 0.9, 1.0, 1)
+[sub_resource type="StyleBoxFlat" id="Style_SideHUD"]
+bg_color = Color(0.05, 0.08, 0.13, 0.88)
+border_color = Color(0.18, 0.35, 0.55, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryActionBtn"]
+bg_color = Color(0.14, 0.55, 0.88, 0.95)
+border_color = Color(0.4, 0.92, 1.0, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
@@ -64,10 +108,26 @@ corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
-content_margin_left = 20.0
-content_margin_top = 12.0
-content_margin_right = 20.0
-content_margin_bottom = 12.0
+content_margin_left = 18.0
+content_margin_top = 10.0
+content_margin_right = 18.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryActionBtn"]
+bg_color = Color(0.08, 0.14, 0.22, 0.9)
+border_color = Color(0.25, 0.5, 0.75, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
 
 [node name="Helios4L1Arrival" type="Node3D"]
 script = ExtResource("1_arrival")
@@ -76,30 +136,37 @@ script = ExtResource("1_arrival")
 environment = SubResource("Env_L1")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -40, 2, 0)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -50, 2, 0)
 light_color = Color(1, 0.98, 0.92, 1)
-light_energy = 2.2
+light_energy = 2.4
 shadow_enabled = true
 
 [node name="SunMesh" type="MeshInstance3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45, 0, 0)
-mesh = SubResource("Mesh_Sun_L1")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 0, 0)
+mesh = SubResource("Mesh_SunCore_L1")
+
+[node name="SunCorona" type="MeshInstance3D" parent="SunMesh"]
+mesh = SubResource("Mesh_SunCorona_L1")
 
 [node name="EarthMesh" type="MeshInstance3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 0, 0)
+transform = Transform3D(0.917, 0.398, 0, -0.398, 0.917, 0, 0, 0, 1, 55, 0, 0)
 mesh = SubResource("Mesh_Earth_L1")
+
+[node name="EarthAtmosphere" type="MeshInstance3D" parent="EarthMesh"]
+mesh = SubResource("Mesh_Atmosphere_L1")
 
 [node name="HaloOrbitRing" type="MeshInstance3D" parent="."]
 unique_name_in_owner = true
 
 [node name="ProbeNode" type="Node3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 4.0)
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.94, -0.059, 0.337, 0, 0.985, 0.174, -0.342, -0.163, 0.926, 3.8, 2.4, 6.8)
+unique_name_in_owner = true
+transform = Transform3D(0.94, -0.059, 0.337, 0, 0.985, 0.174, -0.342, -0.163, 0.926, 3.4, 2.0, 5.2)
 current = true
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
@@ -118,26 +185,27 @@ layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 24.0
-offset_top = 16.0
+offset_top = 14.0
 offset_right = -24.0
-offset_bottom = 50.0
+offset_bottom = 48.0
 grow_horizontal = 2
+theme_override_constants/separation = 12
 
 [node name="TitleBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopBanner"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 1
 
 [node name="Title" type="Label" parent="CanvasLayer/RootUI/TopBanner/TitleBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
-theme_override_font_sizes/font_size = 14
-text = "PHASE 5 & 6: SUN-EARTH L1 INSERTION & INSTRUMENT COMMISSIONING"
+theme_override_font_sizes/font_size = 13
+text = "PHASE 5 & 6: SUN-EARTH L1 HALO-ORBIT INSERTION & COMMISSIONING"
 
 [node name="Sub" type="Label" parent="CanvasLayer/RootUI/TopBanner/TitleBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
-theme_override_font_sizes/font_size = 11
-text = "Sun-Earth L1 (~1.5 Million km Sunward) • Periodic 3D Halo Orbit Capture"
+theme_override_colors/font_color = Color(0.65, 0.72, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Sun-Earth L1 (1.5M km Sunward) • Periodic 3D Halo Orbit • Live Solar Wind Stream"
 
 [node name="Spacer" type="Control" parent="CanvasLayer/RootUI/TopBanner"]
 layout_mode = 2
@@ -147,87 +215,394 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
-theme_override_font_sizes/font_size = 13
-text = "● READY FOR HOI BURN"
+theme_override_font_sizes/font_size = 12
+text = "● READY FOR L1 APPROACH NAVIGATION TRIM"
 
-[node name="BottomCard" type="PanelContainer" parent="CanvasLayer/RootUI"]
+[node name="TopTelemetryStrip" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -660.0
+offset_top = 52.0
+offset_right = -24.0
+offset_bottom = 98.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("Style_SideHUD")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="METBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/METBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "MISSION TIME"
+
+[node name="ValMET" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/METBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.92, 0.98, 1)
+theme_override_font_sizes/font_size = 10
+text = "T+110d 00:00:00"
+
+[node name="DistEarthBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DistEarthBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "DIST EARTH"
+
+[node name="ValEarthDist" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DistEarthBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "1,488,000 km"
+
+[node name="DistL1Box" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DistL1Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "TARGET L1"
+
+[node name="ValL1Dist" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DistL1Box"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.25, 1)
+theme_override_font_sizes/font_size = 10
+text = "12,000 km"
+
+[node name="VelBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/VelBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "REL VEL"
+
+[node name="ValRelVel" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/VelBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "1.25 km/s"
+
+[node name="FuelBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/FuelBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "FUEL (KG)"
+
+[node name="ValFuel" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/FuelBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 10
+text = "259.8 kg"
+
+[node name="DeltaVBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DeltaVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "DELTA-V"
+
+[node name="ValDeltaV" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DeltaVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 10
+text = "1790.2 m/s"
+
+[node name="PowerBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/PowerBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "NET POWER"
+
+[node name="ValPower" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/PowerBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "+80 W"
+
+[node name="BattBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/BattBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "BATTERY"
+
+[node name="ValBattery" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/BattBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.75, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "1180 Wh"
+
+[node name="DSNBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DSNBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.6, 0.75, 1)
+theme_override_font_sizes/font_size = 8
+text = "DSN LINK"
+
+[node name="ValDSN" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/HBox/DSNBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 10
+text = "+4.2 dB"
+
+[node name="FlightObjectivePanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+offset_left = 24.0
+offset_top = 52.0
+offset_right = 440.0
+offset_bottom = 210.0
+theme_override_styles/panel = SubResource("Style_ObjectivePanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/FlightObjectivePanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="LblObjectivePhase" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 12
+text = "PHASE 5: SUN-EARTH L1 ORBITAL APPROACH"
+
+[node name="LblObjectiveStatus" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 10
+text = "CORRIDOR ACCURACY: 99.2% • L1 REGION DISTANCE: 12,000 km"
+
+[node name="HSep" type="HSeparator" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+layout_mode = 2
+
+[node name="LblObjectivePrimary" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "Inspect L1 approach corridor and execute approach navigation trim burn."
+autowrap_mode = 2
+
+[node name="LblObjectiveAction" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "Astrogator: Click EXECUTE APPROACH TRIM BURN [Space/Enter]"
+
+[node name="LblObjectiveNext" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.72, 0.85, 1)
+theme_override_font_sizes/font_size = 9
+text = "Next: Halo-Orbit Insertion (HOI) maneuver planning."
+
+[node name="LblObjectiveControls" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.55, 0.7, 1)
+theme_override_font_sizes/font_size = 8
+text = "Controls: [1-6] Camera Modes • [P] Pause • [Tab] Switch Officer"
+
+[node name="DetailDeck" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 32.0
-offset_top = -220.0
-offset_right = -32.0
-offset_bottom = -20.0
+offset_left = 24.0
+offset_top = -225.0
+offset_right = -24.0
+offset_bottom = -72.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_styles/panel = SubResource("Style_ArrivalCard")
+theme_override_styles/panel = SubResource("Style_ObjectivePanel")
 
-[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomCard"]
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/DetailDeck"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 6
 
-[node name="MetricsBar" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCard/VBox"]
+[node name="HBoxTop" type="HBoxContainer" parent="CanvasLayer/RootUI/DetailDeck/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 24
 
-[node name="FuelReserveLabel" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox/MetricsBar"]
+[node name="DetailTitleLabel" type="Label" parent="CanvasLayer/RootUI/DetailDeck/VBox/HBoxTop"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 12
+text = "STAGE A: SUN-EARTH L1 APPROACH NAVIGATION"
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/DetailDeck/VBox/HBoxTop"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FuelReserveLabel" type="Label" parent="CanvasLayer/RootUI/DetailDeck/VBox/HBoxTop"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
-theme_override_font_sizes/font_size = 12
-text = "Propellant: 240.0 kg"
+theme_override_font_sizes/font_size = 11
+text = "Propellant: 259.8 kg"
 
-[node name="WarningTimeLabel" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox/MetricsBar"]
+[node name="WarningTimeLabel" type="Label" parent="CanvasLayer/RootUI/DetailDeck/VBox/HBoxTop"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
-theme_override_font_sizes/font_size = 12
-text = "Advance Lead Time: Calculating..."
-
-[node name="TelemetryDataLabel" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox/MetricsBar"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.75, 0.8, 0.9, 1)
 theme_override_font_sizes/font_size = 11
-text = "DSN Carrier: 8.4 GHz (Ka-Band) • Magnetometer: Standby • Faraday Cup: Standby"
-horizontal_alignment = 2
+text = "Early Warning: 10.33 min (d: 1.5M km | v: 2420 km/s)"
 
-[node name="HSeparator" type="HSeparator" parent="CanvasLayer/RootUI/BottomCard/VBox"]
-layout_mode = 2
-
-[node name="StepDescription" type="Label" parent="CanvasLayer/RootUI/BottomCard/VBox"]
+[node name="DetailBodyLabel" type="Label" parent="CanvasLayer/RootUI/DetailDeck/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
-theme_override_font_sizes/font_size = 11
-text = "The spacecraft has arrived at the Sun-Earth L1 libration point. Command the Halo-Orbit Insertion burn to capture the probe."
+theme_override_font_sizes/font_size = 10
+text = "Approaching Sun-Earth L1 region. Astrogator must command the approach trim burn to eliminate dispersion."
 autowrap_mode = 2
 
-[node name="ButtonsBar" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCard/VBox"]
+[node name="StepDescription" type="Label" parent="CanvasLayer/RootUI/DetailDeck/VBox"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 9
+text = "Compatibility alias step description label"
 
-[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/BottomCard/VBox/ButtonsBar"]
+[node name="DetailProgressBar" type="ProgressBar" parent="CanvasLayer/RootUI/DetailDeck/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+show_percentage = false
+
+[node name="HBoxBottom" type="HBoxContainer" parent="CanvasLayer/RootUI/DetailDeck/VBox"]
+layout_mode = 2
+
+[node name="DetailMetricLabel" type="Label" parent="CanvasLayer/RootUI/DetailDeck/VBox/HBoxBottom"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
+theme_override_font_sizes/font_size = 10
+text = "Available Delta-V: 1790.2 m/s • Propellant: 259.8 kg"
+
+[node name="Spacer2" type="Control" parent="CanvasLayer/RootUI/DetailDeck/VBox/HBoxBottom"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="CommissionActionBtn" type="Button" parent="CanvasLayer/RootUI/BottomCard/VBox/ButtonsBar"]
+[node name="TelemetryDataLabel" type="Label" parent="CanvasLayer/RootUI/DetailDeck/VBox/HBoxBottom"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(340, 42)
 layout_mode = 2
-theme_override_styles/normal = SubResource("Style_PrimaryBtn")
-theme_override_font_sizes/font_size = 12
-text = "EXECUTE HALO-ORBIT INSERTION BURN (-35 kg) →"
+theme_override_colors/font_color = Color(0.65, 0.75, 0.88, 1)
+theme_override_font_sizes/font_size = 9
+text = "DSN: 8.4 GHz • Mag: Standby • Faraday: Standby • Officer: PROPULSION"
 
-[node name="ProceedToDebriefBtn" type="Button" parent="CanvasLayer/RootUI/BottomCard/VBox/ButtonsBar"]
+[node name="BottomControlsDeck" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -64.0
+offset_right = -24.0
+offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="CommissionActionBtn" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 40)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
+theme_override_font_sizes/font_size = 11
+text = "🧭 EXECUTE APPROACH TRIM BURN (-2.4 kg) →"
+
+[node name="SecondaryActionBtn" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 40)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryActionBtn")
+theme_override_font_sizes/font_size = 10
+text = "FINE-TUNE APPROACH TRAJECTORY"
+
+[node name="ProceedToDebriefBtn" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(340, 42)
+custom_minimum_size = Vector2(380, 40)
 layout_mode = 2
-theme_override_styles/normal = SubResource("Style_PrimaryBtn")
-theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
+theme_override_font_sizes/font_size = 11
 text = "COMMISSIONING COMPLETE: PROCEED TO DEBRIEF →"
+
+[node name="BtnPauseSim" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 40)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryActionBtn")
+theme_override_font_sizes/font_size = 10
+text = "⏸ PAUSE"
+
+[node name="SimPauseBanner" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -30.0
+offset_right = 200.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_ObjectivePanel")
+
+[node name="LblPause" type="Label" parent="CanvasLayer/RootUI/SimPauseBanner"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.35, 1)
+theme_override_font_sizes/font_size = 12
+text = "⏸ SIMULATION PAUSED — PRESS [P] OR CLICK RESUME"
+horizontal_alignment = 1
