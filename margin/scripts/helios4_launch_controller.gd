@@ -132,10 +132,32 @@ var orbit_achieved: bool = false
 var systems_activated: bool = false
 var time_warp: float = 1.0
 
-# Camera Smooth Interpolation
-var _cam_target_pos: Vector3 = Vector3(-3.2, 7.5, 16.5)
-var _cam_target_rot: Vector3 = Vector3(-12.0, -14.0, 0.0)
-var _cam_lerp_speed: float = 3.5
+# Camera Smooth Interpolation & Dynamic Vehicle Tracking
+var _cam_relative_offset: Vector3 = Vector3(-3.5, -2.5, 24.0)
+var _cam_look_offset_dir: float = 1.5
+var _current_cam_offset: Vector3 = Vector3(-3.5, -2.5, 24.0)
+var _current_look_dir: float = 1.5
+var _cam_lerp_speed: float = 4.5
+var _cam_initialized: bool = false
+var _user_manually_selected_cam: bool = false
+
+# Flight Pause State
+var is_flight_paused: bool = false
+var pause_banner_panel: PanelContainer = null
+
+# Persistent Flight Objective Panel UI references
+var obj_panel: PanelContainer = null
+var lbl_obj_phase: Label = null
+var lbl_obj_status: Label = null
+var lbl_obj_primary: Label = null
+var lbl_obj_action: Label = null
+var lbl_obj_next: Label = null
+var lbl_obj_controls: Label = null
+var lbl_pitch_readout: Label = null
+var btn_fairing_jettison: Button = null
+var btn_pause_flight: Button = null
+var btn_abort_flight: Button = null
+var val_throttle_display: Label = null
 
 # Custom Procedural HUD Widgets
 var navball_widget: Helios4HUDWidgets.NavBall = null
@@ -154,6 +176,21 @@ const TARGET_ORBIT_ALT_M: float = 185000.0 # 185 km parking orbit
 const TARGET_ORBIT_VEL_MS: float = 7780.0
 
 func _ready() -> void:
+	# Cache UI node references
+	obj_panel = find_child("FlightObjectivePanel", true, false) as PanelContainer
+	lbl_obj_phase = find_child("LblObjectivePhase", true, false) as Label
+	lbl_obj_status = find_child("LblObjectiveStatus", true, false) as Label
+	lbl_obj_primary = find_child("LblObjectivePrimary", true, false) as Label
+	lbl_obj_action = find_child("LblObjectiveAction", true, false) as Label
+	lbl_obj_next = find_child("LblObjectiveNext", true, false) as Label
+	lbl_obj_controls = find_child("LblObjectiveControls", true, false) as Label
+	lbl_pitch_readout = find_child("LblPitchReadout", true, false) as Label
+	btn_fairing_jettison = find_child("BtnFairingJettison", true, false) as Button
+	btn_pause_flight = find_child("BtnPauseFlight", true, false) as Button
+	btn_abort_flight = find_child("BtnAbortFlight", true, false) as Button
+	val_throttle_display = find_child("ValThrottleDisplay", true, false) as Label
+	_build_pause_banner()
+
 	_init_flight_parameters()
 	_build_launch_environment()
 	_setup_procedural_hud_widgets()
@@ -165,8 +202,6 @@ func _ready() -> void:
 	if max_q_holder:
 		max_q_holder.visible = false
 
-	# Setup interactive prelaunch checklist and flight controls legend
-	_build_flight_controls_legend()
 	if not Helios4CampaignData.is_spacecraft_ready_for_flight():
 		current_phase = FlightPhase.READINESS_HOLD
 		_show_readiness_hold_modal()
@@ -177,10 +212,12 @@ func _ready() -> void:
 	# Print UI coordinates for automated QA and browser testing
 	get_tree().process_frame.connect(func():
 		var btns = [
-			"ProceedToTransferBtn", "BtnStageSeparation", "BtnSystemsActivate",
+			"ProceedToTransferBtn", "BtnStageSeparation", "BtnFairingJettison", "BtnSystemsActivate",
 			"CamBtn_Pad", "CamBtn_Engine", "CamBtn_Chase", "CamBtn_Wide",
 			"CamBtn_MaxQ", "CamBtn_Sep", "CamBtn_Orbit",
-			"BtnStartCountdown", "BtnAutoVerifyPreflight", "BtnAbortLaunchPrep"
+			"BtnStartCountdown", "BtnAutoVerifyPreflight", "BtnAbortLaunchPrep",
+			"BtnThrotUp", "BtnThrotDown", "BtnPitchLeft", "BtnPitchRight",
+			"BtnPauseFlight", "BtnAbortFlight"
 		]
 		for b_name in btns:
 			var b = find_child(b_name, true, false)
@@ -919,37 +956,48 @@ func _set_camera_mode(mode: CameraMode, instant: bool = false) -> void:
 	match mode:
 		CameraMode.PAD:
 			# Low-angle ground view establishing launch mount & towering rocket
-			_cam_target_pos = Vector3(-14.0, 5.0, 18.0)
-			_cam_target_rot = Vector3(-10.0, -32.0, 0.0)
+			_cam_relative_offset = Vector3(-20.0, 6.0, 24.0)
+			_cam_look_offset_dir = 0.0
 		CameraMode.ENGINE:
 			# Close-up of 4 engine bells, flame deflector trench, and hold-down clamps
-			_cam_target_pos = Vector3(3.2, 1.8, 6.5)
-			_cam_target_rot = Vector3(14.0, 26.0, 0.0)
+			_cam_relative_offset = Vector3(3.2, -6.0, 10.0)
+			_cam_look_offset_dir = -3.5
 		CameraMode.CHASE:
 			# Behind & slightly below ascending rocket looking along blazing exhaust plume
-			_cam_target_pos = Vector3(-3.5, 3.5, 16.5)
-			_cam_target_rot = Vector3(-12.0, -12.0, 0.0)
+			_cam_relative_offset = Vector3(-3.5, -2.5, 24.0)
+			_cam_look_offset_dir = 1.5
 		CameraMode.WIDE:
 			# High-altitude wide view showing rocket climbing against curved Earth
-			_cam_target_pos = Vector3(-24.0, 8.0, 32.0)
-			_cam_target_rot = Vector3(-8.0, -35.0, 0.0)
+			_cam_relative_offset = Vector3(-26.0, 4.0, 38.0)
+			_cam_look_offset_dir = 1.0
 		CameraMode.MAX_Q:
 			# THE SIGNATURE VIEW (Matching Reference 02_helios4_launch_maxq.png exact angle):
 			# 3/4 isometric perspective from behind/left framing rocket ascending diagonally across Earth curvature
-			_cam_target_pos = Vector3(-4.0, 8.2, 17.5)
-			_cam_target_rot = Vector3(-7.0, -18.0, 12.0)
+			_cam_relative_offset = Vector3(-14.0, 6.5, 22.0)
+			_cam_look_offset_dir = 2.0
 		CameraMode.SEPARATION:
 			# Focused on interstage during uncoupling of Stage 1 booster core
-			_cam_target_pos = Vector3(-7.5, 4.2, 13.5)
-			_cam_target_rot = Vector3(-8.0, -24.0, 4.0)
+			_cam_relative_offset = Vector3(-8.5, 1.5, 17.0)
+			_cam_look_offset_dir = 0.5
 		CameraMode.ORBITAL:
 			# Orbital insertion view above atmosphere rim in space
-			_cam_target_pos = Vector3(-14.0, 9.5, 18.5)
-			_cam_target_rot = Vector3(-18.0, -32.0, 0.0)
+			_cam_relative_offset = Vector3(-18.0, 8.5, 28.0)
+			_cam_look_offset_dir = 1.0
 
-	if instant and launch_cam and rocket:
-		launch_cam.position = rocket.position + _cam_target_pos
-		launch_cam.rotation_degrees = _cam_target_rot
+	if instant or not _cam_initialized:
+		_current_cam_offset = _cam_relative_offset
+		_current_look_dir = _cam_look_offset_dir
+		_cam_initialized = true
+		if launch_cam and rocket:
+			var vehicle_flight_dir = rocket.global_transform.basis.y.normalized()
+			var vehicle_center = rocket.global_position + vehicle_flight_dir * 8.0
+			if current_cam_mode == CameraMode.PAD:
+				launch_cam.position = Vector3(-20.0, 6.0, 24.0)
+				launch_cam.look_at(rocket.global_position + Vector3(0.0, 8.0, 0.0), Vector3.UP)
+			else:
+				launch_cam.position = vehicle_center + _current_cam_offset
+				var target_look = vehicle_center + vehicle_flight_dir * _current_look_dir
+				launch_cam.look_at(target_look, Vector3.UP)
 
 var _style_cam_act: StyleBoxFlat = null
 var _style_cam_norm: StyleBoxFlat = null
@@ -1002,6 +1050,61 @@ func _update_camera_buttons_styling() -> void:
 # ==============================================================================
 # 4. PRE-LAUNCH CHECKLIST, FLIGHT DYNAMICS & ASCENT SIMULATION
 # ==============================================================================
+
+func _build_pause_banner() -> void:
+	var root_ui = find_child("RootUI", true, false) as Control
+	if not root_ui:
+		return
+
+	pause_banner_panel = PanelContainer.new()
+	pause_banner_panel.name = "FlightPauseBanner"
+	pause_banner_panel.set_anchors_preset(Control.PRESET_CENTER)
+	pause_banner_panel.offset_left = -220.0
+	pause_banner_panel.offset_top = -45.0
+	pause_banner_panel.offset_right = 220.0
+	pause_banner_panel.offset_bottom = 45.0
+	pause_banner_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	pause_banner_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	pause_banner_panel.visible = false
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.08, 0.16, 0.94)
+	style.border_color = Color(0.3, 0.7, 1.0, 0.9)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	pause_banner_panel.add_theme_stylebox_override("panel", style)
+
+	var vbox = VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 6)
+	pause_banner_panel.add_child(vbox)
+
+	var lbl_title = Label.new()
+	lbl_title.text = "❚❚ FLIGHT SIMULATION PAUSED"
+	lbl_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl_title.add_theme_font_size_override("font_size", 15)
+	lbl_title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	vbox.add_child(lbl_title)
+
+	var lbl_sub = Label.new()
+	lbl_sub.text = "Press [P] or click RESUME to continue ascent"
+	lbl_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl_sub.add_theme_font_size_override("font_size", 11)
+	lbl_sub.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
+	vbox.add_child(lbl_sub)
+
+	root_ui.add_child(pause_banner_panel)
+
+func _toggle_flight_pause() -> void:
+	if current_phase == FlightPhase.COUNTDOWN:
+		_on_pause_countdown_pressed()
+	elif current_phase != FlightPhase.READINESS_HOLD and current_phase != FlightPhase.PRE_LAUNCH_PREPARATION and current_phase != FlightPhase.FLIGHT_ABORTED and current_phase != FlightPhase.FLIGHT_COMPLETED:
+		is_flight_paused = !is_flight_paused
+		if pause_banner_panel:
+			pause_banner_panel.visible = is_flight_paused
+		if btn_pause_flight:
+			btn_pause_flight.text = "[P] RESUME" if is_flight_paused else "[P] PAUSE"
+		print("[Launch] Flight pause toggled: ", is_flight_paused)
 
 func _build_flight_controls_legend() -> void:
 	var root_ui = find_child("RootUI", true, false)
@@ -1324,6 +1427,11 @@ func _on_abort_countdown_pressed() -> void:
 	_refresh_prelaunch_checklist_ui()
 
 func _physics_process(delta: float) -> void:
+	if is_flight_paused:
+		_update_camera_smooth(delta)
+		_update_ui()
+		return
+
 	delta *= time_warp
 	if current_phase == FlightPhase.FLIGHT_COMPLETED or current_phase == FlightPhase.FLIGHT_ABORTED or current_phase == FlightPhase.READINESS_HOLD:
 		_update_camera_smooth(delta)
@@ -1397,7 +1505,7 @@ func _execute_ignition_liftoff() -> void:
 		prelaunch_panel.visible = false
 
 	# Auto-switch to Chase view if on Pad camera
-	if current_cam_mode == CameraMode.PAD:
+	if current_cam_mode == CameraMode.PAD and not _user_manually_selected_cam:
 		_set_camera_mode(CameraMode.CHASE)
 
 func _update_flight_physics(delta: float) -> void:
@@ -1422,7 +1530,7 @@ func _update_flight_physics(delta: float) -> void:
 			vapor_cone_node.scale = Vector3(cone_scale, cone_scale, cone_scale)
 
 		# Auto-switch to signature Max-Q camera if on Chase view
-		if current_cam_mode == CameraMode.CHASE and dynamic_pressure_kpa > 30.0:
+		if current_cam_mode == CameraMode.CHASE and dynamic_pressure_kpa > 30.0 and not _user_manually_selected_cam:
 			_set_camera_mode(CameraMode.MAX_Q)
 
 		# Structural Stress accumulation: If throttle > 0.75 during peak dynamic pressure, stress accumulates
@@ -1451,7 +1559,8 @@ func _update_flight_physics(delta: float) -> void:
 			thrust_n = 0.0
 			if plume_smoke_emitter: plume_smoke_emitter.emitting = false
 			if main_plumes_node: main_plumes_node.visible = false
-			_set_camera_mode(CameraMode.SEPARATION)
+			if not _user_manually_selected_cam:
+				_set_camera_mode(CameraMode.SEPARATION)
 			print("[Launch] MECO: Main Engine Cut-Off. Stage 1 Burnout confirmed.")
 	elif not orbit_achieved:
 		# Stage 2 Vacuum Burn
@@ -1518,8 +1627,11 @@ func _update_flight_physics(delta: float) -> void:
 
 func _check_phase_transitions() -> void:
 	# Fairing Jettison check (Above dense atmosphere: > 68,000m)
-	if altitude_m > 68000.0 and not fairing_separated:
-		_execute_fairing_jettison()
+	# Interactive unlocking: Button and key become available when > 68,000m
+	if altitude_m >= 68000.0 and not fairing_separated:
+		if btn_fairing_jettison and btn_fairing_jettison.disabled:
+			btn_fairing_jettison.disabled = false
+			print("[Launch] FAIRING RELEASE AVAILABLE: Vehicle in vacuum (>68 km). Press [J] or click FAIRING JETTISON.")
 
 	# Orbital Injection check (Velocity >= 7,700 m/s, Altitude >= 160,000 m, and flight path angle near horizontal <= 8 deg)
 	if velocity_ms >= 7700.0 and altitude_m >= 160000.0 and flight_path_angle_deg <= 8.0 and not orbit_achieved:
@@ -1527,7 +1639,8 @@ func _check_phase_transitions() -> void:
 		current_phase = FlightPhase.ORBITAL_INJECTION
 		throttle = 0.0
 		if vacuum_plume_node: vacuum_plume_node.visible = false
-		_set_camera_mode(CameraMode.ORBITAL)
+		if not _user_manually_selected_cam:
+			_set_camera_mode(CameraMode.ORBITAL)
 		print("[Launch] Orbital Insertion Achieved! Orbit: %.0f km circular parking orbit, v = %.0f m/s." % [altitude_m / 1000.0, velocity_ms])
 
 func _execute_stage_separation() -> void:
@@ -1537,6 +1650,11 @@ func _execute_stage_separation() -> void:
 	stage1_separated = true
 	current_phase = FlightPhase.ASCENT_STAGE2
 	throttle = 1.0
+
+	var btn_stage = find_child("BtnStageSeparation", true, false) as Button
+	if btn_stage:
+		btn_stage.disabled = true
+		btn_stage.text = "STAGE 1 SEPARATED ✓"
 
 	# Drop Stage 1 dry mass + fin mass from vehicle
 	var tel = Helios4CampaignData.calculate_hangar_telemetry()
@@ -1561,7 +1679,13 @@ func _execute_stage_separation() -> void:
 	print("[Launch] STAGE SEPARATION CONFIRMED! Stage 1 booster discarded. Stage 2 vacuum engine ignition.")
 
 func _execute_fairing_jettison() -> void:
+	if fairing_separated:
+		return
 	fairing_separated = true
+	if btn_fairing_jettison:
+		btn_fairing_jettison.disabled = true
+		btn_fairing_jettison.text = "FAIRING JETTISONED ✓"
+
 	var v_cfg = Helios4CampaignData.vehicle_config
 	var fairing_m = v_cfg.get("fairing_mass_kg", 420.0)
 	current_mass_kg = max(current_mass_kg - fairing_m, 1100.0)
@@ -1584,6 +1708,10 @@ func _execute_systems_activation() -> void:
 	if orbit_achieved and not systems_activated:
 		systems_activated = true
 		current_phase = FlightPhase.SYSTEMS_ACTIVATION
+		var btn_systems = find_child("BtnSystemsActivate", true, false) as Button
+		if btn_systems:
+			btn_systems.disabled = true
+			btn_systems.text = "SYSTEMS ACTIVATED ✓"
 		print("[Launch] Systems Officer activated: Power online, DSN telemetry linked, early solar telemetry streaming.")
 
 func _trigger_flight_abort(reason: String) -> void:
@@ -1794,24 +1922,37 @@ func _update_camera_smooth(delta: float) -> void:
 	if not launch_cam or not rocket:
 		return
 
+	# Responsive FOV adjustment based on viewport aspect ratio
+	var vp_size = get_viewport().get_visible_rect().size
+	var aspect = vp_size.x / max(1.0, vp_size.y)
+	if aspect < 1.55:
+		launch_cam.fov = 58.0
+	else:
+		launch_cam.fov = 52.0
+
+	var vehicle_flight_dir = rocket.global_transform.basis.y.normalized()
+	var vehicle_center = rocket.global_position + vehicle_flight_dir * 8.0
+
 	if current_cam_mode == CameraMode.PAD:
-		# Ground observation post tracking ascending rocket
 		var pad_pos = Vector3(-20.0, 6.0, 24.0)
 		launch_cam.position = pad_pos
-		var look_target = rocket.position + Vector3(0.0, 6.0, 0.0)
+		var look_target = rocket.global_position + Vector3(0.0, 8.0, 0.0)
 		launch_cam.look_at(look_target, Vector3.UP)
 	else:
-		# Tracking camera relative to vehicle
-		var base_cam_pos = rocket.position + _cam_target_pos
-		launch_cam.position = launch_cam.position.lerp(base_cam_pos, clamp(delta * _cam_lerp_speed, 0.0, 1.0))
-		launch_cam.rotation_degrees = launch_cam.rotation_degrees.lerp(_cam_target_rot, clamp(delta * _cam_lerp_speed, 0.0, 1.0))
+		_current_cam_offset = _current_cam_offset.lerp(_cam_relative_offset, clamp(delta * _cam_lerp_speed, 0.0, 1.0))
+		_current_look_dir = lerp(_current_look_dir, _cam_look_offset_dir, clamp(delta * _cam_lerp_speed, 0.0, 1.0))
+
+		var target_pos = vehicle_center + _current_cam_offset
+		launch_cam.position = target_pos
+		var target_look = vehicle_center + vehicle_flight_dir * _current_look_dir
+		launch_cam.look_at(target_look, Vector3.UP)
 
 # ==============================================================================
 # 5. UI CONTROLS & EVENT WIRING
 # ==============================================================================
 
 func _connect_controls() -> void:
-	# Camera Ribbon Buttons
+	# Camera Ribbon Buttons (Pure perspective switches)
 	_connect_cam_btn("CamBtn_Pad", CameraMode.PAD)
 	_connect_cam_btn("CamBtn_Engine", CameraMode.ENGINE)
 	_connect_cam_btn("CamBtn_Chase", CameraMode.CHASE)
@@ -1820,23 +1961,39 @@ func _connect_controls() -> void:
 	_connect_cam_btn("CamBtn_Sep", CameraMode.SEPARATION)
 	_connect_cam_btn("CamBtn_Orbit", CameraMode.ORBITAL)
 
-	# Throttle Step Buttons
+	# Throttle Step Buttons (5% steps for fine control through Max-Q)
 	var btn_throt_up = find_child("BtnThrotUp", true, false) as Button
-	if btn_throt_up: btn_throt_up.pressed.connect(func(): throttle = clamp(throttle + 0.1, 0.0, 1.0))
+	if btn_throt_up: btn_throt_up.pressed.connect(func(): throttle = clamp(throttle + 0.05, 0.0, 1.0))
 
 	var btn_throt_down = find_child("BtnThrotDown", true, false) as Button
-	if btn_throt_down: btn_throt_down.pressed.connect(func(): throttle = clamp(throttle - 0.1, 0.0, 1.0))
+	if btn_throt_down: btn_throt_down.pressed.connect(func(): throttle = clamp(throttle - 0.05, 0.0, 1.0))
 
-	# Pitch Buttons (Gravity Turn steering)
+	# Pitch Buttons (Steering: Zenith = pitch up toward 90°, Horizon = pitch down toward 0°)
 	var btn_pitch_left = find_child("BtnPitchLeft", true, false) as Button
-	if btn_pitch_left: btn_pitch_left.pressed.connect(func(): pitch_deg = clamp(pitch_deg - 3.0, 0.0, 90.0))
+	if btn_pitch_left: btn_pitch_left.pressed.connect(func(): pitch_deg = clamp(pitch_deg + 2.0, 0.0, 90.0))
 
 	var btn_pitch_right = find_child("BtnPitchRight", true, false) as Button
-	if btn_pitch_right: btn_pitch_right.pressed.connect(func(): pitch_deg = clamp(pitch_deg + 3.0, 0.0, 90.0))
+	if btn_pitch_right: btn_pitch_right.pressed.connect(func(): pitch_deg = clamp(pitch_deg - 2.0, 0.0, 90.0))
+
+	# Quick Flight Actions (Pause / Abort)
+	if btn_pause_flight:
+		btn_pause_flight.pressed.connect(_toggle_flight_pause)
+
+	if btn_abort_flight:
+		btn_abort_flight.pressed.connect(func():
+			if current_phase == FlightPhase.COUNTDOWN or current_phase == FlightPhase.PRE_LAUNCH_PREPARATION:
+				_on_abort_countdown_pressed()
+			elif current_phase != FlightPhase.FLIGHT_ABORTED and current_phase != FlightPhase.FLIGHT_COMPLETED:
+				_trigger_flight_abort("MANUAL FLIGHT ABORT: Launch Commander initiated manual abort sequence.")
+		)
 
 	# Stage Separation Button (SPACE)
 	var btn_stage = find_child("BtnStageSeparation", true, false) as Button
 	if btn_stage: btn_stage.pressed.connect(_execute_stage_separation)
+
+	# Fairing Jettison Button (J)
+	if btn_fairing_jettison:
+		btn_fairing_jettison.pressed.connect(_execute_fairing_jettison)
 
 	# Systems Activation Button (E)
 	var btn_systems = find_child("BtnSystemsActivate", true, false) as Button
@@ -1850,14 +2007,8 @@ func _connect_cam_btn(btn_name: String, mode: CameraMode) -> void:
 	var btn = find_child(btn_name, true, false) as Button
 	if btn:
 		btn.pressed.connect(func():
-			if mode == CameraMode.MAX_Q and altitude_m < 2000.0:
-				set_test_state_max_q()
-			elif mode == CameraMode.SEPARATION and not stage1_separated:
-				set_test_state_separation()
-			elif mode == CameraMode.ORBITAL and not orbit_achieved:
-				set_test_state_orbit()
-			else:
-				_set_camera_mode(mode)
+			_user_manually_selected_cam = true
+			_set_camera_mode(mode)
 		)
 
 func set_test_state_max_q() -> void:
@@ -1905,37 +2056,75 @@ func set_test_state_orbit() -> void:
 	_update_3d_visuals(0.016)
 
 func _unhandled_input(event: InputEvent) -> void:
+	var focus_owner = get_viewport().gui_get_focus_owner()
+	if focus_owner and (focus_owner is LineEdit or focus_owner is TextEdit):
+		return
+
 	if event.is_action_pressed("ui_up") or (event is InputEventKey and event.keycode == KEY_W and event.pressed):
-		throttle = clamp(throttle + 0.1, 0.0, 1.0)
+		throttle = clamp(throttle + 0.05, 0.0, 1.0)
 	elif event.is_action_pressed("ui_down") or (event is InputEventKey and event.keycode == KEY_S and event.pressed):
-		throttle = clamp(throttle - 0.1, 0.0, 1.0)
+		throttle = clamp(throttle - 0.05, 0.0, 1.0)
 	elif event.is_action_pressed("ui_left") or (event is InputEventKey and event.keycode == KEY_A and event.pressed):
-		pitch_deg = clamp(pitch_deg - 2.5, 0.0, 90.0)
+		# [A] = Pitch Up toward Zenith (90°)
+		pitch_deg = clamp(pitch_deg + 2.0, 0.0, 90.0)
 	elif event.is_action_pressed("ui_right") or (event is InputEventKey and event.keycode == KEY_D and event.pressed):
-		pitch_deg = clamp(pitch_deg + 2.5, 0.0, 90.0)
+		# [D] = Pitch Down toward Horizon (0°)
+		pitch_deg = clamp(pitch_deg - 2.0, 0.0, 90.0)
 	elif event is InputEventKey and event.keycode == KEY_SPACE and event.pressed:
-		_execute_stage_separation()
+		if current_phase == FlightPhase.PRE_LAUNCH_PREPARATION:
+			_on_start_countdown_pressed()
+		elif current_phase == FlightPhase.COUNTDOWN:
+			_toggle_flight_pause()
+		elif current_phase == FlightPhase.STAGE1_BURNOUT or not stage1_separated:
+			_execute_stage_separation()
+	elif event is InputEventKey and event.keycode == KEY_J and event.pressed:
+		if altitude_m >= 68000.0 and not fairing_separated:
+			_execute_fairing_jettison()
 	elif event is InputEventKey and event.keycode == KEY_E and event.pressed:
 		_execute_systems_activation()
+	elif event is InputEventKey and event.keycode == KEY_V and event.pressed:
+		if current_phase == FlightPhase.PRE_LAUNCH_PREPARATION:
+			_on_auto_verify_all_pressed()
 	elif event is InputEventKey and event.keycode == KEY_T and event.pressed:
 		time_warp = 4.0 if time_warp == 1.0 else 1.0
 		print("[Launch] Time warp toggled to: ", time_warp, "x")
 	elif event is InputEventKey and event.keycode == KEY_P and event.pressed:
-		_on_pause_countdown_pressed()
+		_toggle_flight_pause()
+	elif event is InputEventKey and event.keycode == KEY_X and event.pressed:
+		if current_phase == FlightPhase.COUNTDOWN or current_phase == FlightPhase.PRE_LAUNCH_PREPARATION:
+			_on_abort_countdown_pressed()
+		elif current_phase != FlightPhase.FLIGHT_ABORTED and current_phase != FlightPhase.FLIGHT_COMPLETED:
+			_trigger_flight_abort("MANUAL FLIGHT ABORT: Launch Commander initiated manual abort sequence.")
 	elif event is InputEventKey and event.keycode == KEY_C and event.pressed:
-		_on_start_countdown_pressed()
+		_user_manually_selected_cam = true
+		var next_mode = (int(current_cam_mode) + 1) % 7
+		_set_camera_mode(next_mode as CameraMode)
 	elif event is InputEventKey and event.keycode == KEY_O and event.pressed:
 		_execute_fast_forward_orbit()
 	elif event is InputEventKey and event.pressed:
 		# Number keys 1-7 for Camera selection
 		match event.keycode:
-			KEY_1: _set_camera_mode(CameraMode.PAD)
-			KEY_2: _set_camera_mode(CameraMode.ENGINE)
-			KEY_3: _set_camera_mode(CameraMode.CHASE)
-			KEY_4: _set_camera_mode(CameraMode.WIDE)
-			KEY_5: _set_camera_mode(CameraMode.MAX_Q)
-			KEY_6: _set_camera_mode(CameraMode.SEPARATION)
-			KEY_7: _set_camera_mode(CameraMode.ORBITAL)
+			KEY_1:
+				_user_manually_selected_cam = true
+				_set_camera_mode(CameraMode.PAD)
+			KEY_2:
+				_user_manually_selected_cam = true
+				_set_camera_mode(CameraMode.ENGINE)
+			KEY_3:
+				_user_manually_selected_cam = true
+				_set_camera_mode(CameraMode.CHASE)
+			KEY_4:
+				_user_manually_selected_cam = true
+				_set_camera_mode(CameraMode.WIDE)
+			KEY_5:
+				_user_manually_selected_cam = true
+				_set_camera_mode(CameraMode.MAX_Q)
+			KEY_6:
+				_user_manually_selected_cam = true
+				_set_camera_mode(CameraMode.SEPARATION)
+			KEY_7:
+				_user_manually_selected_cam = true
+				_set_camera_mode(CameraMode.ORBITAL)
 
 func _execute_fast_forward_orbit() -> void:
 	altitude_m = TARGET_ORBIT_ALT_M
@@ -1973,6 +2162,10 @@ func _update_ui() -> void:
 	if attitude_widget:
 		attitude_widget.pitch_deg = pitch_deg
 		attitude_widget.flight_path_angle = flight_path_angle_deg
+
+	# Throttle value display
+	if val_throttle_display:
+		val_throttle_display.text = "%d%%" % int(throttle * 100.0)
 
 	# Text labels
 	_update_label("ValVelocity", "%.0f m/s" % velocity_ms)
@@ -2015,6 +2208,16 @@ func _update_ui() -> void:
 			var secs = int(flight_time_s) % 60
 			timer_lbl.text = "T+ %02d:%02d" % [mins, secs]
 
+	# Pitch / Guidance readout
+	if lbl_pitch_readout:
+		var target_pitch = 90.0 * (1.0 - sqrt(clamp(altitude_m / 140000.0, 0.0, 1.0)))
+		var steer_hint = "ON TARGET"
+		if pitch_deg > target_pitch + 3.0:
+			steer_hint = "HORIZON [D] ►"
+		elif pitch_deg < target_pitch - 3.0:
+			steer_hint = "◄ [A] ZENITH"
+		lbl_pitch_readout.text = "PITCH: %4.1f° | TARGET: %4.1f° | FPA: %4.1f° | GUIDANCE: %s" % [pitch_deg, target_pitch, flight_path_angle_deg, steer_hint]
+
 	# Flight Event Advisory Banner & Buttons
 	var advisory_lbl = find_child("AdvisoryBanner", true, false) as Label
 	var btn_stage = find_child("BtnStageSeparation", true, false) as Button
@@ -2028,38 +2231,63 @@ func _update_ui() -> void:
 				advisory_lbl.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
 		FlightPhase.PRE_LAUNCH_PREPARATION:
 			if advisory_lbl:
-				advisory_lbl.text = "STANDBY: Complete pre-flight operational verifications on console to unlock countdown."
+				advisory_lbl.text = "PRE-LAUNCH STANDBY: Verify console checks [V] • Press [SPACE] for T-10s countdown."
 				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
 		FlightPhase.COUNTDOWN:
 			if advisory_lbl:
 				if countdown_paused:
-					advisory_lbl.text = "● COUNTDOWN HOLD: Paused at T-%.1f seconds. Press RESUME to continue." % countdown_s
+					advisory_lbl.text = "● COUNTDOWN HOLD: Paused at T-%.1f seconds. Press RESUME [P] to continue." % countdown_s
 					advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15))
 				else:
 					advisory_lbl.text = "T-MINUS %.1f SECONDS — PAD CLEARED • STANDBY FOR BOOSTER IGNITION" % countdown_s
 					advisory_lbl.add_theme_color_override("font_color", Color(0.95, 0.95, 0.5))
 		FlightPhase.ASCENT_STAGE1:
 			if advisory_lbl:
-				advisory_lbl.text = "BOOSTER CLIMB: STEER GRAVITY TURN TOWARD HORIZON [A/D KEYS]"
-				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+				if altitude_m < 2000.0:
+					advisory_lbl.text = "LIFTOFF CONFIRMED! TOWER CLEARED • CLIMBING VERTICAL"
+					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+				elif altitude_m < 18000.0:
+					advisory_lbl.text = "BEGIN GRAVITY TURN: INITIATE PITCH OVER TOWARD HORIZON [D KEY]"
+					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+				elif dynamic_pressure_kpa < 27.5 and altitude_m < 28000.0:
+					advisory_lbl.text = "MAX-Q APPROACHING: STANDBY TO REDUCE THROTTLE (TARGET 70%)"
+					advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.85, 0.3))
+				elif dynamic_pressure_kpa >= 27.5:
+					advisory_lbl.text = "▲ REDUCE THROTTLE! MAX-Q TRANSONIC PRESSURE PEAK (%.1f kPa)" % dynamic_pressure_kpa
+					advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15))
+				else:
+					advisory_lbl.text = "MAX-Q CLEARED: SUPERSONIC ASCENT NOMINAL • THROTTLE 100% [W KEY]"
+					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 		FlightPhase.MAX_Q_CORRIDOR:
 			if advisory_lbl:
-				advisory_lbl.text = "▲ MAX-Q TRANSONIC PRESSURE PEAK (%.1f kPa) — REDUCE THROTTLE TO 70%% TO PREVENT BREAKUP!" % dynamic_pressure_kpa
+				advisory_lbl.text = "▲ REDUCE THROTTLE TO 70%%! MAX-Q PRESSURE PEAK (%.1f kPa) — PREVENT BREAKUP" % dynamic_pressure_kpa
 				advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15))
 		FlightPhase.STAGE1_BURNOUT:
 			if advisory_lbl:
-				advisory_lbl.text = "STAGE 1 DEPLETED (MECO) — AUTHORIZE STAGE SEPARATION [SPACE / BUTTON]"
-				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+				advisory_lbl.text = "MECO — STAGE 1 ENGINE CUTOFF • STAGE SEPARATION AUTHORIZED [SPACE / BUTTON]"
+				advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.75, 0.2))
 			if btn_stage: btn_stage.disabled = false
+		FlightPhase.STAGE_SEPARATION:
+			if advisory_lbl:
+				advisory_lbl.text = "STAGE SEPARATION CONFIRMED • UPPER STAGE READY • THROTTLE TO 100% [W]"
+				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+			if btn_stage: btn_stage.disabled = true
 		FlightPhase.ASCENT_STAGE2:
 			if advisory_lbl:
-				var fairing_msg = " • FAIRING JETTISONED" if fairing_separated else ""
-				advisory_lbl.text = "STAGE 2 VACUUM BURN: ACCELERATING TO ORBITAL VELOCITY (7,780 m/s)%s" % fairing_msg
-				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+				if altitude_m >= 68000.0 and not fairing_separated:
+					advisory_lbl.text = "FAIRING RELEASE AVAILABLE: EXOSPHERIC VACUUM (>68 km) • PRESS [J] OR JETTISON FAIRING"
+					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+				elif altitude_m >= 140000.0 and velocity_ms >= 6500.0:
+					advisory_lbl.text = "PARKING ORBIT APPROACHING: ACCELERATING TO CIRCULAR INSERTION (7,780 m/s)"
+					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+				else:
+					var fairing_tag = " • FAIRING JETTISONED" if fairing_separated else ""
+					advisory_lbl.text = "UPPER STAGE VACUUM BURN: ACCELERATING TO ORBIT (%.0f m/s / 7,780 m/s)%s" % [velocity_ms, fairing_tag]
+					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
 			if btn_stage: btn_stage.disabled = true
 		FlightPhase.ORBITAL_INJECTION:
 			if advisory_lbl:
-				advisory_lbl.text = "PARKING ORBIT INJECTION SUCCESSFUL! SYSTEMS OFFICER: ACTIVATE BUS TELEMETRY [E]"
+				advisory_lbl.text = "ORBITAL INSERTION CONFIRMED! 185 km PARKING ORBIT • SYSTEMS OFFICER: ACTIVATE BUS [E]"
 				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 			if btn_systems: btn_systems.disabled = false
 		FlightPhase.SYSTEMS_ACTIVATION:
@@ -2073,6 +2301,137 @@ func _update_ui() -> void:
 			if advisory_lbl:
 				advisory_lbl.text = "▲ MISSION ABORT: %s" % abort_reason_text
 				advisory_lbl.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
+
+	_update_flight_objective_panel()
+
+func _update_flight_objective_panel() -> void:
+	if not obj_panel: return
+
+	match current_phase:
+		FlightPhase.READINESS_HOLD:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: READINESS HOLD"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: NO-GO"
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Complete Flight Readiness Review in Hangar."
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Clear engineering discrepancies to unlock launch clearance."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: Pad Pre-Flight Checkout"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: Return to Hangar"
+
+		FlightPhase.PRE_LAUNCH_PREPARATION:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: PRE-LAUNCH CHECKOUT"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: STANDBY"
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Verify ground umbilicals, cryogenics, and avionics."
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Press [V] or click VERIFY ALL. Press [SPACE] for Countdown."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: T-10s Terminal Countdown"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [V] Auto-Verify | [SPACE] Start Countdown | [C] / 1-7 Camera"
+
+		FlightPhase.COUNTDOWN:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: TERMINAL COUNTDOWN"
+			if lbl_obj_status:
+				if countdown_paused:
+					lbl_obj_status.text = "STATUS: HOLD (T-%.1fs)" % countdown_s
+					lbl_obj_status.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15))
+				else:
+					lbl_obj_status.text = "STATUS: COUNTING (T-%.1fs)" % countdown_s
+					lbl_obj_status.add_theme_color_override("font_color", Color(0.95, 0.95, 0.45))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Clear pad, activate sound suppression deluge, ignite main engines."
+			if lbl_obj_action:
+				lbl_obj_action.text = "ACTION: Stand by for ignition at T-0. Press [P] to Hold / Resume." if not countdown_paused else "ACTION: Press [P] or click RESUME to resume countdown."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: T-0 Liftoff & Tower Clearance"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [P] Hold/Resume | [X] Abort Countdown | [C] / 1-7 Camera"
+
+		FlightPhase.ASCENT_STAGE1:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: BOOSTER ASCENT (STAGE 1)"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: POWERED FLIGHT (T+%02d:%02d)" % [int(flight_time_s) / 60, int(flight_time_s) % 60]
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Steer gravity turn downrange toward horizon (target 45° by 30 km)."
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Steer pitch with [A/D] or buttons. Maintain 100% throttle [W]."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: Max-Q Boundary (~30 km / ~32 kPa)"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [W/S] Throttle | [A/D] Pitch | [C] / 1-7 Camera | [P] Pause | [X] Abort"
+
+		FlightPhase.MAX_Q_CORRIDOR:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: MAX-Q TRANSONIC CORRIDOR"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: PEAK PRESSURE (%.1f kPa)" % dynamic_pressure_kpa
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Limit aerodynamic stress. Throttle down to 70%!"
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Press [S] or click [-] to throttle down to 70% until dynamic pressure drops."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: MECO — Stage 1 Depletion"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [S] Throttle to 70% | [A/D] Maintain Pitch | [C] / 1-7 Camera"
+
+		FlightPhase.STAGE1_BURNOUT:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: MECO (STAGE 1 DEPLETED)"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: BOOSTER SHUTDOWN"
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.98, 0.75, 0.2))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Jettison depleted booster core and initiate upper stage burn."
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Press [SPACE] or click STAGE SEPARATION button to decouple booster."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: Stage 2 Vacuum Ignition"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [SPACE] Stage Separation | [C] / 1-7 Camera"
+
+		FlightPhase.STAGE_SEPARATION:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: STAGE SEPARATION"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: DECOUPLING CONFIRMED"
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Stage 1 booster tumbling away. Upper stage vacuum engine online."
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Throttle up to 100% [W] and maintain pitch angle."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: Fairing Jettison (>68 km)"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [W/S] Throttle | [A/D] Pitch | [C] / 1-7 Camera"
+
+		FlightPhase.ASCENT_STAGE2:
+			if altitude_m >= 68000.0 and not fairing_separated:
+				if lbl_obj_phase: lbl_obj_phase.text = "PHASE: VACUUM ASCENT (FAIRING READY)"
+				if lbl_obj_status:
+					lbl_obj_status.text = "STATUS: VACUUM REGIME (>68 km)"
+					lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+				if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Jettison protective fairings in vacuum to reduce vehicle dead weight."
+				if lbl_obj_action: lbl_obj_action.text = "ACTION: Press [J] or click FAIRING JETTISON to expose HELIOS-4 probe."
+				if lbl_obj_next: lbl_obj_next.text = "NEXT: Parking Orbit Insertion (185 km / 7,780 m/s)"
+				if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [J] Jettison Fairing | [W/S] Throttle | [A/D] Pitch"
+			else:
+				if lbl_obj_phase: lbl_obj_phase.text = "PHASE: UPPER STAGE VACUUM BURN"
+				if lbl_obj_status:
+					lbl_obj_status.text = "STATUS: ACCELERATING (%.0f / 7,780 m/s)" % velocity_ms
+					lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+				if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Accelerate into circular parking orbit at 185 km altitude."
+				if lbl_obj_action: lbl_obj_action.text = "ACTION: Guide pitch toward horizon (0°) as velocity approaches 7,780 m/s."
+				if lbl_obj_next: lbl_obj_next.text = "NEXT: 185 km Circular Orbit Cutoff"
+				if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [W/S] Throttle | [A/D] Pitch | [C] / 1-7 Camera"
+
+		FlightPhase.ORBITAL_INJECTION:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: PARKING ORBIT CONFIRMED"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: ORBIT INSERTION ACHIEVED"
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Establish spacecraft bus power and Deep Space Network telemetry."
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Press [E] or click SYSTEMS ACTIVATE to initialize bus telemetry."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: Deep Space Transfer Departure"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [E] Systems Activate | [C] / 1-7 Camera"
+
+		FlightPhase.SYSTEMS_ACTIVATION:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: MISSION READY (L1 INJECTION)"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: TELEMETRY ONLINE & VERIFIED"
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Spacecraft operational in parking orbit. Ready for L1 transfer burn!"
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Click PROCEED TO DEEP SPACE TRANSFER to depart Earth."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: Stage 3 Trans-Lagrange Injection"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: Click [PROCEED TO DEEP SPACE TRANSFER]"
+
+		FlightPhase.FLIGHT_ABORTED:
+			if lbl_obj_phase: lbl_obj_phase.text = "PHASE: MISSION ABORT"
+			if lbl_obj_status:
+				lbl_obj_status.text = "STATUS: ABORT / FAILURE"
+				lbl_obj_status.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
+			if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Launch attempt terminated due to flight failure envelope breach."
+			if lbl_obj_action: lbl_obj_action.text = "ACTION: Click RESET LAUNCH to return to pre-launch standby."
+			if lbl_obj_next: lbl_obj_next.text = "NEXT: Pad Reset"
+			if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: Click Reset / Reconfigure in Hangar"
 
 func _update_label(node_name: String, text_val: String) -> void:
 	var lbl = find_child(node_name, true, false) as Label
