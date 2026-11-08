@@ -414,6 +414,47 @@ static func get_mat(name: String) -> StandardMaterial3D:
 			mat.emission_energy_multiplier = 5.0
 			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		
+		# --- DEEP SPACE TRANSFER & SOLAR CRISIS MATERIALS (References 03 & 04) ---
+		"solar_flare_plasma":
+			mat.albedo_color = Color(1.0, 0.62, 0.15, 0.88)
+			mat.emission_enabled = true
+			mat.emission = Color(1.0, 0.65, 0.18)
+			mat.emission_energy_multiplier = 5.5
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		
+		"solar_proton_stream":
+			mat.albedo_color = Color(1.0, 0.85, 0.45, 0.75)
+			mat.emission_enabled = true
+			mat.emission = Color(1.0, 0.80, 0.35)
+			mat.emission_energy_multiplier = 4.2
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		
+		"trajectory_line_cyan":
+			mat.albedo_color = Color(0.18, 0.82, 0.98, 0.90)
+			mat.emission_enabled = true
+			mat.emission = Color(0.20, 0.85, 1.0)
+			mat.emission_energy_multiplier = 4.0
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		
+		"trajectory_line_gold":
+			mat.albedo_color = Color(0.98, 0.75, 0.22, 0.90)
+			mat.emission_enabled = true
+			mat.emission = Color(0.98, 0.72, 0.20)
+			mat.emission_energy_multiplier = 3.5
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		
+		"rcs_plume_white":
+			mat.albedo_color = Color(0.92, 0.95, 1.0, 0.70)
+			mat.emission_enabled = true
+			mat.emission = Color(0.85, 0.92, 1.0)
+			mat.emission_energy_multiplier = 3.8
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	
 	_materials[name] = mat
 	return mat

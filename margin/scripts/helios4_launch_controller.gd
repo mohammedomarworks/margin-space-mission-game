@@ -2077,6 +2077,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_toggle_flight_pause()
 		elif current_phase == FlightPhase.STAGE1_BURNOUT or not stage1_separated:
 			_execute_stage_separation()
+		elif current_phase == FlightPhase.SYSTEMS_ACTIVATION:
+			_on_proceed_to_transfer_pressed()
+	elif event is InputEventKey and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER) and event.pressed:
+		if current_phase == FlightPhase.SYSTEMS_ACTIVATION:
+			_on_proceed_to_transfer_pressed()
 	elif event is InputEventKey and event.keycode == KEY_J and event.pressed:
 		if altitude_m >= 68000.0 and not fairing_separated:
 			_execute_fairing_jettison()
@@ -2295,8 +2300,9 @@ func _update_ui() -> void:
 				advisory_lbl.text = "★ ALL SYSTEMS NOMINAL: HELIOS-4 INJECTED TOWARD SUN-EARTH L1!"
 				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 			if btn_proceed:
+				if not btn_proceed.visible:
+					print("[Launch] ProceedToTransferBtn global_rect: ", btn_proceed.get_global_rect(), " center: ", btn_proceed.get_global_rect().get_center())
 				btn_proceed.visible = true
-				print("[Launch] ProceedToTransferBtn global_rect: ", btn_proceed.get_global_rect(), " center: ", btn_proceed.get_global_rect().get_center())
 		FlightPhase.FLIGHT_ABORTED:
 			if advisory_lbl:
 				advisory_lbl.text = "▲ MISSION ABORT: %s" % abort_reason_text
