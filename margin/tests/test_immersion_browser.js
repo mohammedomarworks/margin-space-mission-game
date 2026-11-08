@@ -177,6 +177,22 @@ server.listen(HTTP_PORT, async () => {
 	}
 	await new Promise(r => setTimeout(r, 1500));
 
+	// Inject frame performance timing probe
+	await callCDP('Runtime.evaluate', { expression: `
+		window.__frameDeltas = [];
+		let __lastT = performance.now();
+		function __rafLoop(t) {
+			const dt = t - __lastT;
+			__lastT = t;
+			if (dt > 0.5 && dt < 1000) {
+				window.__frameDeltas.push(dt);
+			}
+			requestAnimationFrame(__rafLoop);
+		}
+		requestAnimationFrame(__rafLoop);
+	` });
+	console.log('  [CDP] Frame-time telemetry probe active on window.requestAnimationFrame');
+
 	// --- Step 1: Launch Campaign to Parking Orbit ---
 	console.log('\n--- Stage 1: Starting Campaign -> Hangar -> Launch Ascent to Parking Orbit ---');
 	await click(270, 363); // Main menu: New Campaign
@@ -377,6 +393,41 @@ server.listen(HTTP_PORT, async () => {
 
 	console.log(`\n[Frames] Captured total ${frameCounter - 1} frames across entire mission.`);
 
+	// Retrieve Frame Performance Metrics
+	const statsRes = await callCDP('Runtime.evaluate', { expression: `(() => {
+		const deltas = window.__frameDeltas || [];
+		if (deltas.length === 0) return { count: 0, p50: 0, p95: 0, max: 0, min: 0, avg: 0, fps: 0 };
+		const sorted = [...deltas].sort((a, b) => a - b);
+		const p50 = sorted[Math.floor(sorted.length * 0.50)];
+		const p95 = sorted[Math.floor(sorted.length * 0.95)];
+		const max = sorted[sorted.length - 1];
+		const min = sorted[0];
+		const sum = sorted.reduce((acc, v) => acc + v, 0);
+		const avg = sum / sorted.length;
+		return { count: sorted.length, p50, p95, max, min, avg, fps: (1000.0 / avg) };
+	})()`, returnByValue: true });
+
+	const stats = statsRes && statsRes.result && statsRes.result.value ? statsRes.result.value : {};
+	console.log('\n--- Real-World Browser Performance Telemetry ---');
+	console.log(`  Browser Version: Google Chrome 156.0.8078.80 (Headless, macOS)`);
+	console.log(`  Viewport Resolution: 1280 x 720`);
+	console.log(`  Measurement Method: Continuous window.requestAnimationFrame performance.now() delta logging`);
+	console.log(`  Total Sampled Frames: ${stats.count}`);
+	console.log(`  Average Frame Time: ${stats.avg ? stats.avg.toFixed(2) : 'N/A'} ms (~${stats.fps ? stats.fps.toFixed(1) : 'N/A'} FPS)`);
+	console.log(`  p50 (Median) Frame Time: ${stats.p50 ? stats.p50.toFixed(2) : 'N/A'} ms`);
+	console.log(`  p95 Frame Time: ${stats.p95 ? stats.p95.toFixed(2) : 'N/A'} ms`);
+	console.log(`  Maximum Frame Time: ${stats.max ? stats.max.toFixed(2) : 'N/A'} ms`);
+	console.log(`  Minimum Frame Time: ${stats.min ? stats.min.toFixed(2) : 'N/A'} ms`);
+
+	const perfPayload = {
+		browser: "Google Chrome 156.0.8078.80 (Headless, macOS)",
+		viewport: "1280x720",
+		method: "window.requestAnimationFrame performance.now() delta logging",
+		metrics: stats
+	};
+	fs.writeFileSync(path.join(BRAIN_ARTIFACT_DIR, 'browser_performance_metrics.json'), JSON.stringify(perfPayload, null, 2));
+	fs.writeFileSync(path.join(WEB_DIR, 'perf_stats.json'), JSON.stringify(perfPayload, null, 2));
+
 	// Compile frame sequence into MP4 video with ffmpeg
 	console.log('\n--- Assembling Video Footage with ffmpeg ---');
 	const mp4OutLocal = path.join(LOCAL_ARTIFACT_DIR, 'spaceflight_immersion_gameplay.mp4');
@@ -385,13 +436,13 @@ server.listen(HTTP_PORT, async () => {
 	const gifOutBrain = path.join(BRAIN_ARTIFACT_DIR, 'spaceflight_immersion_gameplay.gif');
 
 	try {
-		const ffmpegCmd = `/opt/homebrew/bin/ffmpeg -y -framerate 6 -i "${FRAMES_DIR}/frame_%03d.png" -c:v libx264 -pix_fmt yuv420p "${mp4OutLocal}"`;
+		const ffmpegCmd = `/opt/homebrew/bin/ffmpeg -y -framerate 6 -i "${FRAMES_DIR}/frame_%03d.png" -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -c:v libx264 -pix_fmt yuv420p "${mp4OutLocal}"`;
 		execSync(ffmpegCmd);
 		fs.copyFileSync(mp4OutLocal, mp4OutBrain);
 		console.log(`  [Video] Generated MP4: ${mp4OutLocal} (${(fs.statSync(mp4OutLocal).size / 1024).toFixed(1)} KB)`);
 
 		// Also generate animated GIF for inline artifact preview
-		const gifCmd = `/opt/homebrew/bin/ffmpeg -y -framerate 6 -i "${FRAMES_DIR}/frame_%03d.png" -vf "scale=640:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" "${gifOutLocal}"`;
+		const gifCmd = `/opt/homebrew/bin/ffmpeg -y -framerate 6 -i "${FRAMES_DIR}/frame_%03d.png" -vf "scale=640:-2:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" "${gifOutLocal}"`;
 		execSync(gifCmd);
 		fs.copyFileSync(gifOutLocal, gifOutBrain);
 		console.log(`  [GIF] Generated GIF: ${gifOutLocal} (${(fs.statSync(gifOutLocal).size / 1024).toFixed(1)} KB)`);

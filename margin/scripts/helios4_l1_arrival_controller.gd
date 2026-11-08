@@ -15,6 +15,10 @@ const SpacecraftMaterials = preload("res://margin/materials/spacecraft_materials
 # Physical & Astrodynamic Constants
 const G0: float = 9.80665
 const L1_DISTANCE_KM: float = 1500000.0
+const VISUAL_SCALE: float = 0.0001
+const L1_POS: Vector3 = Vector3(-150.0, 0.0, 0.0)
+const EARTH_POS: Vector3 = Vector3(0.0, 0.0, 0.0)
+const SUN_POS: Vector3 = Vector3(-15000.0, 0.0, 0.0)
 
 # Educational 3D parametric halo orbit parameters around Sun-Earth L1
 # (Ax = Sun-Earth axis amplitude, Ay = in-plane amplitude, Az = out-of-plane amplitude)
@@ -213,6 +217,13 @@ func _ready() -> void:
 	_load_inherited_campaign_state()
 	lead_time_minutes = Helios4CampaignData.calculate_warning_lead_time_minutes(shock_velocity_km_s, L1_DISTANCE_KM)
 	
+	if earth_mesh:
+		earth_mesh.position = EARTH_POS
+		earth_mesh.scale = Vector3.ONE
+	if sun_mesh:
+		sun_mesh.position = SUN_POS
+		sun_mesh.scale = Vector3.ONE
+		
 	_build_probe_visual()
 	_update_halo_orbit_visual()
 	_build_l1_marker_visual()
@@ -265,7 +276,7 @@ func _process(delta: float) -> void:
 	# Animate probe in periodic 3D halo orbit when captured
 	if current_phase >= SubPhase.STAGE_B_HOI_EXECUTION and not is_engine_firing:
 		_halo_angle += delta * 0.35
-		var pos = Vector3(
+		var pos = L1_POS + Vector3(
 			-HALO_AX * cos(2.0 * _halo_angle),
 			HALO_AY * sin(_halo_angle),
 			HALO_AZ * cos(_halo_angle)
@@ -283,8 +294,8 @@ func _process(delta: float) -> void:
 	elif current_phase < SubPhase.STAGE_B_HOI_EXECUTION and probe_node:
 		# Approach flight toward L1
 		var approach_offset = (distance_to_l1_km / 12000.0) * 4.0
-		probe_node.position = Vector3(0.0, 1.2 + approach_offset * 0.3, approach_offset)
-		probe_node.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
+		probe_node.position = L1_POS + Vector3(approach_offset, 1.2 + approach_offset * 0.3, approach_offset)
+		probe_node.look_at(L1_POS, Vector3.UP)
 		
 	# Process active burns
 	if is_engine_firing:
@@ -301,6 +312,9 @@ func _process(delta: float) -> void:
 	# Rotate Earth
 	if earth_mesh:
 		earth_mesh.rotation.y += delta * 0.06
+		
+	if starfield_cluster and probe_node:
+		starfield_cluster.global_position = probe_node.global_position
 		
 	# Update particle space dust velocity
 	_update_space_dust(delta)
@@ -326,13 +340,13 @@ func _update_camera_transform(delta: float) -> void:
 			base_offset = Vector3(3.4, 2.0, 5.2)
 			look_target = target_pos + Vector3(0.0, 0.2, 0.0)
 		CameraMode.WIDE:
-			anchor_pos = Vector3.ZERO
+			anchor_pos = L1_POS
 			base_offset = Vector3(14.0, 16.0, 32.0)
-			look_target = Vector3.ZERO
+			look_target = L1_POS
 		CameraMode.HALO:
-			anchor_pos = Vector3.ZERO
+			anchor_pos = L1_POS
 			base_offset = Vector3(0.0, 24.0, 0.2)
-			look_target = Vector3.ZERO
+			look_target = L1_POS
 			cam_up = Vector3.FORWARD
 		CameraMode.MAG_BOOM:
 			base_offset = Vector3(1.2, 1.6, -2.6)
@@ -536,7 +550,7 @@ func _update_halo_orbit_visual() -> void:
 	if not halo_ring:
 		return
 	halo_ring.mesh = _generate_halo_tube_mesh(HALO_AX, HALO_AY, HALO_AZ, 0.065, 64, 8)
-	halo_ring.position = Vector3.ZERO
+	halo_ring.position = L1_POS
 	halo_ring.rotation_degrees = Vector3.ZERO
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.22, 0.74, 0.96, 0.75)
@@ -551,6 +565,7 @@ func _build_l1_marker_visual() -> void:
 		return
 	l1_marker = Node3D.new()
 	l1_marker.name = "L1MarkerNode"
+	l1_marker.position = L1_POS
 	add_child(l1_marker)
 	
 	# 3D diamond wireframe marker at (0, 0, 0)

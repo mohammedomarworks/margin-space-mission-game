@@ -83,23 +83,92 @@ var _is_mouse_dragging: bool = false
 var _last_mouse_pos: Vector2 = Vector2.ZERO
 
 # 3D Trajectory & Celestial World Coordinates
-const EARTH_POS: Vector3 = Vector3(22.0, -3.0, 36.0)
-const SUN_POS: Vector3 = Vector3(-65.0, 8.0, -85.0)
-const L1_POS: Vector3 = Vector3(-32.0, 2.0, -42.0)
-const PARKING_ORBIT_RADIUS: float = 6.8
+# --- Frozen Sun–Earth Aligned Reference Frame ---
+# Earth-centred simulation coordinates:
+# Earth: (0, 0, 0) km
+# L1: (-1,500,000, 0, 0) km
+# Sun: (-150,000,000, 0, 0) km
+# Earth orbital phase and rotating-frame dynamics are intentionally not simulated.
+# VISUAL_SCALE: 0.0001 (1 Godot visual unit = 10,000 km)
+const VISUAL_SCALE: float = 0.0001
+
+const EARTH_SIM_POS_KM: Vector3 = Vector3(0.0, 0.0, 0.0)
+const L1_SIM_POS_KM: Vector3 = Vector3(-1500000.0, 0.0, 0.0)
+const SUN_SIM_POS_KM: Vector3 = Vector3(-150000000.0, 0.0, 0.0)
+
+const EARTH_RADIUS_KM: float = 6371.0          # Earth physical radius (authoritative)
+const PARKING_ORBIT_ALTITUDE_KM: float = 165.0 # Low Earth parking orbit altitude
+const PARKING_ORBIT_RADIUS_KM: float = 6536.0  # 6,371 + 165 = 6,536 km
+const L1_DISTANCE_KM: float = 1500000.0        # Sunward distance from Earth to L1
+
+const EARTH_VISUAL_RADIUS: float = 0.6371      # 6,371 km * 0.0001
+const PARKING_ORBIT_VISUAL_RADIUS: float = 0.6536 # 6,536 km * 0.0001
+const ATMOSPHERE_VISUAL_RADIUS: float = 0.66   # Atmosphere outer visual envelope
+
+const EARTH_POS: Vector3 = Vector3(0.0, 0.0, 0.0)
+const L1_POS: Vector3 = Vector3(-150.0, 0.0, 0.0)
+const SUN_POS: Vector3 = Vector3(-15000.0, 0.0, 0.0) # Documented artistic visual position (exaggerated for gameplay)
+
+# Authoritative simulation state (64-bit scalar floats — NOT Vector3)
+var spacecraft_x_km: float = 6536.0
+var spacecraft_y_km: float = 0.0
+var spacecraft_z_km: float = 0.0
+
+var transfer_start_x_km: float = 6536.0
+var transfer_start_y_km: float = 0.0
+var transfer_start_z_km: float = 0.0
+
+var parking_orbit_altitude_km: float = 165.0
+var transfer_progress_km: float = 0.0
 var parking_orbit_theta: float = 0.0
 
+# Trajectory math
+func get_trajectory_point_sim_km(u: float) -> Vector3:
+	var clamped_u = clamp(u, 0.0, 1.0)
+	var dec = cos(clamped_u * PI / 2.0)
+	var local_x = -L1_DISTANCE_KM * clamped_u
+	var lateral_y = sin(clamped_u * PI) * 85000.0
+	var lateral_z = -sin(clamped_u * PI) * 45000.0
+	
+	var rad_x = transfer_start_x_km * dec
+	var rad_y = transfer_start_y_km * dec
+	var rad_z = transfer_start_z_km * dec
+	
+	var x = local_x + rad_x
+	var y = rad_y + lateral_y
+	var z = rad_z + lateral_z
+	
+	# Earth-clearance enforcement: distance from Earth center (0,0,0) is at least PARKING_ORBIT_RADIUS_KM (6536 km)
+	var cur_r = sqrt(x * x + y * y + z * z)
+	if cur_r < PARKING_ORBIT_RADIUS_KM and cur_r > 0.001:
+		var scale_factor = PARKING_ORBIT_RADIUS_KM / cur_r
+		x *= scale_factor
+		y *= scale_factor
+		z *= scale_factor
+		
+	return Vector3(x, y, z)
+
+func get_trajectory_point_visual(u: float) -> Vector3:
+	var p = get_trajectory_point_sim_km(u)
+	return p * VISUAL_SCALE
+
+func get_trajectory_tangent_sim_km(u: float) -> Vector3:
+	var delta_u = 0.0005
+	var u_prev = clamp(u - delta_u, 0.0, 1.0)
+	var u_next = clamp(u + delta_u, 0.0, 1.0)
+	var p_prev = get_trajectory_point_sim_km(u_prev)
+	var p_next = get_trajectory_point_sim_km(u_next)
+	var tangent = (p_next - p_prev)
+	if tangent.length_squared() < 0.000001:
+		return Vector3(-1.0, 0.0, 0.0)
+	return tangent.normalized()
+
+# Backward compatible helpers
 func get_trajectory_point(u: float) -> Vector3:
-	var p0 = Vector3(16.5, -2.0, 31.0)
-	var p1 = L1_POS
-	var curve_offset = Vector3(sin(u * PI) * 8.5, sin(u * PI) * 3.2, -sin(u * PI) * 6.5)
-	return p0.lerp(p1, u) + curve_offset
+	return get_trajectory_point_visual(u)
 
 func get_trajectory_tangent(u: float) -> Vector3:
-	var p0 = Vector3(16.5, -2.0, 31.0)
-	var p1 = L1_POS
-	var d_curve = Vector3(cos(u * PI) * 8.5 * PI, cos(u * PI) * 3.2 * PI, -cos(u * PI) * 6.5 * PI)
-	return (p1 - p0) + d_curve
+	return get_trajectory_tangent_sim_km(u)
 
 # Time Acceleration
 var time_warp_factors: Array = [1.0, 10.0, 100.0, 1000.0]
@@ -113,7 +182,22 @@ var warp_factor: float:
 const TARGET_L1_DISTANCE_KM: float = 1500000.0
 const G0: float = 9.80665
 
-var distance_km: float = 165.0 # starts at 165 km Earth parking orbit
+# Authoritative distance accessor with backward compatibility
+var distance_km: float:
+	get:
+		if current_subphase == SubPhase.PARKING_ORBIT:
+			return parking_orbit_altitude_km
+		return parking_orbit_altitude_km + transfer_progress_km
+	set(val):
+		if current_subphase == SubPhase.PARKING_ORBIT:
+			parking_orbit_altitude_km = val
+		else:
+			transfer_progress_km = max(0.0, val - parking_orbit_altitude_km)
+
+var propellant_kg: float:
+	get: return probe_propellant_kg
+	set(val): probe_propellant_kg = val
+
 var velocity_kms: float = 7.75 # km/s in parking orbit
 var mission_elapsed_days: float = 0.0
 var mission_elapsed_hours: float = 0.0
@@ -287,13 +371,13 @@ func _inherit_campaign_state() -> void:
 		target_cruise_days = 135.0 if trajectory_mode == "phased_wsb" else 110.0
 		
 	if not l_tel.is_empty():
-		distance_km = l_tel.get("orbit_altitude_km", 165.0)
+		parking_orbit_altitude_km = l_tel.get("orbit_altitude_km", 165.0)
 		velocity_kms = l_tel.get("orbit_velocity_ms", 7750.0) / 1000.0
 
 	# Check if jumping directly into Phase 4 (Crisis)
 	if Helios4CampaignData.current_stage == Helios4CampaignData.Stage.PHASE_4_CRISIS or name == "Helios4Crisis":
 		current_subphase = SubPhase.SOLAR_CRISIS_ALERT
-		distance_km = 750000.0
+		transfer_progress_km = 750000.0
 		mission_elapsed_days = 58.5
 		velocity_kms = 3.65
 		trajectory_accuracy_pct = 99.4
@@ -301,7 +385,8 @@ func _inherit_campaign_state() -> void:
 			probe_propellant_kg = 295.0 # Account for TLI and MCC
 	else:
 		current_subphase = SubPhase.PARKING_ORBIT
-		distance_km = 165.0
+		parking_orbit_altitude_km = 165.0
+		transfer_progress_km = 0.0
 		velocity_kms = 7.75
 
 func _build_spacecraft_model() -> void:
@@ -522,6 +607,9 @@ func _build_starfield() -> void:
 	mi.mesh = im
 	starfield_cluster.add_child(mi)
 
+func _build_trajectory_arc() -> void:
+	_build_3d_trajectory()
+
 func _build_3d_trajectory() -> void:
 	if not trajectory_arc:
 		return
@@ -655,19 +743,22 @@ func _process(delta: float) -> void:
 	# Process active sub-phase simulation
 	match current_subphase:
 		SubPhase.PARKING_ORBIT:
-			# Spacecraft physical orbit around Earth
+			# Spacecraft physical orbit around Earth (Earth-relative, 64-bit scalar)
 			parking_orbit_theta += delta * 0.25
-			var park_pos = EARTH_POS + Vector3(
-				cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
-				sin(parking_orbit_theta) * 1.8,
-				sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS
-			)
+			spacecraft_x_km = cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS_KM
+			spacecraft_y_km = sin(parking_orbit_theta) * 1850.0
+			spacecraft_z_km = sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS_KM
+			transfer_start_x_km = spacecraft_x_km
+			transfer_start_y_km = spacecraft_y_km
+			transfer_start_z_km = spacecraft_z_km
+			transfer_progress_km = 0.0
+			velocity_kms = 7.75
 			if probe_node:
-				probe_node.position = park_pos
+				probe_node.position = Vector3(spacecraft_x_km, spacecraft_y_km, spacecraft_z_km) * VISUAL_SCALE
 				var tangent = Vector3(
-					-sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
-					cos(parking_orbit_theta) * 1.8,
-					cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS
+					-sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS_KM,
+					cos(parking_orbit_theta) * 1850.0,
+					cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS_KM
 				).normalized()
 				probe_node.look_at(probe_node.position + tangent, Vector3.UP)
 		
@@ -710,12 +801,19 @@ func _process(delta: float) -> void:
 			
 	# Update physical trajectory position in world space when in cruise
 	if current_subphase != SubPhase.PARKING_ORBIT and current_subphase != SubPhase.INJECTION_BURN:
-		var u = clamp((distance_km - 165.0) / (TARGET_L1_DISTANCE_KM - 165.0), 0.0, 1.0)
+		var u = clamp(transfer_progress_km / L1_DISTANCE_KM, 0.0, 1.0)
+		var sim_pos = get_trajectory_point_sim_km(u)
+		spacecraft_x_km = sim_pos.x
+		spacecraft_y_km = sim_pos.y
+		spacecraft_z_km = sim_pos.z
 		if probe_node:
-			probe_node.position = get_trajectory_point(u)
-			var tangent = get_trajectory_tangent(u).normalized()
+			probe_node.position = sim_pos * VISUAL_SCALE
+			var tangent = get_trajectory_tangent_sim_km(u).normalized()
 			probe_node.look_at(probe_node.position + tangent, Vector3.UP)
 			
+	if starfield_cluster and probe_node:
+		starfield_cluster.global_position = probe_node.global_position
+		
 	_update_space_dust(delta)
 	_update_celestial_transforms(delta)
 	_update_spacecraft_tracking(delta)
@@ -736,19 +834,18 @@ func _process_injection_burn(dt: float) -> void:
 	
 	var progress = clamp(burn_timer_s / burn_duration_s, 0.0, 1.0)
 	velocity_kms = lerp(7.75, 10.95, progress)
-	distance_km += velocity_kms * dt * 15.0 # initial escape surge
+	transfer_progress_km += velocity_kms * dt * 15.0 # initial escape surge
 	
-	# Smooth physical trajectory blend out of parking orbit onto interplanetary transfer
+	var u = clamp(transfer_progress_km / L1_DISTANCE_KM, 0.0, 1.0)
+	var sim_pos = get_trajectory_point_sim_km(u)
+	spacecraft_x_km = sim_pos.x
+	spacecraft_y_km = sim_pos.y
+	spacecraft_z_km = sim_pos.z
+	
 	if probe_node:
-		var park_exit = EARTH_POS + Vector3(
-			cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
-			sin(parking_orbit_theta) * 1.8,
-			sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS
-		)
-		var traj_start = get_trajectory_point(0.02)
-		probe_node.position = park_exit.lerp(traj_start, progress)
-		var dir = (traj_start - park_exit).normalized()
-		probe_node.look_at(probe_node.position + dir, Vector3.UP)
+		probe_node.position = sim_pos * VISUAL_SCALE
+		var tangent = get_trajectory_tangent_sim_km(u).normalized()
+		probe_node.look_at(probe_node.position + tangent, Vector3.UP)
 	
 	if burn_timer_s >= burn_duration_s:
 		is_thruster_firing = false
@@ -769,7 +866,7 @@ func _process_cruise_progression(dt: float) -> void:
 	
 	# Advance distance (1 second = dt seconds of cruise; educational scale factor 100 km/s per sim-sec)
 	var d_dist = velocity_kms * dt * 80.0
-	distance_km += d_dist
+	transfer_progress_km += d_dist
 	
 	# Calculate mission elapsed time
 	var d_days = (d_dist / TARGET_L1_DISTANCE_KM) * target_cruise_days
@@ -880,27 +977,26 @@ func _animate_solar_storm_visuals(dt: float) -> void:
 		proton_stream_particles.emitting = true
 
 func _update_celestial_transforms(delta: float = 0.0) -> void:
-	var progress = clamp((distance_km - 165.0) / (TARGET_L1_DISTANCE_KM - 165.0), 0.0, 1.0)
-	
-	# Earth is stationary in world space at EARTH_POS; its visual scale recedes with distance
+	# Frozen Sun–Earth Aligned Frame: celestial bodies fixed in simulation coordinates
+	# Earth at origin (0, 0, 0), Sun at (-15000, 0, 0) in visual units
+	# No distance-based celestial scaling is used — visual movement is completely perspective-driven
 	if earth_node:
 		earth_node.position = EARTH_POS
-		var earth_scale = max(0.2, 1.0 - progress * 0.78)
-		earth_node.scale = Vector3.ONE * earth_scale
+		earth_node.scale = Vector3.ONE
 		
 	if earth_mesh:
 		earth_mesh.rotation.y += delta * 0.06
 	if earth_atmosphere:
 		earth_atmosphere.rotation.y += delta * 0.08
 		
+	if sun_node:
+		sun_node.position = SUN_POS
+		sun_node.scale = Vector3.ONE
+		
 	# Sun corona & particle pulsation
 	if sun_corona:
 		var pulse = 1.0 + sin(Time.get_ticks_msec() * 0.002) * 0.05
 		sun_corona.scale = Vector3.ONE * pulse
-		
-	if sun_node:
-		var sun_scale = 1.0 + progress * 0.25
-		sun_node.scale = Vector3.ONE * sun_scale
 
 func _update_space_dust(_delta: float) -> void:
 	if not space_dust_emitter or not probe_node:
@@ -914,13 +1010,13 @@ func _update_space_dust(_delta: float) -> void:
 	var flight_dir = Vector3.FORWARD
 	if current_subphase == SubPhase.PARKING_ORBIT:
 		flight_dir = Vector3(
-			-sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
-			cos(parking_orbit_theta) * 1.8,
-			cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS
+			-sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS_KM,
+			cos(parking_orbit_theta) * 1850.0,
+			cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS_KM
 		).normalized()
 	else:
-		var u = clamp((distance_km - 165.0) / (TARGET_L1_DISTANCE_KM - 165.0), 0.0, 1.0)
-		flight_dir = get_trajectory_tangent(u).normalized()
+		var u = clamp(transfer_progress_km / L1_DISTANCE_KM, 0.0, 1.0)
+		flight_dir = get_trajectory_tangent_sim_km(u).normalized()
 		
 	# Particles stream backwards opposite to flight
 	var stream_dir = probe_node.global_transform.basis.inverse() * (-flight_dir)
@@ -1110,6 +1206,12 @@ func _on_primary_action_pressed() -> void:
 			# Authorize Trans-L1 Injection Burn
 			current_subphase = SubPhase.INJECTION_BURN
 			burn_timer_s = 0.0
+			burn_duration_s = 4.0
+			transfer_start_x_km = spacecraft_x_km
+			transfer_start_y_km = spacecraft_y_km
+			transfer_start_z_km = spacecraft_z_km
+			transfer_progress_km = 0.0
+			_build_trajectory_arc()
 			_show_advisory("🚀 TLI IGNITION: Hyperbolic escape burn initiated toward Sun-Earth L1.")
 			_update_flight_guidance()
 			

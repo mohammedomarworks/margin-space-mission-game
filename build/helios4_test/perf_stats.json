@@ -1,0 +1,14 @@
+{
+  "browser": "Google Chrome 156.0.8078.80 (Headless, macOS)",
+  "viewport": "1280x720",
+  "method": "window.requestAnimationFrame performance.now() delta logging",
+  "metrics": {
+    "count": 6443,
+    "p50": 16.665000000000873,
+    "p95": 16.67000000000189,
+    "max": 416.64999999999964,
+    "min": 3.8100000071526665,
+    "avg": 16.88387319571747,
+    "fps": 59.22811599021285
+  }
+}
