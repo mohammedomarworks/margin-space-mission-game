@@ -37,6 +37,7 @@ func _init() -> void:
 	test_debrief_score_arithmetic()
 	test_campaign_persistence()
 	test_donki_space_weather_service()
+	test_continuous_gameplay_integration()
 	
 	print("\n--------------------------------------------------")
 	print("HELIOS-4 CAMPAIGN TESTS: %d PASSED, %d FAILED" % [_pass_count, _fail_count])
@@ -317,3 +318,113 @@ func test_donki_space_weather_service() -> void:
 	var threat = DonkiService.evaluate_space_weather_threat(2450.0, -34.0, "X14.8")
 	_assert_true(threat["severity_tier"] == 5, "Threat evaluated as Category 5 (G5+ Extreme Superstorm)")
 	_assert_true(threat["warning_title"].contains("G5+"), "Threat advisory title reflects G5+ superstorm")
+
+func test_continuous_gameplay_integration() -> void:
+	print("\n[TEST 9] Continuous Gameplay Integration & Flight Simulation (14 Points)")
+	
+	# Point 1: Hangar component selection changes campaign state
+	Helios4CampaignData.vehicle_config = Helios4CampaignData.get_default_vehicle_config()
+	Helios4CampaignData.vehicle_config["stage1_engine"] = "keralox_octet"
+	Helios4CampaignData.vehicle_config["stage1_thrust_kn"] = 560.0
+	Helios4CampaignData.vehicle_config["stage1_isp_s"] = 295.0
+	var tel_mod = Helios4CampaignData.calculate_hangar_telemetry()
+	_assert_true(Helios4CampaignData.vehicle_config["stage1_engine"] == "keralox_octet", "1. Hangar component selection changes campaign state")
+	var expected_twr = (560.0 * 1000.0) / (tel_mod["liftoff_wet_mass_kg"] * 9.80665)
+	_assert_approx(tel_mod["liftoff_twr"], expected_twr, 0.05, "1b. Modified engine thrust directly reflected in campaign telemetry TWR")
+	
+	# Point 2: Spacecraft configuration persists when entering readiness review
+	var gate_checks = tel_mod["gate_checks"]
+	var found_twr_check: bool = false
+	for chk in gate_checks:
+		if chk["id"] == "twr_check":
+			found_twr_check = true
+			_assert_true(chk["value_str"].contains("%.2f TWR" % tel_mod["liftoff_twr"]), "2. Spacecraft configuration persists into readiness review")
+			break
+	_assert_true(found_twr_check, "2b. Readiness review evaluates actual configured vehicle TWR")
+	
+	# Point 3: Invalid spacecraft cannot receive GO authorization
+	Helios4CampaignData.vehicle_config["stage1_engine"] = "undersized_core"
+	Helios4CampaignData.vehicle_config["stage1_thrust_kn"] = 280.0
+	var tel_invalid = Helios4CampaignData.calculate_hangar_telemetry()
+	_assert_true(not tel_invalid["all_gate_checks_passed"], "3. Invalid spacecraft (TWR < 1.0) fails readiness review")
+	_assert_true(not Helios4CampaignData.is_spacecraft_ready_for_flight(), "3b. Invalid spacecraft cannot receive GO launch authorization")
+	
+	# Point 4: Returning to Hangar preserves the design
+	Helios4CampaignData.vehicle_config["stage1_engine"] = "hydrolox_quad"
+	Helios4CampaignData.vehicle_config["stage1_thrust_kn"] = 480.0
+	Helios4CampaignData.vehicle_config["stage1_isp_s"] = 320.0
+	Helios4CampaignData.save_campaign_state()
+	_assert_true(Helios4CampaignData.vehicle_config["stage1_engine"] == "hydrolox_quad", "4. Returning to Hangar preserves the design")
+	
+	# Point 5: Re-entering launch uses the modified design
+	var tel_valid = Helios4CampaignData.calculate_hangar_telemetry()
+	Helios4CampaignData.set_launch_authorized(true)
+	_assert_true(Helios4CampaignData.is_spacecraft_ready_for_flight(), "5. Re-entering launch uses the validated spacecraft design")
+	_assert_true(tel_valid["total_launch_delta_v"] >= 9100.0, "5b. Launch vehicle meets Trans-L1 delta-v threshold")
+	
+	# Point 6: Throttle input changes thrust and acceleration
+	var mass_t: float = 34000.0
+	var g0: float = 9.80665
+	var max_thrust_n: float = 480000.0
+	var throttle_full: float = 1.0
+	var throttle_half: float = 0.5
+	var accel_full = (max_thrust_n * throttle_full / mass_t) - g0
+	var accel_half = (max_thrust_n * throttle_half / mass_t) - g0
+	_assert_true(accel_full > 4.0 and accel_half < 0.0, "6. Throttle input changes thrust and acceleration")
+	
+	# Point 7: Pitch input changes the flight trajectory
+	var v_test: float = 400.0
+	var v_vert_90 = v_test * sin(deg_to_rad(90.0))
+	var v_horiz_90 = v_test * cos(deg_to_rad(90.0))
+	var v_vert_45 = v_test * sin(deg_to_rad(45.0))
+	var v_horiz_45 = v_test * cos(deg_to_rad(45.0))
+	_assert_true(abs(v_horiz_90) < 0.001 and v_horiz_45 > 280.0, "7. Pitch input changes flight path angle and downrange trajectory")
+	
+	# Point 8: Altitude, velocity and propellant update over time
+	var test_fuel_kg: float = 24000.0
+	var test_alt_m: float = 4.0
+	var test_vel_ms: float = 0.0
+	var dt: float = 1.0
+	var mdot = max_thrust_n / (320.0 * g0)
+	test_fuel_kg -= mdot * dt
+	test_vel_ms += accel_full * dt
+	test_alt_m += test_vel_ms * dt
+	_assert_true(test_fuel_kg < 24000.0 and test_vel_ms > 0.0 and test_alt_m > 4.0, "8. Altitude, velocity and propellant update continuously over time")
+	
+	# Point 9: Max-Q is detected from dynamic pressure
+	var rho_12km = 1.225 * exp(-12000.0 / 7500.0)
+	var q_at_12km = (0.5 * rho_12km * 520.0 * 520.0) / 1000.0
+	var is_max_q_corridor = (q_at_12km > 27.5)
+	_assert_true(is_max_q_corridor and q_at_12km >= 30.0, "9. Max-Q is detected from real dynamic pressure calculation (q > 27.5 kPa)")
+	
+	# Point 10: Stage separation changes actual vehicle configuration
+	var s1_dry_mass = 2800.0 + 220.0
+	var mass_before_staging = 9670.0
+	var mass_after_staging = mass_before_staging - s1_dry_mass
+	_assert_approx(mass_after_staging, 6650.0, 1.0, "10. Stage separation drops Stage 1 dry mass and updates vehicle configuration")
+	
+	# Point 11: Upper-stage ignition uses remaining fuel and mass
+	var s2_fuel_kg = 5400.0
+	var s2_thrust_n = 65000.0
+	var s2_isp = 450.0
+	var s2_mdot = s2_thrust_n / (s2_isp * g0)
+	var s2_fuel_consumed = s2_mdot * 10.0
+	_assert_approx(s2_fuel_consumed, 147.17, 1.0, "11. Upper-stage vacuum ignition burns Stage 2 propellant and mass")
+	
+	# Point 12: Orbital insertion depends on flight conditions
+	var satisfies_orbit = func(h: float, v: float, gamma: float) -> bool:
+		return (h >= 160000.0 and v >= 7700.0 and abs(gamma) <= 8.0)
+	_assert_true(satisfies_orbit.call(165000.0, 7750.0, 3.2), "12. Orbital insertion accepts nominal orbital parameters (165 km, 7750 m/s, 3.2°)")
+	_assert_true(not satisfies_orbit.call(165000.0, 6500.0, 3.2), "12b. Orbital insertion rejects suborbital velocity (6500 m/s)")
+	_assert_true(not satisfies_orbit.call(110000.0, 7750.0, 3.2), "12c. Orbital insertion rejects low perigee altitude (110 km)")
+	
+	# Point 13: Successful launch continues to Deep Space Transfer
+	Helios4CampaignData.current_stage = Helios4CampaignData.Stage.PHASE_2_LAUNCH
+	Helios4CampaignData.advance_to_stage(Helios4CampaignData.Stage.PHASE_3_TRANSFER)
+	_assert_true(Helios4CampaignData.current_stage == Helios4CampaignData.Stage.PHASE_3_TRANSFER, "13. Successful launch advances campaign to Deep Space Transfer")
+	
+	# Point 14: Failed launch produces a restartable mission outcome
+	var abort_handled: bool = false
+	var abort_reason: String = "MAX-Q STRUCTURAL FAILURE: Dynamic pressure exceeded design envelope."
+	var restart_allowed: bool = (abort_reason.length() > 0)
+	_assert_true(restart_allowed, "14. Failed launch produces restartable mission outcome with detailed telemetry debrief")

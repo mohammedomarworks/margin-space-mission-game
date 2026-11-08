@@ -90,6 +90,34 @@ func _populate_checks() -> void:
 		adv_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		vbox.add_child(adv_lbl)
 		
+		if not is_pass:
+			var fix_hbox := HBoxContainer.new()
+			var cor_lbl := Label.new()
+			cor_lbl.text = "Recommended Fix: %s" % chk.get("correction", "Adjust parameters in Hangar.")
+			cor_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cor_lbl.add_theme_color_override("font_color", Color(0.98, 0.65, 0.25))
+			cor_lbl.add_theme_font_size_override("font_size", 11)
+			cor_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			fix_hbox.add_child(cor_lbl)
+			
+			var fix_btn := Button.new()
+			fix_btn.text = "FIX IN %s →" % chk["role"].to_upper()
+			fix_btn.add_theme_font_size_override("font_size", 10)
+			var btn_style := StyleBoxFlat.new()
+			btn_style.bg_color = Color(0.2, 0.08, 0.08, 0.95)
+			btn_style.border_color = Color(0.95, 0.4, 0.3)
+			btn_style.set_border_width_all(1)
+			btn_style.set_corner_radius_all(4)
+			btn_style.content_margin_left = 8
+			btn_style.content_margin_right = 8
+			fix_btn.add_theme_stylebox_override("normal", btn_style)
+			fix_btn.pressed.connect(func():
+				Helios4CampaignData.active_role = chk["role"]
+				Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_1_HANGAR, get_tree())
+			)
+			fix_hbox.add_child(fix_btn)
+			vbox.add_child(fix_hbox)
+		
 		panel.add_child(vbox)
 		check_list.add_child(panel)
 
@@ -116,19 +144,23 @@ func _update_launch_button_state() -> void:
 		status_banner.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
 		launch_btn.disabled = true
 		launch_btn.text = "LAUNCH LOCKED (CRITICAL CHECKS FAILED)"
+		Helios4CampaignData.is_launch_authorized = false
 	elif not all_voted:
 		status_banner.text = "● ENGINEERING CHECKS PASSED: All 4 workstations must sign off [GO] for final launchpad clearance."
 		status_banner.add_theme_color_override("font_color", Color(0.98, 0.65, 0.2))
 		launch_btn.disabled = true
 		launch_btn.text = "AWAITING 4-OFFICER GO SIGN-OFF"
+		Helios4CampaignData.is_launch_authorized = false
 	else:
 		status_banner.text = "★ UNANIMOUS GO FOR LAUNCH: HELIOS-4 Launchpad clearance granted."
 		status_banner.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 		launch_btn.disabled = false
 		launch_btn.text = "PROCEED TO EARTH LAUNCH (PHASE 2) →"
+		Helios4CampaignData.set_launch_authorized(true)
 
 func _on_launch_pressed() -> void:
 	print("[EngineeringReview] FRR Approval Unanimous! Advancing to Earth Launch Pad (Phase 2)")
+	Helios4CampaignData.set_launch_authorized(true)
 	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_2_LAUNCH, get_tree())
 
 func _on_return_hangar_pressed() -> void:

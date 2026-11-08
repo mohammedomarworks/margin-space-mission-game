@@ -658,10 +658,10 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 10
 selected = 0
 item_count = 3
-popup/item_0/text = "Hydrolox Quad Cluster (4,200 kN, 320s)"
-popup/item_1/text = "Keralox Octet Cluster (4,900 kN, 295s)"
+popup/item_0/text = "Hydrolox Quad Cluster (480 kN, 320s)"
+popup/item_1/text = "Keralox Octet Cluster (560 kN, 295s)"
 popup/item_1/id = 1
-popup/item_2/text = "Solid Strap-On + Hydrolox (5,600 kN, 280s)"
+popup/item_2/text = "Undersized Test Core (280 kN, 310s - Low TWR)"
 popup/item_2/id = 2
 
 [node name="Lbl2" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsPropulsion"]

@@ -147,6 +147,7 @@ static var hangar_time_remaining: float = 600.0 # 10 minutes
 # Active Vehicle & Spacecraft Configuration
 static var vehicle_config: Dictionary = {}
 static var probe_config: Dictionary = {}
+static var is_launch_authorized: bool = false
 
 # Cooperative Team Decision & Attribution History
 static var team_decision_log: Array = []
@@ -334,7 +335,8 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	
 	# Stage 1 Mass Breakdown
 	var stage1_dry_mass: float = v_cfg.get("stage1_dry_mass_kg", 2800.0) + v_cfg.get("stage1_fin_mass_kg", 220.0)
-	var stage1_fuel_mass: float = v_cfg.get("stage1_fuel_mass_kg", 24000.0)
+	var s1_fuel_factor: float = v_cfg.get("propellant_load_factor", 1.0)
+	var stage1_fuel_mass: float = v_cfg.get("stage1_fuel_mass_kg", 24000.0) * s1_fuel_factor
 	var stage1_wet_mass: float = stage1_dry_mass + stage1_fuel_mass
 	
 	var fairing_mass: float = v_cfg.get("fairing_mass_kg", 420.0)
@@ -383,7 +385,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	
 	# Center of Pressure: Nose cone produces destabilizing forward lift;
 	# Aft grid fins at tail (x ~ 0.8m) provide restorative aerodynamic stabilizing moment.
-	var has_fins: bool = (v_cfg.get("stage1_fins", "") != "none")
+	var has_fins: bool = v_cfg.get("has_grid_fins", true) and (v_cfg.get("stage1_fins", "aero_grid_fins") != "none")
 	var nose_cop_area: float = 1.4
 	var body_cop_area: float = 0.8
 	var fin_cop_area: float = 7.0 if has_fins else 0.2
@@ -435,70 +437,123 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	var transfer_days: int = 135 if traj_mode == "phased_wsb" else 110
 	var traj_mode_name: String = "Phased WSB" if traj_mode == "phased_wsb" else "Direct Injection"
 
-	# --- ENGINEERING GATE CHECKS ---
+	# --- ENGINEERING GATE CHECKS (7 Authoritative Mission Criteria) ---
 	var gate_checks: Array = []
 	
-	# Check 1: Liftoff TWR
+	# Criterion 1: Propulsion Readiness & Liftoff TWR
 	var twr_valid: bool = (liftoff_twr >= 1.20 and liftoff_twr <= 1.85)
 	gate_checks.append({
 		"id": "twr_check",
-		"name": "Liftoff Thrust-to-Weight Ratio",
-		"value_str": "%.2f" % liftoff_twr,
-		"target_str": "1.20 – 1.85",
+		"name": "1. Propulsion Readiness (Liftoff TWR)",
+		"value_str": "%.2f TWR (Thrust: %.0f kN)" % [liftoff_twr, s1_thrust_kn],
+		"target_str": "1.20 – 1.85 TWR",
 		"status": "PASS" if twr_valid else ("WARN" if liftoff_twr > 1.10 else "FAIL"),
 		"role": ROLE_PROPULSION,
-		"advice": "Nominal liftoff thrust." if twr_valid else ("TWR too low (<1.20) for positive launch pad clearance." if liftoff_twr < 1.20 else "Excessive acceleration (>1.85 TWR) risks structural G-force overstress.")
+		"subsystem": "propulsion",
+		"advice": "Nominal liftoff thrust. Positive launchpad clearance verified." if twr_valid else ("TWR too low (<1.20). Vehicle cannot safely clear pad or will fail to liftoff." if liftoff_twr < 1.20 else "Excessive acceleration (>1.85 TWR) risks structural G-force overstress."),
+		"correction": "Select standard Hydrolox Quad (480 kN) or Keralox Cluster engine."
 	})
 	
-	# Check 2: Launch Vehicle Delta-V to L1 Transfer Orbit
+	# Criterion 2: Propellant Sufficiency
+	var propellant_valid: bool = (stage1_fuel_mass >= 20000.0 and stage2_fuel_mass >= 4800.0)
+	gate_checks.append({
+		"id": "propellant_check",
+		"name": "2. Propellant Loading Sufficiency",
+		"value_str": "S1: %.0f kg • S2: %.0f kg" % [stage1_fuel_mass, stage2_fuel_mass],
+		"target_str": "S1 >= 20,000 kg • S2 >= 4,800 kg",
+		"status": "PASS" if propellant_valid else "FAIL",
+		"role": ROLE_PROPULSION,
+		"subsystem": "propulsion",
+		"advice": "Full propellant load verified for nominal ascent trajectory." if propellant_valid else "Propellant deficit! Stage 1 fuel underloaded (<20,000 kg) causing premature MECO and failed ascent.",
+		"correction": "Increase Propellant Loading slider to >= 90% in Hangar Propulsion workstation."
+	})
+	
+	# Criterion 3: Structural Stability (Static Margin)
+	var stability_valid: bool = (static_margin_calibers >= 1.20)
+	gate_checks.append({
+		"id": "stability_check",
+		"name": "3. Structural Aerodynamic Stability (CoM / CoP)",
+		"value_str": "+%.2f calibers" % static_margin_calibers,
+		"target_str": ">= +1.20 calibers",
+		"status": "PASS" if stability_valid else "FAIL",
+		"role": ROLE_STRUCTURAL,
+		"subsystem": "structural",
+		"advice": "Center of Mass ahead of Center of Pressure. Rocket has passive aerodynamic restoring torque." if stability_valid else "Aerodynamic instability! CoP is too close to CoM. Rocket will tumble out of control at Max-Q.",
+		"correction": "Enable 4x Titanium Grid Fins or reduce nose fairing mass in Structural workstation."
+	})
+	
+	# Criterion 4: Power and Avionics
+	var power_valid: bool = (power_margin_w >= 100.0)
+	gate_checks.append({
+		"id": "power_check",
+		"name": "4. Power Generation & Avionics Balance",
+		"value_str": "+%.0f W surplus (%s)" % [power_margin_w, p_cfg.get("computer_type", "comp_rad_hard_quad_core")],
+		"target_str": ">= +100 W surplus at L1",
+		"status": "PASS" if power_valid else "FAIL",
+		"role": ROLE_SYSTEMS,
+		"subsystem": "systems",
+		"advice": "Positive electrical balance across avionics, instruments, and transmitters." if power_valid else "Power deficit or insufficient margin (<100 W). Probe will suffer battery depletion at L1.",
+		"correction": "Increase solar array area (>= 6.0 m²) or optimize avionics in Systems workstation."
+	})
+	
+	# Criterion 5: Payload and Fairing Readiness
+	var fairing_diam: float = v_cfg.get("fairing_diameter_m", 2.4)
+	var payload_fairing_valid: bool = (probe_wet_mass <= 1250.0 and fairing_diam >= 2.4)
+	gate_checks.append({
+		"id": "payload_fairing_check",
+		"name": "5. Payload Envelope & Fairing Readiness",
+		"value_str": "Probe: %.0f kg • Envelope: %.1fm ⌀" % [probe_wet_mass, fairing_diam],
+		"target_str": "Probe <= 1,250 kg • Fairing >= 2.4m",
+		"status": "PASS" if payload_fairing_valid else "FAIL",
+		"role": ROLE_STRUCTURAL,
+		"subsystem": "structural",
+		"advice": "HELIOS-4 probe mass within allowable launch vehicle payload envelope." if payload_fairing_valid else "Payload overmass or fairing clearance violation! Probe exceeds 1,250 kg limit.",
+		"correction": "Switch to lightweight carbon composite bus structure in Structural workstation."
+	})
+	
+	# Criterion 6A: Available Launch Delta-V (Trans-L1 Injection)
 	var launch_dv_valid: bool = (total_launch_delta_v >= req_launch_dv)
 	gate_checks.append({
 		"id": "launch_dv_check",
-		"name": "Launch Vehicle Trans-L1 Delta-V (%s)" % traj_mode_name,
+		"name": "6A. Launch Vehicle Trans-L1 Delta-V (%s)" % traj_mode_name,
 		"value_str": "%.0f m/s" % total_launch_delta_v,
 		"target_str": ">= %.0f m/s" % req_launch_dv,
 		"status": "PASS" if launch_dv_valid else "FAIL",
-		"role": ROLE_PROPULSION,
-		"advice": ("Upper stage insertion into %s transfer confirmed." % ("weak-stability boundary (WSB) trajectory" if traj_mode == "phased_wsb" else "direct Sunward trajectory")) if launch_dv_valid else "Insufficient booster/upper-stage Delta-V to reach Earth-L1 transfer orbit."
+		"role": ROLE_ASTROGATOR,
+		"subsystem": "astrogator",
+		"advice": ("Upper stage insertion into %s transfer confirmed." % ("weak-stability boundary (WSB) trajectory" if traj_mode == "phased_wsb" else "direct Sunward trajectory")) if launch_dv_valid else "Insufficient booster/upper-stage Delta-V to reach Earth-L1 transfer orbit.",
+		"correction": "Optimize Astrogator trajectory mode to Phased WSB or maximize propellant loading."
 	})
 	
-	# Check 3: Probe Deep-Space Maneuver Delta-V (MCC + Halo Insertion + Stationkeeping)
+	# Criterion 6B: Probe Deep-Space Maneuver Delta-V (MCC + Halo Insertion + Stationkeeping)
 	var probe_dv_valid: bool = (delta_v_probe >= req_probe_dv)
 	gate_checks.append({
 		"id": "probe_dv_check",
-		"name": "Spacecraft Halo Insertion & Stationkeeping ΔV (%s)" % traj_mode_name,
+		"name": "6B. Spacecraft Halo Insertion & Stationkeeping ΔV (%s)" % traj_mode_name,
 		"value_str": "%.0f m/s" % delta_v_probe,
 		"target_str": ">= %.0f m/s" % req_probe_dv,
 		"status": "PASS" if probe_dv_valid else "FAIL",
 		"role": ROLE_ASTROGATOR,
-		"advice": "Propellant reserve meets insertion and illustrative stationkeeping threshold (educational game model)." if probe_dv_valid else "Probe lacks propellant for halo insertion and illustrative stationkeeping threshold at L1 under selected trajectory mode."
+		"subsystem": "astrogator",
+		"advice": "Propellant reserve meets insertion and illustrative stationkeeping threshold (educational game model)." if probe_dv_valid else "Probe lacks propellant for halo insertion and illustrative stationkeeping threshold at L1 under selected trajectory mode.",
+		"correction": "Select bipropellant propulsion system or trim dry mass in Propulsion workstation."
 	})
 	
-	# Check 4: Aerodynamic Static Margin (CoM vs CoP)
-	var stability_valid: bool = (static_margin_calibers >= 1.2)
+	# Criterion 7: Launch Vehicle TWR & Pad Mass Constraints
+	var pad_mass_valid: bool = (liftoff_wet_mass <= 45000.0 and liftoff_wet_mass >= 25000.0 and liftoff_twr >= 1.20)
 	gate_checks.append({
-		"id": "stability_check",
-		"name": "Aerodynamic Static Margin (CoM / CoP)",
-		"value_str": "%.2f calibers" % static_margin_calibers,
-		"target_str": ">= +1.20 calibers",
-		"status": "PASS" if stability_valid else "FAIL",
-		"role": ROLE_STRUCTURAL,
-		"advice": "Center of Mass ahead of Center of Pressure. Rocket has passive aerodynamic restoring torque." if stability_valid else "Aerodynamic instability: CoP is too close to CoM. Add stabilizing grid fins or trim nose fairing mass."
+		"id": "pad_mass_limit_check",
+		"name": "7. Launchpad Structural Load & Mass Constraints",
+		"value_str": "%.0f kg Liftoff Wet Mass" % liftoff_wet_mass,
+		"target_str": "25,000 – 45,000 kg",
+		"status": "PASS" if pad_mass_valid else "FAIL",
+		"role": ROLE_PROPULSION,
+		"subsystem": "propulsion",
+		"advice": "Total stack mass safely within launchpad mount structural capacity." if pad_mass_valid else "Vehicle wet mass exceeds launchpad rating (>45,000 kg) or is dangerously under-massed.",
+		"correction": "Balance propellant loading and stage dry mass within pad limits."
 	})
 	
-	# Check 5: Electrical Power Balance
-	var power_valid: bool = (power_margin_w >= 100.0)
-	gate_checks.append({
-		"id": "power_check",
-		"name": "Sun-Earth L1 Power Surplus Margin",
-		"value_str": "+%.0f W" % power_margin_w,
-		"target_str": ">= +100 W surplus",
-		"status": "PASS" if power_valid else "FAIL",
-		"role": ROLE_SYSTEMS,
-		"advice": "Positive electrical balance across avionics, instruments, and transmitters." if power_valid else "Power deficit or narrow margin (<100W). Enlarge solar wing area or optimize instrument duty cycles."
-	})
-	
-	# Check 6: Budget Cap
+	# Additional Check: Campaign Budget Allocation
 	var budget_valid: bool = (total_project_cost_m <= BUDGET_CAP_M)
 	gate_checks.append({
 		"id": "budget_check",
@@ -507,10 +562,12 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"target_str": "<= $%.1fM" % BUDGET_CAP_M,
 		"status": "PASS" if budget_valid else "FAIL",
 		"role": ROLE_PROPULSION,
-		"advice": "Project costs within authorized emergency congressional ceiling." if budget_valid else "Cost overrun ($%.1fM > $185.0M). Downgrade non-critical bus components to stay in budget." % total_project_cost_m
+		"subsystem": "propulsion",
+		"advice": "Project costs within authorized emergency congressional ceiling." if budget_valid else "Cost overrun ($%.1fM > $185.0M). Downgrade non-critical bus components to stay in budget." % total_project_cost_m,
+		"correction": "Select cost-effective bus components in Hangar."
 	})
 	
-	var all_passed: bool = (twr_valid and launch_dv_valid and probe_dv_valid and stability_valid and power_valid and budget_valid)
+	var all_passed: bool = (twr_valid and propellant_valid and stability_valid and power_valid and payload_fairing_valid and launch_dv_valid and probe_dv_valid and pad_mass_valid and budget_valid)
 	
 	return {
 		"liftoff_wet_mass_kg": liftoff_wet_mass,
@@ -610,6 +667,7 @@ static func save_campaign_state() -> bool:
 		"team_decision_log": team_decision_log,
 		"vehicle_config": vehicle_config,
 		"probe_config": probe_config,
+		"is_launch_authorized": is_launch_authorized,
 		"launch_telemetry": launch_telemetry,
 		"transfer_telemetry": transfer_telemetry,
 		"crisis_results": crisis_results,
@@ -657,6 +715,7 @@ static func load_campaign_state() -> bool:
 		vehicle_config = data["vehicle_config"]
 	if data.has("probe_config"):
 		probe_config = data["probe_config"]
+	is_launch_authorized = data.get("is_launch_authorized", false)
 	if data.has("launch_telemetry"):
 		launch_telemetry = data["launch_telemetry"]
 	if data.has("transfer_telemetry"):
@@ -670,6 +729,14 @@ static func load_campaign_state() -> bool:
 		
 	print("[Helios4CampaignData] Loaded campaign at stage: ", STAGE_METADATA[current_stage]["title"])
 	return true
+
+static func set_launch_authorized(authorized: bool) -> void:
+	is_launch_authorized = authorized
+	save_campaign_state()
+
+static func is_spacecraft_ready_for_flight() -> bool:
+	var tel = calculate_hangar_telemetry()
+	return tel.get("all_gate_checks_passed", false) and is_launch_authorized
 
 static func has_saved_campaign() -> bool:
 	return FileAccess.file_exists(SAVE_PATH)
@@ -688,6 +755,7 @@ static func reset_campaign() -> void:
 	active_role = ROLE_PROPULSION
 	vehicle_config = get_default_vehicle_config()
 	probe_config = get_default_probe_config()
+	is_launch_authorized = false
 	launch_telemetry = {}
 	transfer_telemetry = {}
 	crisis_results = {}

@@ -57,6 +57,7 @@ func _ready() -> void:
 	_setup_procedural_widgets()
 	_setup_inventory_grid()
 	_connect_ui_signals()
+	_switch_role(active_role)
 	_update_camera_transform()
 	_recalculate_and_refresh_ui()
 
@@ -308,7 +309,7 @@ func _setup_hardware_selector_signals() -> void:
 		var eng = Helios4CampaignData.vehicle_config.get("stage1_engine", "booster_hydrolox_quad")
 		if eng == "booster_keralox_cluster":
 			opt_s1_engine.selected = 1
-		elif eng == "booster_strap_on_solids":
+		elif eng == "booster_undersized_twin":
 			opt_s1_engine.selected = 2
 		else:
 			opt_s1_engine.selected = 0
@@ -317,24 +318,26 @@ func _setup_hardware_selector_signals() -> void:
 			match idx:
 				0:
 					v["stage1_engine"] = "booster_hydrolox_quad"
-					v["stage1_thrust_kn"] = 4200.0
+					v["stage1_thrust_kn"] = 480.0
 					v["stage1_isp_s"] = 320.0
-					v["vehicle_cost_m"] = 58.0
+					v["vehicle_cost_m"] = 48.0
 				1:
 					v["stage1_engine"] = "booster_keralox_cluster"
-					v["stage1_thrust_kn"] = 4900.0
+					v["stage1_thrust_kn"] = 560.0
 					v["stage1_isp_s"] = 295.0
-					v["vehicle_cost_m"] = 54.0
+					v["vehicle_cost_m"] = 44.0
 				2:
-					v["stage1_engine"] = "booster_strap_on_solids"
-					v["stage1_thrust_kn"] = 5600.0
-					v["stage1_isp_s"] = 280.0
-					v["vehicle_cost_m"] = 48.0
+					v["stage1_engine"] = "booster_undersized_twin"
+					v["stage1_thrust_kn"] = 280.0
+					v["stage1_isp_s"] = 310.0
+					v["vehicle_cost_m"] = 32.0
+			Helios4CampaignData.is_launch_authorized = false
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_PROPULSION,
 				"Booster Engine Selection",
 				"Selected %s (Thrust: %.0f kN, Isp: %.0f s)" % [v["stage1_engine"], v["stage1_thrust_kn"], v["stage1_isp_s"]]
 			)
+			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
 		)
 
@@ -344,11 +347,13 @@ func _setup_hardware_selector_signals() -> void:
 		sld_prop.value = Helios4CampaignData.vehicle_config.get("propellant_load_factor", 1.0)
 		sld_prop.value_changed.connect(func(val):
 			Helios4CampaignData.vehicle_config["propellant_load_factor"] = val
+			Helios4CampaignData.is_launch_authorized = false
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_PROPULSION,
 				"Propellant Loading",
 				"Adjusted Stage 1 propellant fraction to %.2f" % val
 			)
+			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
 		)
 
@@ -358,6 +363,8 @@ func _setup_hardware_selector_signals() -> void:
 		chk_fins.button_pressed = Helios4CampaignData.vehicle_config.get("has_grid_fins", true)
 		chk_fins.toggled.connect(func(pressed):
 			Helios4CampaignData.vehicle_config["has_grid_fins"] = pressed
+			Helios4CampaignData.vehicle_config["stage1_fins"] = "aero_grid_fins" if pressed else "none"
+			Helios4CampaignData.is_launch_authorized = false
 			if rocket_3d and rocket_3d.grid_fins_node:
 				rocket_3d.grid_fins_node.visible = pressed
 			Helios4CampaignData.record_team_decision(
@@ -365,6 +372,7 @@ func _setup_hardware_selector_signals() -> void:
 				"Aerodynamic Stabilizers",
 				"Toggled 4x Titanium Grid Fins: %s" % ("ENABLED" if pressed else "REMOVED")
 			)
+			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
 		)
 
@@ -384,11 +392,13 @@ func _setup_hardware_selector_signals() -> void:
 					p["bus_structure"] = "struct_al_li_alloy"
 					p["structure_mass_kg"] = 230.0
 					p["structure_cost_m"] = 13.5
+			Helios4CampaignData.is_launch_authorized = false
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_STRUCTURAL,
 				"Bus Hull Material",
 				"Selected %s structure (Mass: %.0f kg)" % [p["bus_structure"], p["structure_mass_kg"]]
 			)
+			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
 		)
 
@@ -401,6 +411,7 @@ func _setup_hardware_selector_signals() -> void:
 			var v = Helios4CampaignData.vehicle_config
 			var m = "phased_wsb" if idx == 1 else "direct_injection"
 			v["trajectory_mode"] = m
+			Helios4CampaignData.is_launch_authorized = false
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_ASTROGATOR,
 				"Trajectory Optimization",
@@ -409,6 +420,7 @@ func _setup_hardware_selector_signals() -> void:
 					"135-Day" if idx == 1 else "110-Day"
 				]
 			)
+			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
 		)
 
@@ -418,11 +430,13 @@ func _setup_hardware_selector_signals() -> void:
 		sld_solar.value = Helios4CampaignData.probe_config.get("solar_array_area_m2", 6.5)
 		sld_solar.value_changed.connect(func(val):
 			Helios4CampaignData.probe_config["solar_array_area_m2"] = val
+			Helios4CampaignData.is_launch_authorized = false
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_SYSTEMS,
 				"Solar Array Sizing",
 				"Configured solar array area to %.1f m²" % val
 			)
+			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
 		)
 
@@ -442,11 +456,13 @@ func _setup_hardware_selector_signals() -> void:
 					p["computer_type"] = "comp_dual_leon3"
 					p["avionics_power_w"] = 52.0
 					p["computer_cost_m"] = 12.0
+			Helios4CampaignData.is_launch_authorized = false
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_SYSTEMS,
 				"Avionics Computer",
 				"Selected %s (Power: %.0f W)" % [p["computer_type"], p["avionics_power_w"]]
 			)
+			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
 		)
 
