@@ -308,6 +308,112 @@ static func get_mat(name: String) -> StandardMaterial3D:
 			mat.albedo_color = Color(0.12, 0.13, 0.16)
 			mat.metallic = 0.90
 			mat.roughness = 0.35
+		
+		# --- EARTH LAUNCH & MAX-Q MATERIALS (Matching Reference 02) ---
+		"launch_pad_concrete":
+			mat.albedo_color = Color(0.25, 0.27, 0.30)
+			mat.metallic = 0.15
+			mat.roughness = 0.75
+		
+		"launch_flame_trench":
+			mat.albedo_color = Color(0.08, 0.08, 0.10)
+			mat.metallic = 0.40
+			mat.roughness = 0.85
+		
+		"launch_clamp_steel":
+			mat.albedo_color = Color(0.18, 0.20, 0.24)
+			mat.metallic = 0.92
+			mat.roughness = 0.28
+			mat.rim_enabled = true
+			mat.rim = 0.3
+		
+		"launch_tower_red":
+			mat.albedo_color = Color(0.85, 0.18, 0.12)
+			mat.metallic = 0.35
+			mat.roughness = 0.45
+		
+		"launch_tower_white":
+			mat.albedo_color = Color(0.92, 0.94, 0.96)
+			mat.metallic = 0.35
+			mat.roughness = 0.40
+		
+		"spaceport_terrain":
+			mat.albedo_color = Color(0.20, 0.28, 0.22)
+			mat.metallic = 0.05
+			mat.roughness = 0.90
+		
+		"spaceport_tarmac":
+			mat.albedo_color = Color(0.10, 0.11, 0.13)
+			mat.metallic = 0.10
+			mat.roughness = 0.80
+		
+		"spaceport_ocean":
+			mat.albedo_color = Color(0.05, 0.18, 0.42)
+			mat.metallic = 0.15
+			mat.roughness = 0.12
+			mat.clearcoat_enabled = true
+			mat.clearcoat = 0.9
+		
+		"earth_ocean":
+			mat.albedo_color = Color(0.06, 0.22, 0.48)
+			mat.metallic = 0.10
+			mat.roughness = 0.18
+			mat.clearcoat_enabled = true
+			mat.clearcoat = 0.85
+			mat.rim_enabled = true
+			mat.rim = 0.4
+			mat.rim_tint = 0.6
+		
+		"earth_land":
+			mat.albedo_color = Color(0.18, 0.30, 0.20)
+			mat.metallic = 0.05
+			mat.roughness = 0.82
+		
+		"earth_clouds":
+			mat.albedo_color = Color(0.98, 0.99, 1.0, 0.82)
+			mat.metallic = 0.05
+			mat.roughness = 0.40
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		
+		"atmosphere_rim_glow":
+			mat.albedo_color = Color(0.20, 0.65, 0.98, 0.85)
+			mat.emission_enabled = true
+			mat.emission = Color(0.25, 0.70, 1.0)
+			mat.emission_energy_multiplier = 3.5
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.rim_enabled = true
+			mat.rim = 1.0
+			mat.rim_tint = 1.0
+		
+		"engine_exhaust_flame":
+			mat.albedo_color = Color(1.0, 0.92, 0.65)
+			mat.emission_enabled = true
+			mat.emission = Color(1.0, 0.88, 0.45)
+			mat.emission_energy_multiplier = 6.0
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		
+		"engine_plume_smoke":
+			mat.albedo_color = Color(0.95, 0.96, 0.98, 0.65)
+			mat.metallic = 0.05
+			mat.roughness = 0.75
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		
+		"vapor_cone_transonic":
+			mat.albedo_color = Color(0.96, 0.98, 1.0, 0.55)
+			mat.metallic = 0.08
+			mat.roughness = 0.15
+			mat.clearcoat_enabled = true
+			mat.clearcoat = 0.7
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		
+		"vacuum_plume_blue":
+			mat.albedo_color = Color(0.35, 0.65, 1.0, 0.75)
+			mat.emission_enabled = true
+			mat.emission = Color(0.40, 0.70, 1.0)
+			mat.emission_energy_multiplier = 5.0
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	
 	_materials[name] = mat
 	return mat

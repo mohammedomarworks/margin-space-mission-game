@@ -41,6 +41,9 @@ extends Node3D
 const SpacecraftMaterials = preload("res://margin/materials/spacecraft_materials.gd")
 
 # State
+@export var include_hangar: bool = true
+@export var include_callouts: bool = true
+@export var initial_fairing_open: bool = true
 var fairing_open: bool = true
 var active_highlight: String = ""
 
@@ -97,10 +100,11 @@ func rebuild_vehicle() -> void:
 	callouts.clear()
 
 	# --- 1. INDUSTRIAL ASSEMBLY HANGAR & GANTRIES ---
-	hangar_facility_node = Node3D.new()
-	hangar_facility_node.name = "HangarFacility"
-	add_child(hangar_facility_node)
-	_build_hangar_facility(hangar_facility_node)
+	if include_hangar:
+		hangar_facility_node = Node3D.new()
+		hangar_facility_node.name = "HangarFacility"
+		add_child(hangar_facility_node)
+		_build_hangar_facility(hangar_facility_node)
 
 	# --- 2. STAGE 1: HEAVY QUAD-BOOSTER CORE ---
 	stage1_node = Node3D.new()
@@ -124,9 +128,11 @@ func rebuild_vehicle() -> void:
 
 	# --- 5. BIFOLD SPLIT FAIRINGS ---
 	_build_fairings()
+	set_fairing_open_instant(initial_fairing_open)
 
 	# --- 6. FLOATING 3D HOLOGRAPHIC CALLOUTS ---
-	_build_holographic_callouts()
+	if include_callouts:
+		_build_holographic_callouts()
 
 # ==============================================================================
 # HANGAR FACILITY, GANTRIES & ROBOTIC ARMS (Matching Reference 01)
@@ -1253,6 +1259,18 @@ func _build_stage2(parent: Node3D) -> void:
 
 	# --- A. Open-Lattice Cylindrical Interstage Truss ---
 	# Connects booster top to upper stage (y = 0.0 to 1.6)
+	if not include_hangar:
+		var skirt := MeshInstance3D.new()
+		var s_cyl := CylinderMesh.new()
+		s_cyl.top_radius = 1.45
+		s_cyl.bottom_radius = 1.45
+		s_cyl.height = 1.6
+		s_cyl.radial_segments = 32
+		skirt.mesh = s_cyl
+		skirt.position = Vector3(0.0, 0.8, 0.0)
+		skirt.material_override = mat_dark
+		parent.add_child(skirt)
+
 	for ring_y in [0.08, 1.52]:
 		var ring := MeshInstance3D.new()
 		var r_cyl := CylinderMesh.new()
@@ -1480,45 +1498,82 @@ func _build_solar_wing(parent: Node3D, dir: float) -> void:
 # ==============================================================================
 
 func _build_fairings() -> void:
-	var mat_fairing := SpacecraftMaterials.get_mat("rocket_machined_steel")
+	var mat_fairing := SpacecraftMaterials.get_mat("rocket_dark_carbon")
+	var mat_tip := SpacecraftMaterials.get_mat("rocket_machined_steel")
 
 	# Left Fairing Half
 	fairing_left = Node3D.new()
 	fairing_left.name = "FairingHalf_Left"
-	fairing_left.position = Vector3(-0.1, 10.6, 0.0)
+	fairing_left.position = Vector3(0.0, 10.1, 0.0)
 	add_child(fairing_left)
 
 	var shell_l := MeshInstance3D.new()
 	var c_l := CylinderMesh.new()
 	c_l.top_radius = 0.5
-	c_l.bottom_radius = 1.35
-	c_l.height = 4.2
+	c_l.bottom_radius = 1.38
+	c_l.height = 4.8
 	c_l.radial_segments = 24
 	shell_l.mesh = c_l
-	shell_l.position = Vector3(-0.7, 2.1, 0.0)
-	shell_l.rotation_degrees = Vector3(0.0, 0.0, 8.0)
+	shell_l.position = Vector3(0.0, 2.4, 0.0)
+	shell_l.rotation_degrees = Vector3.ZERO
 	shell_l.material_override = mat_fairing
 	fairing_left.add_child(shell_l)
+
+	# Sleek ogive nose cone tip
+	var tip_l := MeshInstance3D.new()
+	var c_tip_l := CylinderMesh.new()
+	c_tip_l.top_radius = 0.04
+	c_tip_l.bottom_radius = 0.5
+	c_tip_l.height = 1.6
+	c_tip_l.radial_segments = 24
+	tip_l.mesh = c_tip_l
+	tip_l.position = Vector3(0.0, 5.6, 0.0)
+	tip_l.material_override = mat_tip
+	fairing_left.add_child(tip_l)
 
 	# Right Fairing Half
 	fairing_right = Node3D.new()
 	fairing_right.name = "FairingHalf_Right"
-	fairing_right.position = Vector3(0.1, 10.6, 0.0)
+	fairing_right.position = Vector3(0.0, 10.1, 0.0)
 	add_child(fairing_right)
 
 	var shell_r := MeshInstance3D.new()
 	var c_r := CylinderMesh.new()
 	c_r.top_radius = 0.5
-	c_r.bottom_radius = 1.35
-	c_r.height = 4.2
+	c_r.bottom_radius = 1.38
+	c_r.height = 4.8
 	c_r.radial_segments = 24
 	shell_r.mesh = c_r
-	shell_r.position = Vector3(0.7, 2.1, 0.0)
-	shell_r.rotation_degrees = Vector3(0.0, 0.0, -8.0)
+	shell_r.position = Vector3(0.0, 2.4, 0.0)
+	shell_r.rotation_degrees = Vector3.ZERO
 	shell_r.material_override = mat_fairing
 	fairing_right.add_child(shell_r)
 
-	update_fairing_pose(true)
+	var tip_r := MeshInstance3D.new()
+	var c_tip_r := CylinderMesh.new()
+	c_tip_r.top_radius = 0.04
+	c_tip_r.bottom_radius = 0.5
+	c_tip_r.height = 1.6
+	c_tip_r.radial_segments = 24
+	tip_r.mesh = c_tip_r
+	tip_r.position = Vector3(0.0, 5.6, 0.0)
+	tip_r.material_override = mat_tip
+	fairing_right.add_child(tip_r)
+
+func set_fairing_open_instant(is_open: bool) -> void:
+	fairing_open = is_open
+	if not fairing_left or not fairing_right:
+		return
+	if is_open:
+		fairing_left.rotation_degrees.z = 24.0
+		fairing_left.position.x = -1.4
+		fairing_right.rotation_degrees.z = -24.0
+		fairing_right.position.x = 1.4
+	else:
+		fairing_left.rotation_degrees.z = 0.0
+		fairing_left.position.x = 0.0
+		fairing_right.rotation_degrees.z = 0.0
+		fairing_right.position.x = 0.0
 
 func update_fairing_pose(is_open: bool) -> void:
 	fairing_open = is_open
@@ -1528,10 +1583,10 @@ func update_fairing_pose(is_open: bool) -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)
 	if is_open:
-		tween.tween_property(fairing_left, "rotation_degrees:z", 22.0, 0.45)
-		tween.tween_property(fairing_left, "position:x", -1.2, 0.45)
-		tween.tween_property(fairing_right, "rotation_degrees:z", -22.0, 0.45)
-		tween.tween_property(fairing_right, "position:x", 1.2, 0.45)
+		tween.tween_property(fairing_left, "rotation_degrees:z", 24.0, 0.45)
+		tween.tween_property(fairing_left, "position:x", -1.4, 0.45)
+		tween.tween_property(fairing_right, "rotation_degrees:z", -24.0, 0.45)
+		tween.tween_property(fairing_right, "position:x", 1.4, 0.45)
 	else:
 		tween.tween_property(fairing_left, "rotation_degrees:z", 0.0, 0.45)
 		tween.tween_property(fairing_left, "position:x", 0.0, 0.45)
