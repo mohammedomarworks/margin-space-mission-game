@@ -2,6 +2,8 @@ class_name LaunchPlannerController
 extends Node3D
 
 const MissionOperationsData = preload("res://margin/data/mission_operations_data.gd")
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+const TeamData = preload("res://margin/data/team_data.gd")
 
 # 3D Scene Nodes
 @onready var orbit_cam: OrbitCamera = $OrbitCamera
@@ -93,6 +95,12 @@ func _ready() -> void:
 	
 	spacecraft.update_spacecraft(state.current_components)
 	
+	var cur_scen = MissionScenario.get_active_scenario()
+	if not cur_scen.allowed_transfer_ids.has(selected_transfer_id):
+		selected_transfer_id = cur_scen.default_transfer_id
+	if not cur_scen.allowed_orbit_ids.has(selected_orbit_id):
+		selected_orbit_id = cur_scen.default_orbit_id
+	
 	_build_transfer_cards()
 	_build_orbit_cards()
 	_build_lv_cards()
@@ -177,7 +185,7 @@ func _build_transfer_cards() -> void:
 		child.queue_free()
 	_transfer_card_nodes.clear()
 	
-	var all_transfers = TransferDatabase.get_all_transfers()
+	var all_transfers = TransferDatabase.get_transfers_for_scenario(MissionScenario.get_active_scenario_id())
 	for t_id in all_transfers:
 		var trans: Dictionary = all_transfers[t_id]
 		var card := _create_transfer_card(trans)
@@ -264,7 +272,7 @@ func _build_orbit_cards() -> void:
 		child.queue_free()
 	_orbit_card_nodes.clear()
 	
-	var all_orbits = OrbitDatabase.get_all_orbits()
+	var all_orbits = OrbitDatabase.get_orbits_for_scenario(MissionScenario.get_active_scenario_id())
 	for o_id in all_orbits:
 		var orb: Dictionary = all_orbits[o_id]
 		var card := _create_orbit_card(orb)
@@ -435,7 +443,7 @@ func _run_validation() -> void:
 	var lv: Dictionary = LaunchVehicleDatabase.get_vehicle(selected_vehicle_id)
 	
 	var wet_mass: float = t["wet_mass_kg"]
-	var tli_cap: float = lv["tli_payload_capacity_kg"]
+	var tli_cap: float = LaunchVehicleDatabase.get_vehicle_payload_capacity(selected_vehicle_id, MissionScenario.get_active_scenario_id())
 	var stowed_vol: float = t.get("stowed_volume_m3", 1.35)
 	var fairing_vol: float = lv["fairing_volume_m3"]
 	var stowed_diam: float = t.get("stowed_diameter_m", 1.20)
@@ -448,7 +456,7 @@ func _run_validation() -> void:
 	var mcc_dv: float = orb.get("mcc_delta_v_ms", 20.0)
 	var sk_dv: float = orb.get("stationkeeping_delta_v_ms", 150.0)
 	var total_mission_cost: float = t["total_cost_m"] + lv["launch_cost_m"]
-	var budget_cap: float = MissionData.SCENARIO_BUDGET_CAP_M
+	var budget_cap: float = MissionScenario.get_active_scenario().budget_cap_m
 	
 	# 1. Mass Check
 	var pass_mass: bool = wet_mass <= tli_cap
@@ -684,11 +692,12 @@ func _show_results_modal() -> void:
 	var loi_dv: float = _current_validation["loi_dv"]
 	var sk_dv: float = _current_validation["sk_dv"]
 	var remaining_dv: float = onboard_dv - req_dv
-	var budget_margin: float = MissionData.SCENARIO_BUDGET_CAP_M - _current_validation["total_cost"]
+	var scen = MissionScenario.get_active_scenario()
+	var budget_margin: float = scen.budget_cap_m - _current_validation["total_cost"]
 	var final_sci: float = _current_validation["science_score"]
-	var total_mission_days: float = float(MissionData.SCENARIO_DURATION_DAYS) + trans["duration_days"]
+	var total_mission_days: float = float(scen.duration_days) + trans["duration_days"]
 	
-	result_title_label.text = "LUNAR MISSION LAUNCH SUCCESSFUL"
+	result_title_label.text = "%s LAUNCH SUCCESSFUL" % scen.title
 	result_orbit_label.text = "Strategy: %s (%s) → %s (Alt: %0.0f–%0.0f km)" % [
 		trans["name"], trans["duration_desc"], orb["name"], orb["perilune_km"], orb["apolune_km"]
 	]
@@ -698,7 +707,7 @@ func _show_results_modal() -> void:
 	result_dv_label.text = "Spacecraft ΔV Breakdown: %0.0f m/s onboard - %0.0f m/s req (%0.0f MCC + %0.1f LOI + %0.0f SK) = +%0.0f m/s flight reserve" % [
 		onboard_dv, req_dv, mcc_dv, loi_dv, sk_dv, remaining_dv
 	]
-	result_budget_label.text = "Budget Reserve: +$%0.1fM remaining under scenario limit ($%0.0fM cap)" % [budget_margin, MissionData.SCENARIO_BUDGET_CAP_M]
+	result_budget_label.text = "Budget Reserve: +$%0.1fM remaining under scenario limit ($%0.0fM cap)" % [budget_margin, scen.budget_cap_m]
 	result_science_label.text = "Science Performance Rating: %0.1f points (Coverage: %s)" % [
 		final_sci, orb["spatial_resolution_rating"]
 	]
@@ -711,6 +720,13 @@ func _on_commence_operations_pressed() -> void:
 	MissionOperationsData.active_orbit_id = selected_orbit_id
 	MissionOperationsData.active_transfer_id = selected_transfer_id
 	MissionOperationsData.active_vehicle_id = selected_vehicle_id
+	
+	# Flight Readiness Review (FRR) Voting Evaluation
+	var scen = MissionScenario.get_active_scenario()
+	var frr = TeamData.evaluate_flight_readiness_review(_current_validation, scen)
+	TeamData.log_decision(TeamData.ROLE_FLIGHT_COMMS, "Launch Planning", "Flight Architecture Selection", "%s via %s on %s" % [selected_orbit_id, selected_transfer_id, selected_vehicle_id])
+	TeamData.log_decision(TeamData.ROLE_DIRECTOR, "Launch Planning", "Flight Readiness Review (FRR) Approval", "FRR Consensus: %s" % frr.get("consensus_rating", "GO"))
+	
 	get_tree().change_scene_to_file("res://margin/scenes/mission_operations.tscn")
 
 func _on_back_to_workshop_pressed() -> void:

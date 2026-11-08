@@ -8,6 +8,7 @@ const TransferDatabase = preload("res://margin/data/transfer_data.gd")
 const LaunchVehicleDatabase = preload("res://margin/data/launch_vehicle_data.gd")
 const MissionOperationsData = preload("res://margin/data/mission_operations_data.gd")
 const MissionData = preload("res://margin/data/mission_data.gd")
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
 
 # ==============================================================================
 # MARGIN: MISSION OPERATIONS SIMULATOR ENGINE
@@ -59,6 +60,11 @@ var selected_vehicle: Dictionary = {}
 var current_mode_id: String = "mode_nominal"
 var current_target_crater_id: String = "crater_shackleton"
 
+# Interactive Emergency Decisions
+var emergency_decisions: Array[Dictionary] = []
+var persistent_sensor_noise: bool = false
+var pending_emergency_decision: Dictionary = {}
+
 # Operational Log
 var window_history: Array[Dictionary] = []
 var is_completed: bool = false
@@ -93,7 +99,11 @@ func initialize(
 	var loi_dv: float = OrbitDatabase.get_loi_delta_v(orbit_id, transfer_id)
 	
 	var transit_expended_dv: float = mcc_dv + loi_dv
-	delta_v_remaining_ms = max(0.0, onboard_dv - transit_expended_dv)
+	var scen = MissionScenario.get_active_scenario()
+	if scen.id == "sandbox":
+		delta_v_remaining_ms = max(500.0, onboard_dv)
+	else:
+		delta_v_remaining_ms = max(0.0, onboard_dv - transit_expended_dv)
 	
 	# Compute propellant mass remaining for science operations using Tsiolkovsky
 	if prop_isp_s > 0.0 and dry_mass_kg > 0.0 and delta_v_remaining_ms > 0.0:
@@ -116,22 +126,24 @@ func initialize(
 	data_downlinked_total_gbit = 0.0
 	data_lost_overflow_gbit = 0.0
 	
-	# Budget tracking under $180M scenario cap:
+	# Budget tracking under active scenario cap:
 	# Phase E Mission Operations is allocated a $15.0M baseline operations grant
 	# plus unspent development savings as contingency reserve
+	var scenario = MissionScenario.get_active_scenario()
 	spacecraft_dev_cost_m = t.get("total_cost_m", 112.5)
 	launch_cost_m = selected_vehicle.get("launch_cost_m", 48.0)
 	ops_cost_total_m = 0.0
-	var unspent_dev_savings: float = max(0.0, MissionData.SCENARIO_BUDGET_CAP_M - (spacecraft_dev_cost_m + launch_cost_m))
+	var unspent_dev_savings: float = max(0.0, scenario.budget_cap_m - (spacecraft_dev_cost_m + launch_cost_m))
 	operational_budget_remaining_m = 15.0 + unspent_dev_savings
 	
 	# Base science points
 	science_score_total = 0.0
 	
-	# Initialize crater coverage
+	# Initialize target coverage
 	crater_coverage.clear()
-	for c_id in MissionOperationsData.get_all_craters():
-		crater_coverage[c_id] = 0.0
+	var all_targets = MissionOperationsData.get_targets_for_scenario(scenario.id)
+	for t_id in all_targets:
+		crater_coverage[t_id] = 0.0
 	hydrogen_candidates_found = 0
 	
 	# Reset lifecycle
@@ -141,8 +153,23 @@ func initialize(
 	is_completed = false
 	is_terminated = false
 	termination_reason = ""
+	emergency_decisions.clear()
+	persistent_sensor_noise = false
+	pending_emergency_decision.clear()
 
-func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
+func get_current_emergency_event() -> Dictionary:
+	return MissionOperationsData.get_emergency_event(current_window)
+
+func set_pending_emergency_decision(choice_id: String) -> void:
+	var ev = get_current_emergency_event()
+	if ev.is_empty():
+		return
+	for ch in ev.get("choices", []):
+		if ch["id"] == choice_id:
+			pending_emergency_decision = ch
+			return
+
+func advance_window(mode_id: String, target_crater_id: String, emergency_choice_id: String = "") -> Dictionary:
 	if is_terminated or is_completed:
 		return get_campaign_summary()
 	
@@ -150,9 +177,45 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 	current_target_crater_id = target_crater_id
 	
 	var mode: Dictionary = MissionOperationsData.get_mode(mode_id)
-	var target_crater: Dictionary = MissionOperationsData.get_crater(target_crater_id)
+	var scenario = MissionScenario.get_active_scenario()
+	var target_crater: Dictionary = MissionOperationsData.get_target(target_crater_id, scenario.id)
 	var event: Dictionary = MissionOperationsData.get_window_event(current_window)
 	var t: Dictionary = state.calculate_telemetry()
+	
+	# Determine and resolve emergency decision for this window if applicable
+	var emerg_event: Dictionary = event.get("emergency_event", {})
+	var chosen_choice: Dictionary = {}
+	var emerg_effects: Dictionary = {}
+	
+	if not emerg_event.is_empty():
+		var choice_to_use: String = emergency_choice_id
+		if choice_to_use == "" and not pending_emergency_decision.is_empty():
+			chosen_choice = pending_emergency_decision
+		elif choice_to_use == "":
+			choice_to_use = emerg_event.get("default_choice_id", "")
+		
+		if chosen_choice.is_empty() and choice_to_use != "":
+			for ch in emerg_event.get("choices", []):
+				if ch["id"] == choice_to_use:
+					chosen_choice = ch
+					break
+		
+		if not chosen_choice.is_empty():
+			emerg_effects = chosen_choice.get("effects", {})
+			var dec_record: Dictionary = {
+				"window": current_window,
+				"event_id": emerg_event.get("id", ""),
+				"event_title": emerg_event.get("title", ""),
+				"choice_id": chosen_choice.get("id", ""),
+				"choice_name": chosen_choice.get("name", ""),
+				"impact_summary": chosen_choice.get("impact_summary", ""),
+				"timestamp_days": mission_days_elapsed
+			}
+			emergency_decisions.append(dec_record)
+			if emerg_effects.get("persistent_sensor_noise", false):
+				persistent_sensor_noise = true
+		
+		pending_emergency_decision.clear()
 	
 	var report: Dictionary = {
 		"window": current_window,
@@ -163,10 +226,14 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 		"warnings": []
 	}
 	
+	if not chosen_choice.is_empty():
+		report["emergency_decision"] = chosen_choice
+		report["warnings"].append("DIRECTIVE: %s executed (%s)." % [chosen_choice["name"], chosen_choice["impact_summary"]])
+	
 	# --------------------------------------------------------------------------
 	# 1. POWER & BATTERY SIMULATION
 	# --------------------------------------------------------------------------
-	var p_load_w: float = t.get("power_load_w", 175.0) * mode["power_multiplier"]
+	var p_load_w: float = (t.get("power_load_w", 175.0) * mode["power_multiplier"] * emerg_effects.get("power_load_multiplier", 1.0)) + emerg_effects.get("extra_power_w", 0.0)
 	var p_gen_w: float = t.get("power_gen_w", 420.0) * max(0.0, 1.0 + (event["power_delta_pct"] / 100.0))
 	var net_sunlight_power_w: float = p_gen_w - p_load_w
 	
@@ -200,6 +267,11 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 	else:
 		battery_health_pct = max(0.0, battery_health_pct - 0.2)
 	
+	if emerg_effects.has("battery_health_penalty"):
+		battery_health_pct = max(0.0, battery_health_pct - emerg_effects["battery_health_penalty"])
+	if emerg_effects.has("battery_health_bonus"):
+		battery_health_pct = min(100.0, battery_health_pct + emerg_effects["battery_health_bonus"])
+	
 	if battery_health_pct <= 0.0:
 		is_terminated = true
 		termination_reason = "Mission Terminated: Spacecraft electrical bus failure. Battery storage capacity permanently exhausted due to continuous deep eclipse discharges."
@@ -209,6 +281,8 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 
 	# Subsystem Equipment Aging & Environmental Stress Degradation
 	var equip_loss: float = 0.3 # baseline monthly vacuum & radiation aging
+	if persistent_sensor_noise:
+		equip_loss += 0.4 # ongoing sensor degradation from continuing through solar storm
 	if mode_id == "mode_high_res":
 		equip_loss += 0.3 # extra detector and reaction wheel wear
 	elif mode_id == "mode_conserve":
@@ -220,6 +294,11 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 		equip_loss += 1.0
 	elif event.get("effect_type", "") == "thermal_stress":
 		equip_loss += 1.2
+	
+	if emerg_effects.has("equipment_health_delta"):
+		equip_loss -= emerg_effects["equipment_health_delta"] # negative delta increases loss
+	if emerg_effects.has("equipment_health_penalty"):
+		equip_loss += emerg_effects["equipment_health_penalty"]
 	
 	equipment_health_pct = max(0.0, equipment_health_pct - equip_loss)
 	if equipment_health_pct <= 0.0:
@@ -238,8 +317,11 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 	# 2. STATIONKEEPING PROPULSION & PROPELLANT DRAIN
 	# --------------------------------------------------------------------------
 	var req_sk_dv: float = event.get("sk_burn_required_ms", 12.5)
-	# Quasi-frozen orbit cuts required stationkeeping by 50%
-	if selected_orbit.get("id", "") == "orbit_elliptical_frozen":
+	if scenario.id == "sandbox":
+		req_sk_dv = 0.0
+	elif scenario.id == "earth_climate_sentinel":
+		req_sk_dv = selected_orbit.get("stationkeeping_delta_v_ms", 25.0) / 12.0
+	elif selected_orbit.get("id", "") == "orbit_elliptical_frozen":
 		req_sk_dv *= 0.5
 	
 	if delta_v_remaining_ms < req_sk_dv:
@@ -271,7 +353,8 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 	var win_generated_gbit: float = gen_daily * window_duration_days
 	
 	var dsn_eff: float = max(0.1, 1.0 + (event["downlink_delta_pct"] / 100.0))
-	var dl_daily: float = t.get("downlink_gbit_day", 14.5) * mode["downlink_multiplier"] * dsn_eff
+	var dl_emerg_mult: float = emerg_effects.get("downlink_multiplier", 1.0)
+	var dl_daily: float = t.get("downlink_gbit_day", 14.5) * mode["downlink_multiplier"] * dsn_eff * dl_emerg_mult
 	var win_downlink_capacity_gbit: float = dl_daily * window_duration_days
 	
 	# Add generated data to solid-state buffer
@@ -325,7 +408,8 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 	# Downlink fidelity ratio (0.0 to 1.0)
 	var downlink_fidelity: float = actual_downlinked_gbit / max(1.0, win_generated_gbit)
 	var instrument_base_sci: float = t.get("science_score", 76.0)
-	var window_science_gain: float = (instrument_base_sci / 12.0) * downlink_fidelity * mode["science_multiplier"] * orb_sci_mult
+	var sci_emerg_mult: float = emerg_effects.get("science_multiplier", 1.0)
+	var window_science_gain: float = (instrument_base_sci / 12.0) * downlink_fidelity * mode["science_multiplier"] * orb_sci_mult * sci_emerg_mult
 	window_science_gain += event.get("science_bonus", 0.0) * 0.5
 	
 	science_score_total += window_science_gain
@@ -337,7 +421,7 @@ func advance_window(mode_id: String, target_crater_id: String) -> Dictionary:
 	# --------------------------------------------------------------------------
 	# 5. OPERATIONAL BUDGET DRAIN
 	# --------------------------------------------------------------------------
-	var base_monthly_ops_m: float = 1.2
+	var base_monthly_ops_m: float = 1.2 + emerg_effects.get("ops_cost_delta_m", 0.0)
 	if mode_id == "mode_high_res" or mode_id == "mode_comm_priority":
 		base_monthly_ops_m += 0.35 # Extra DSN ground antenna pass fees
 	
@@ -378,7 +462,8 @@ func get_campaign_summary() -> Dictionary:
 		total_cov += crater_coverage[c_id]
 	var avg_coverage_pct: float = total_cov / max(1.0, float(crater_coverage.size()))
 	
-	var is_success: bool = not is_terminated and science_score_total >= MissionData.MIN_SCIENCE_POINTS
+	var scenario = MissionScenario.get_active_scenario()
+	var is_success: bool = not is_terminated and science_score_total >= scenario.min_science_points
 	
 	var summary: Dictionary = {
 		"is_completed": is_completed,
@@ -388,7 +473,7 @@ func get_campaign_summary() -> Dictionary:
 		"windows_completed": min(12, current_window - 1),
 		"mission_days_elapsed": mission_days_elapsed,
 		"final_science_score": science_score_total,
-		"target_threshold_score": MissionData.MIN_SCIENCE_POINTS,
+		"target_threshold_score": scenario.min_science_points,
 		"hydrogen_candidates_found": hydrogen_candidates_found,
 		"total_craters_tracked": crater_coverage.size(),
 		"avg_polar_coverage_pct": avg_coverage_pct,
@@ -405,12 +490,15 @@ func get_campaign_summary() -> Dictionary:
 		"launch_cost_m": launch_cost_m,
 		"ops_cost_total_m": ops_cost_total_m,
 		"total_cost_m": spacecraft_dev_cost_m + launch_cost_m + ops_cost_total_m,
-		"budget_cap_m": MissionData.SCENARIO_BUDGET_CAP_M,
+		"budget_cap_m": scenario.budget_cap_m,
 		"budget_remaining_m": operational_budget_remaining_m,
+		"scenario_id": scenario.id,
+		"scenario_title": scenario.title,
 		"orbit_name": selected_orbit.get("name", "Low Circular Polar Orbit"),
 		"transfer_name": selected_transfer.get("name", "Low-Energy Ballistic Transfer"),
 		"vehicle_name": selected_vehicle.get("name", "Medium Commercial EELV-Class"),
-		"scientific_proxy_summary": "Hydrogen enhancement detected via epithermal neutron moderation. Scientific proxy for volatile/hydrogenous regolith; does not constitute definitive proof of pure surface water ice."
+		"emergency_decisions": emergency_decisions.duplicate(true),
+		"scientific_proxy_summary": scenario.scientific_caution
 	}
 	
 	MissionOperationsData.active_campaign_results = summary

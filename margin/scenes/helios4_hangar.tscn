@@ -1,0 +1,964 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_hangar_controller.gd" id="1_hangar"]
+[ext_resource type="Script" path="res://margin/scripts/helios4_rocket_3d.gd" id="2_rocket"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Hangar"]
+sky_top_color = Color(0.025, 0.035, 0.055, 1)
+sky_horizon_color = Color(0.05, 0.08, 0.13, 1)
+ground_bottom_color = Color(0.015, 0.02, 0.03, 1)
+ground_horizon_color = Color(0.035, 0.055, 0.085, 1)
+
+[sub_resource type="Sky" id="Sky_Hangar"]
+sky_material = SubResource("SkyMat_Hangar")
+
+[sub_resource type="Environment" id="Env_Hangar"]
+background_mode = 2
+sky = SubResource("Sky_Hangar")
+ambient_light_source = 2
+ambient_light_color = Color(0.13, 0.17, 0.25, 1)
+ambient_light_energy = 1.05
+tonemap_mode = 3
+glow_enabled = true
+glow_intensity = 0.8
+glow_bloom = 0.15
+glow_blend_mode = 0
+fog_enabled = true
+fog_light_color = Color(0.07, 0.10, 0.16, 1)
+fog_density = 0.0065
+fog_sky_affect = 0.4
+
+[sub_resource type="StyleBoxFlat" id="Style_HangarCard"]
+bg_color = Color(0.04, 0.06, 0.09, 0.88)
+border_color = Color(0.18, 0.28, 0.42, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryBtn"]
+bg_color = Color(0.08, 0.12, 0.18, 0.85)
+border_color = Color(0.25, 0.35, 0.5, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="Style_InvCard"]
+bg_color = Color(0.06, 0.09, 0.13, 0.85)
+border_color = Color(0.2, 0.32, 0.46, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 6.0
+content_margin_top = 4.0
+content_margin_right = 6.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleCard_Prop"]
+bg_color = Color(0.12, 0.08, 0.04, 0.9)
+border_color = Color(0.98, 0.58, 0.12, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleCard_Struct"]
+bg_color = Color(0.04, 0.11, 0.07, 0.9)
+border_color = Color(0.25, 0.88, 0.48, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleCard_Astro"]
+bg_color = Color(0.12, 0.05, 0.07, 0.9)
+border_color = Color(0.95, 0.35, 0.45, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="Style_RoleCard_Sys"]
+bg_color = Color(0.04, 0.09, 0.14, 0.9)
+border_color = Color(0.2, 0.85, 1.0, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+
+[node name="Helios4Hangar" type="Node3D"]
+script = ExtResource("1_hangar")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Hangar")
+
+[node name="MainLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.28, 0.41, 0, 0.825, 0.565, -0.5, -0.49, 0.71, 14, 24, 16)
+light_color = Color(0.96, 0.98, 1, 1)
+light_energy = 1.85
+shadow_enabled = true
+
+[node name="RimLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 18, -16)
+light_color = Color(0.35, 0.65, 0.95, 1)
+light_energy = 1.5
+omni_range = 45.0
+
+[node name="WarmPadFill" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 10)
+light_color = Color(1, 0.82, 0.55, 1)
+light_energy = 0.95
+omni_range = 22.0
+
+[node name="RearDoorLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12, -26)
+light_color = Color(1.0, 0.75, 0.3, 1)
+light_energy = 1.2
+omni_range = 30.0
+
+[node name="HighbayCeilingLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 28, 0)
+light_color = Color(0.75, 0.88, 1.0, 1)
+light_energy = 1.1
+omni_range = 40.0
+
+[node name="LeftRocketWorklight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 9.0, 4.5)
+light_color = Color(0.85, 0.92, 1.0, 1)
+light_energy = 1.6
+omni_range = 24.0
+
+[node name="RightRocketWorklight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 9.0, 4.5)
+light_color = Color(0.95, 0.94, 0.90, 1)
+light_energy = 1.6
+omni_range = 24.0
+
+[node name="Rocket3D" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_rocket")
+
+[node name="HangarCamera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.951, -0.065, 0.302, 0, 0.978, 0.209, -0.309, -0.199, 0.93, 4.8, 8.2, 14.8)
+fov = 52.0
+current = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = 44.0
+grow_horizontal = 2
+theme_override_constants/separation = 12
+
+[node name="BackToTeamBtn" type="Button" parent="CanvasLayer/RootUI/TopBar"]
+custom_minimum_size = Vector2(100, 30)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 10
+text = "CREW ROSTER"
+
+[node name="ActiveRoleBanner" type="Label" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
+theme_override_font_sizes/font_size = 12
+text = "ACTIVE WORKSTATION: PROPULSION ENGINEER"
+
+[node name="CamPresets" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="FocusFullStackBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/CamPresets"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 10
+text = "FULL"
+
+[node name="FocusStage1Btn" type="Button" parent="CanvasLayer/RootUI/TopBar/CamPresets"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 10
+text = "STAGE 1"
+
+[node name="FocusStage2Btn" type="Button" parent="CanvasLayer/RootUI/TopBar/CamPresets"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 10
+text = "STAGE 2"
+
+[node name="FocusProbeBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/CamPresets"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 10
+text = "PROBE"
+
+[node name="ToggleFairingBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/CamPresets"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 10
+text = "FAIRING: OPEN"
+
+[node name="Spacer" type="Control" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TimerLabel" type="Label" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "TIME: 10:00"
+
+[node name="GateBadge" type="Label" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "ALL SYSTEMS NOMINAL - GO FOR FLIGHT REVIEW"
+
+[node name="LeftInventoryPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 16.0
+offset_top = -250.0
+offset_right = 265.0
+offset_bottom = 205.0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_HangarCard")
+
+[node name="HBoxMain" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftInventoryPanel"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ToolStripVBox" type="VBoxContainer" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain"]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="InvContentVBox" type="VBoxContainer" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="InvTitle" type="Label" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.75, 0.98, 1)
+theme_override_font_sizes/font_size = 10
+text = "COMPONENT INVENTORY"
+
+[node name="Scroll" type="ScrollContainer" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="InventoryGrid" type="GridContainer" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+columns = 2
+
+[node name="InvBtn_stage1_engine" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "STAGE 1\nHydrolox Quad"
+
+[node name="InvBtn_booster_tank" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "BOOSTER CORE\n24t Quad Tank"
+
+[node name="InvBtn_interstage_truss" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "INTERSTAGE\nLattice Truss"
+
+[node name="InvBtn_vacuum_engine" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "VACUUM S2\nDual Bell"
+
+[node name="InvBtn_grid_fins" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "GRID FINS\n4x Titanium"
+
+[node name="InvBtn_probe_bus" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "HELIOS BUS\nGold MLI Foil"
+
+[node name="InvBtn_solar_wings" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "SOLAR WINGS\nGaAs Arrays"
+
+[node name="InvBtn_high_gain_dish" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "COMMS DISH\nX/Ka Gimbal"
+
+[node name="InvBtn_mag_boom" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "MAG BOOM\nTriaxial Mast"
+
+[node name="InvBtn_avionics" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "AVIONICS HUB\nRad-Hard Quad"
+
+[node name="InvBtn_copv_tanks" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "HELIUM COPV\n4x Carbon"
+
+[node name="InvBtn_fairing" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "SPLIT FAIRING\nDual Clamshell"
+
+[node name="InvBtn_faraday" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "PLASMA CUP\nSolar Wind"
+
+[node name="InvBtn_rcs" type="Button" parent="CanvasLayer/RootUI/LeftInventoryPanel/HBoxMain/InvContentVBox/Scroll/InventoryGrid"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("Style_InvCard")
+theme_override_font_sizes/font_size = 8
+text = "RCS QUADS\nCold Gas"
+
+[node name="RightTelemetryHUD" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -285.0
+offset_top = -250.0
+offset_right = -16.0
+offset_bottom = 205.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_HangarCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TopDialRow" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="DialGaugeHolder" type="Control" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/TopDialRow"]
+custom_minimum_size = Vector2(76, 76)
+layout_mode = 2
+
+[node name="HUDTitle" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "ENGINEERING TELEMETRY"
+
+[node name="MassSec" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HBox1" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec/HBox1"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Liftoff Wet Mass:"
+
+[node name="ValWetMass" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec/HBox1"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 10
+text = "34,925 kg"
+
+[node name="HBox2" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec/HBox2"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Total Dry Mass:"
+
+[node name="ValDryMass" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec/HBox2"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 10
+text = "5,205 kg"
+
+[node name="HBox3" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec/HBox3"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Total Propellant:"
+
+[node name="ValPropMass" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/MassSec/HBox3"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.2, 1)
+theme_override_font_sizes/font_size = 10
+text = "29,720 kg"
+
+[node name="DVSec" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HBoxDVT" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DVSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DVSec/HBoxDVT"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "Total Mission Delta-V:"
+
+[node name="ValDeltaVTotal" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DVSec/HBoxDVT"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "11,399 m/s"
+
+[node name="DynSec" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HBoxTWR" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxTWR"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Liftoff TWR:"
+
+[node name="ValTWR" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxTWR"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "1.41"
+
+[node name="HBoxMargin" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Static Margin:"
+
+[node name="ValStaticMargin" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxMargin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "+1.52 calibers"
+
+[node name="HBoxPower" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxPower"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Power Margin:"
+
+[node name="ValPowerMargin" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxPower"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "+2470 W"
+
+[node name="HBoxCost" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxCost"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.82, 1)
+theme_override_font_sizes/font_size = 10
+text = "Budget Allocation:"
+
+[node name="ValBudget" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/DynSec/HBoxCost"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 10
+text = "$162.0M / $185.0M"
+
+[node name="WaveformSection" type="HBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SparklineAeroHolder" type="Control" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/WaveformSection"]
+custom_minimum_size = Vector2(115, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SparklinePowerHolder" type="Control" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/WaveformSection"]
+custom_minimum_size = Vector2(115, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ControlsPropulsion" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Lbl1" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsPropulsion"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.12, 1)
+theme_override_font_sizes/font_size = 10
+text = "STAGE 1 BOOSTER PROPULSION:"
+
+[node name="OptStage1Engine" type="OptionButton" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsPropulsion"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+selected = 0
+item_count = 3
+popup/item_0/text = "Hydrolox Quad Cluster (480 kN, 320s)"
+popup/item_1/text = "Keralox Octet Cluster (560 kN, 295s)"
+popup/item_1/id = 1
+popup/item_2/text = "Undersized Test Core (280 kN, 310s - Low TWR)"
+popup/item_2/id = 2
+
+[node name="Lbl2" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsPropulsion"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 10
+text = "PROPELLANT LOADING (STAGE 1):"
+
+[node name="SldPropellantLoad" type="HSlider" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsPropulsion"]
+layout_mode = 2
+min_value = 0.85
+max_value = 1.05
+step = 0.01
+value = 1.0
+
+[node name="ControlsStructural" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Lbl1" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsStructural"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "AERODYNAMIC TAIL STABILIZERS:"
+
+[node name="ChkGridFins" type="CheckBox" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsStructural"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+button_pressed = true
+text = "4x Deployable Titanium Grid Fins"
+
+[node name="Lbl2" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsStructural"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 10
+text = "BUS STRUCTURE HULL MATERIAL:"
+
+[node name="OptHullMaterial" type="OptionButton" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsStructural"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+selected = 0
+item_count = 2
+popup/item_0/text = "Carbon Composite Honeycomb (180kg)"
+popup/item_1/text = "Al-Li 2195 Cryogenic Alloy (230kg)"
+popup/item_1/id = 1
+
+[node name="ControlsAstrogator" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Lbl1" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsAstrogator"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.25, 0.75, 1.0, 1)
+theme_override_font_sizes/font_size = 10
+text = "L1 TRANSFER TRAJECTORY MODE:"
+
+[node name="OptTrajectoryMode" type="OptionButton" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsAstrogator"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+selected = 0
+item_count = 2
+popup/item_0/text = "Direct Sun-Earth L1 Transfer (110 Days)"
+popup/item_1/text = "Phased WSB Ballistic Capture (135 Days)"
+popup/item_1/id = 1
+
+[node name="ControlsSystems" type="VBoxContainer" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Lbl1" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsSystems"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.75, 0.2, 1)
+theme_override_font_sizes/font_size = 10
+text = "GaAs SOLAR ARRAY SIZING:"
+
+[node name="SldSolarArea" type="HSlider" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsSystems"]
+layout_mode = 2
+min_value = 4.0
+max_value = 9.0
+step = 0.5
+value = 6.5
+
+[node name="Lbl2" type="Label" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsSystems"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 10
+text = "RAD-HARD ON-BOARD COMPUTER:"
+
+[node name="OptAvionics" type="OptionButton" parent="CanvasLayer/RootUI/RightTelemetryHUD/VBox/ControlsSystems"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+selected = 0
+item_count = 2
+popup/item_0/text = "Rad-Hard Quad Core (65W, 300 krad)"
+popup/item_1/text = "Dual Fault-Tolerant LEON3 (52W, 100 krad)"
+popup/item_1/id = 1
+
+[node name="BottomCardsRow" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -84.0
+offset_right = -16.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 10
+
+[node name="TabPropulsion" type="Button" parent="CanvasLayer/RootUI/BottomCardsRow"]
+custom_minimum_size = Vector2(170, 72)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RoleCard_Prop")
+alignment = 0
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabPropulsion"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="WrenchIconHolder" type="Control" parent="CanvasLayer/RootUI/BottomCardsRow/TabPropulsion/HBox"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabPropulsion/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabPropulsion/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.12, 1)
+theme_override_font_sizes/font_size = 11
+text = "WRENCH"
+
+[node name="Sub" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabPropulsion/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 1)
+theme_override_font_sizes/font_size = 9
+text = "PROPULSION LEAD\nThrust: 4,200 kN"
+
+[node name="TabStructural" type="Button" parent="CanvasLayer/RootUI/BottomCardsRow"]
+custom_minimum_size = Vector2(170, 72)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RoleCard_Struct")
+alignment = 0
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabStructural"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="RadarScopeHolder" type="Control" parent="CanvasLayer/RootUI/BottomCardsRow/TabStructural/HBox"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabStructural/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabStructural/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.25, 0.9, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "RADAR"
+
+[node name="Sub" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabStructural/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 1)
+theme_override_font_sizes/font_size = 9
+text = "STRUCTURAL\nMargin: +1.52 cal"
+
+[node name="CenterReadinessCard" type="PanelContainer" parent="CanvasLayer/RootUI/BottomCardsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_HangarCard")
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/CenterReadinessCard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ReadinessBarsHolder" type="Control" parent="CanvasLayer/RootUI/BottomCardsRow/CenterReadinessCard/HBox"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="ProceedToFRRBtn" type="Button" parent="CanvasLayer/RootUI/BottomCardsRow/CenterReadinessCard/HBox"]
+custom_minimum_size = Vector2(250, 42)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("Style_PrimaryBtn")
+theme_override_font_sizes/font_size = 10
+text = "PROCEED TO FLIGHT READINESS REVIEW"
+
+[node name="TabAstrogator" type="Button" parent="CanvasLayer/RootUI/BottomCardsRow"]
+custom_minimum_size = Vector2(170, 72)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RoleCard_Astro")
+alignment = 0
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabAstrogator"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="PlanetIconHolder" type="Control" parent="CanvasLayer/RootUI/BottomCardsRow/TabAstrogator/HBox"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabAstrogator/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabAstrogator/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.4, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+text = "PLANETARY"
+
+[node name="Sub" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabAstrogator/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 1)
+theme_override_font_sizes/font_size = 9
+text = "ASTROGATOR\nDirect Transfer (110d)"
+
+[node name="TabSystems" type="Button" parent="CanvasLayer/RootUI/BottomCardsRow"]
+custom_minimum_size = Vector2(170, 72)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RoleCard_Sys")
+alignment = 0
+
+[node name="HBox" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabSystems"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="ElecIconHolder" type="Control" parent="CanvasLayer/RootUI/BottomCardsRow/TabSystems/HBox"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomCardsRow/TabSystems/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabSystems/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "ELECTRICAL"
+
+[node name="Sub" type="Label" parent="CanvasLayer/RootUI/BottomCardsRow/TabSystems/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 1)
+theme_override_font_sizes/font_size = 9
+text = "SYSTEMS LEAD\nSurplus: +2,470 W"

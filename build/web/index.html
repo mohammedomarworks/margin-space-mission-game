@@ -157,12 +157,31 @@
 			transition: width 0.15s ease-out;
 		}
 
+		#custom-progress-bar.compiling {
+			animation: pulse-compile 1.2s infinite ease-in-out;
+			background: linear-gradient(90deg, #0284c7, #38bdf8, #818cf8);
+		}
+
+		@keyframes pulse-compile {
+			0%, 100% { opacity: 0.8; filter: brightness(1.0); }
+			50% { opacity: 1.0; filter: brightness(1.35); }
+		}
+
 		#progress-details {
 			font-size: 11px;
 			font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 			color: #7dd3fc;
 			letter-spacing: 0.05em;
-			margin-bottom: 18px;
+			margin-bottom: 12px;
+		}
+
+		#status-advice {
+			display: none;
+			font-size: 11px;
+			color: #94a3b8;
+			font-style: italic;
+			margin-bottom: 14px;
+			line-height: 1.4;
 		}
 
 		.engine-badge {
@@ -221,7 +240,9 @@
 				<div id="custom-progress-bar"></div>
 			</div>
 
-			<div id="progress-details">Streaming Flight Engine & Assets...</div>
+			<div id="progress-details">Connecting to Flight Simulation Server...</div>
+
+			<div id="status-advice"></div>
 
 			<div id="status-notice"></div>
 
@@ -231,7 +252,7 @@
 
 	<script src="index.js"></script>
 	<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":426856,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":577596,"index.wasm":28046004},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -241,8 +262,17 @@ const engine = new Engine(GODOT_CONFIG);
 	const progressDetails = document.getElementById('progress-details');
 	const statusMessage = document.getElementById('status-message');
 	const statusNotice = document.getElementById('status-notice');
+	const statusAdvice = document.getElementById('status-advice');
 
 	let initializing = true;
+	let downloadStartTime = null;
+
+	const adviceTimer = setTimeout(() => {
+		if (initializing && statusAdvice) {
+			statusAdvice.style.display = 'block';
+			statusAdvice.textContent = 'Cold load downloads the 3D flight engine (~6.1 MB compressed). On slower connections this may take a few minutes. Subsequent loads will be cached & near-instant.';
+		}
+	}, 12000);
 
 	function displayFailureNotice(err) {
 		console.error('[MARGIN Web Engine Error]', err);
@@ -254,6 +284,7 @@ const engine = new Engine(GODOT_CONFIG);
 			statusMessage.textContent = 'Simulation Initialization Failed';
 			statusMessage.style.color = '#ef4444';
 		}
+		if (adviceTimer) clearTimeout(adviceTimer);
 		initializing = false;
 	}
 
@@ -266,34 +297,77 @@ const engine = new Engine(GODOT_CONFIG);
 	} else {
 		engine.startGame({
 			'onProgress': function (current, total) {
+				if (!downloadStartTime && current > 0) {
+					downloadStartTime = performance.now();
+				}
 				if (current > 0 && total > 0) {
-					const pct = Math.min(100, Math.floor((current / total) * 100));
+					const now = performance.now();
 					const currentMB = (current / (1024 * 1024)).toFixed(1);
 					const totalMB = (total / (1024 * 1024)).toFixed(1);
+					const rawRatio = Math.min(1.0, current / total);
 
-					if (customProgressBar) {
-						customProgressBar.style.width = pct + '%';
-					}
-					if (progressDetails) {
-						progressDetails.textContent = `Streaming Flight Assets: ${currentMB} MB / ${totalMB} MB (${pct}%)`;
-					}
-					if (statusMessage) {
-						if (pct < 70) {
-							statusMessage.textContent = 'Downloading Spacecraft Bus & Instrument Assets...';
-						} else if (pct < 95) {
-							statusMessage.textContent = 'Decompressing Lunar Mesh & Compiling Shaders...';
-						} else {
-							statusMessage.textContent = 'Launching MARGIN Operations Control...';
+					if (rawRatio < 1.0) {
+						// Stage 1: Network download (maps to 0% - 85% of progress bar)
+						const visualPct = Math.min(85, Math.floor(rawRatio * 85));
+						if (customProgressBar) {
+							customProgressBar.style.width = visualPct + '%';
+						}
+
+						let speedStr = '';
+						let etaStr = '';
+						if (downloadStartTime && (now - downloadStartTime) > 600) {
+							const elapsedSec = (now - downloadStartTime) / 1000;
+							const bytesPerSec = current / elapsedSec;
+							if (bytesPerSec > 1024 * 1024) {
+								speedStr = ` • ${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+							} else if (bytesPerSec > 1024) {
+								speedStr = ` • ${(bytesPerSec / 1024).toFixed(0)} KB/s`;
+							}
+							const remainingBytes = total - current;
+							const etaSec = Math.ceil(remainingBytes / Math.max(1, bytesPerSec));
+							if (etaSec > 0 && isFinite(etaSec) && etaSec < 3600) {
+								etaStr = ` • ~${etaSec}s left`;
+							}
+						}
+
+						if (progressDetails) {
+							progressDetails.textContent = `Downloading Assets: ${currentMB} MB / ${totalMB} MB (${Math.floor(rawRatio * 100)}%)${speedStr}${etaStr}`;
+						}
+						if (statusMessage) {
+							statusMessage.textContent = 'Streaming Spacecraft & Lunar Assets...';
+						}
+					} else {
+						// Stage 2: WebAssembly Compilation & Shader Linking (85% -> 94%)
+						if (customProgressBar) {
+							customProgressBar.style.width = '92%';
+							customProgressBar.classList.add('compiling');
+						}
+						if (statusMessage) {
+							statusMessage.textContent = 'Compiling WebAssembly Engine Core...';
+						}
+						if (progressDetails) {
+							progressDetails.textContent = 'Translating 28.0 MB bytecode into machine code (CPU)...';
 						}
 					}
 				}
 			},
 		}).then(() => {
+			if (customProgressBar) {
+				customProgressBar.style.width = '100%';
+				customProgressBar.classList.remove('compiling');
+			}
+			if (statusMessage) {
+				statusMessage.textContent = 'Simulation Initialized';
+			}
+			if (progressDetails) {
+				progressDetails.textContent = 'Launching MARGIN Operations Control...';
+			}
 			if (statusOverlay) {
 				statusOverlay.style.opacity = '0';
 				setTimeout(() => {
 					statusOverlay.remove();
 					initializing = false;
+					if (adviceTimer) clearTimeout(adviceTimer);
 				}, 400);
 			}
 		}).catch(displayFailureNotice);

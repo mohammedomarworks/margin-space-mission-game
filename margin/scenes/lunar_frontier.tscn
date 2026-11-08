@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/lunar_frontier_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://margin/scripts/lunar_frontier_world.gd" id="2_world"]
+[ext_resource type="Script" path="res://margin/scripts/lunar_hopper.gd" id="3_hopper"]
+[ext_resource type="Script" path="res://margin/scripts/lunar_frontier_camera.gd" id="4_cam"]
+[ext_resource type="Script" path="res://margin/scripts/lunar_frontier_hud.gd" id="5_hud"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Lunar"]
+sky_top_color = Color(0.005, 0.008, 0.015, 1)
+sky_horizon_color = Color(0.01, 0.015, 0.025, 1)
+ground_bottom_color = Color(0.002, 0.004, 0.008, 1)
+ground_horizon_color = Color(0.008, 0.012, 0.02, 1)
+
+[sub_resource type="Sky" id="Sky_Lunar"]
+sky_material = SubResource("SkyMat_Lunar")
+
+[sub_resource type="Environment" id="Env_Lunar"]
+background_mode = 2
+sky = SubResource("Sky_Lunar")
+ambient_light_source = 2
+ambient_light_color = Color(0.08, 0.1, 0.16, 1)
+ambient_light_energy = 0.85
+tonemap_mode = 2
+
+[node name="LunarFrontier" type="Node3D"]
+script = ExtResource("1_ctrl")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Lunar")
+
+[node name="LunarFrontierWorld" type="Node3D" parent="."]
+script = ExtResource("2_world")
+
+[node name="LunarHopper" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 6.2)
+script = ExtResource("3_hopper")
+
+[node name="LunarFrontierCamera" type="Node3D" parent="."]
+script = ExtResource("4_cam")
+
+[node name="LunarFrontierHUD" type="CanvasLayer" parent="."]
+script = ExtResource("5_hud")

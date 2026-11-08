@@ -100,7 +100,71 @@ horizontal_scroll_mode = 0
 [node name="ContentVBox" type="VBoxContainer" parent="ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 20
+theme_override_constants/separation = 16
+
+[node name="ScenarioSelectorHBox" type="HBoxContainer" parent="ScrollContainer/ContentVBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ScenarioLunarBtn" type="Button" parent="ScrollContainer/ContentVBox/ScenarioSelectorHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 38)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "★ MISSION 1: LUNAR SOUTH POLE (LSP-01)"
+
+[node name="ScenarioEarthBtn" type="Button" parent="ScrollContainer/ContentVBox/ScenarioSelectorHBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 38)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "★ MISSION 2: EARTH CLIMATE SENTINEL (ECS-01)"
+
+[node name="TeamModeContainer" type="HBoxContainer" parent="ScrollContainer/ContentVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TeamModeLabel" type="Label" parent="ScrollContainer/ContentVBox/TeamModeContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "CREW ROSTER:"
+
+[node name="TeamSoloBtn" type="Button" parent="ScrollContainer/ContentVBox/TeamModeContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "1P (SOLO)"
+
+[node name="Team2PBtn" type="Button" parent="ScrollContainer/ContentVBox/TeamModeContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "2 PLAYERS"
+
+[node name="Team3PBtn" type="Button" parent="ScrollContainer/ContentVBox/TeamModeContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "3 PLAYERS"
+
+[node name="Team4PBtn" type="Button" parent="ScrollContainer/ContentVBox/TeamModeContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "4 PLAYERS"
+
+[node name="TeamStatusLabel" type="Label" parent="ScrollContainer/ContentVBox/TeamModeContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "Flight Crew: Solo Operator (All Disciplines)"
 
 [node name="HeaderPanel" type="PanelContainer" parent="ScrollContainer/ContentVBox"]
 layout_mode = 2
@@ -111,18 +175,21 @@ layout_mode = 2
 theme_override_constants/separation = 6
 
 [node name="Badge" type="Label" parent="ScrollContainer/ContentVBox/HeaderPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 13
 text = "MARGIN // FLIGHT READINESS DOSSIER — MISSION ID: LSP-01"
 
 [node name="MissionTitle" type="Label" parent="ScrollContainer/ContentVBox/HeaderPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.96, 0.97, 0.99, 1)
 theme_override_font_sizes/font_size = 26
 text = "LUNAR SOUTH POLE — VOLATILE MAPPING MISSION"
 
 [node name="MissionSubtitle" type="Label" parent="ScrollContainer/ContentVBox/HeaderPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
 theme_override_font_sizes/font_size = 14
@@ -147,7 +214,8 @@ theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
 theme_override_font_sizes/font_size = 11
 text = "BUDGET CAP"
 
-[node name="Value" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/BudgetCard/VBox"]
+[node name="BudgetValue" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/BudgetCard/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 20
@@ -174,7 +242,8 @@ theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
 theme_override_font_sizes/font_size = 11
 text = "SCENARIO WET MASS"
 
-[node name="Value" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/MassCard/VBox"]
+[node name="MassValue" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/MassCard/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 20
@@ -201,7 +270,8 @@ theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
 theme_override_font_sizes/font_size = 11
 text = "SCENARIO DURATION"
 
-[node name="Value" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/DurationCard/VBox"]
+[node name="DurationValue" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/DurationCard/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 20
@@ -228,13 +298,15 @@ theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
 theme_override_font_sizes/font_size = 11
 text = "TARGET ORBIT"
 
-[node name="Value" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/OrbitCard/VBox"]
+[node name="OrbitValue" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/OrbitCard/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 20
 text = "100 km Polar"
 
-[node name="Sub" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/OrbitCard/VBox"]
+[node name="OrbitSub" type="Label" parent="ScrollContainer/ContentVBox/MetricsGrid/OrbitCard/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.6, 0.7, 1)
 theme_override_font_sizes/font_size = 10
@@ -252,9 +324,10 @@ theme_override_constants/separation = 16
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 15
-text = "1. SCIENTIFIC OBJECTIVE & THE NEUTRON SPECTROMETRY SECRET"
+text = "1. SCIENTIFIC OBJECTIVE & THE REMOTE SENSING METHOD"
 
 [node name="Sec1Text" type="Label" parent="ScrollContainer/ContentVBox/BodyPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.88, 0.94, 1)
 theme_override_font_sizes/font_size = 13
@@ -279,6 +352,7 @@ theme_override_font_sizes/font_size = 13
 text = "CRITICAL SCIENTIFIC CAUTION (NASA REFERENCE PRINCIPLE)"
 
 [node name="CautionText" type="Label" parent="ScrollContainer/ContentVBox/BodyPanel/VBox/CautionCard/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.92, 0.9, 0.85, 1)
 theme_override_font_sizes/font_size = 12

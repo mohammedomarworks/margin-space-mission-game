@@ -57,8 +57,34 @@ static func get_all_transfers() -> Dictionary:
 			"educational_tradeoff": "Direct translunar injection reaches the Moon in 4.036 days but with high hyperbolic speed. Capturing into lunar orbit requires a short, impulsive high-thrust chemical burn (839.878 m/s). Low-thrust electric propulsion lacks the thrust-to-weight ratio for this rapid maneuver.",
 			"jpl_citation": "NASA/JPL lunar trajectory monograph (Series 12) cites 4.036 days transit and 839.878 m/s LOI for a specific direct transfer into a 100 km circular lunar orbit (cited as an illustrative reference case, not a universal lunar requirement).",
 			"source_url": "https://descanso.jpl.nasa.gov/monograph/series12/LunarTraj--Overall.pdf"
+		},
+		"transfer_leo_direct": {
+			"id": "transfer_leo_direct",
+			"name": "Direct Ascent & LEO Injection",
+			"tag": "Rapid LEO Insertion (0.05 Days / 45 Min)",
+			"duration_days": 0.05,
+			"duration_desc": "0.05 Days (~45 Min Ascent)",
+			"loi_ref_100km_ms": 45.0,
+			"requires_chemical_propulsion": false, # Upper stage executes primary injection
+			"requires_impulsive_thrust": false,
+			"thrust_requirement_text": "Compatible with Chemical or Low-Thrust Electric Propulsion",
+			"description": "Standard two-stage launcher direct ascent flight profile delivering the spacecraft directly into its operational LEO Sun-Synchronous or polar orbit plane.",
+			"tradeoff_positive": "Negligible cruise transit (45 minutes) eliminates interplanetary thermal and radiation stress before commissioning.",
+			"tradeoff_negative": "Requires launcher upper stage restart precision for accurate Sun-Synchronous inclination injection.",
+			"educational_tradeoff": "Direct LEO ascent utilizes launcher thrust to achieve orbital velocity (~7.5 km/s). Spacecraft onboard propulsion is reserved exclusively for orbital slot circularization (45 m/s) and annual drag makeup.",
+			"jpl_citation": "Standard commercial LEO launch profile."
 		}
 	}
+
+static func get_transfers_for_scenario(scenario_id: String) -> Dictionary:
+	var all_trans = get_all_transfers()
+	var filtered: Dictionary = {}
+	if scenario_id == "earth_climate_sentinel" or scenario_id == "ecs_01":
+		filtered["transfer_leo_direct"] = all_trans["transfer_leo_direct"]
+	else:
+		filtered["transfer_low_energy"] = all_trans["transfer_low_energy"]
+		filtered["transfer_direct"] = all_trans["transfer_direct"]
+	return filtered
 
 static func get_transfer(id: String) -> Dictionary:
 	var transfers = get_all_transfers()

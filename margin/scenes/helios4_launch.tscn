@@ -1,0 +1,718 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_launch_controller.gd" id="1_launch"]
+[ext_resource type="Script" path="res://margin/scripts/helios4_rocket_3d.gd" id="2_rocket"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Launch"]
+sky_top_color = Color(0.015, 0.03, 0.08, 1)
+sky_horizon_color = Color(0.18, 0.42, 0.72, 1)
+ground_bottom_color = Color(0.02, 0.04, 0.08, 1)
+ground_horizon_color = Color(0.15, 0.38, 0.65, 1)
+sun_angle_max = 30.0
+
+[sub_resource type="Sky" id="Sky_Launch"]
+sky_material = SubResource("SkyMat_Launch")
+
+[sub_resource type="Environment" id="Env_Launch"]
+background_mode = 2
+sky = SubResource("Sky_Launch")
+ambient_light_source = 2
+ambient_light_color = Color(0.18, 0.22, 0.32, 1)
+ambient_light_energy = 0.45
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.6
+glow_bloom = 0.15
+fog_enabled = false
+
+[sub_resource type="StyleBoxFlat" id="Style_LaunchHUD"]
+bg_color = Color(0.04, 0.07, 0.12, 0.0)
+border_color = Color(0.22, 0.38, 0.58, 0.0)
+border_width_left = 0
+border_width_top = 0
+border_width_right = 0
+border_width_bottom = 0
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_ActionBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_CamBtn_Active"]
+bg_color = Color(0.18, 0.55, 0.88, 0.95)
+border_color = Color(0.4, 0.9, 1.0, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxFlat" id="Style_CamBtn_Normal"]
+bg_color = Color(0.08, 0.12, 0.18, 0.85)
+border_color = Color(0.25, 0.35, 0.5, 0.6)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 4.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
+
+[node name="Helios4Launch" type="Node3D"]
+script = ExtResource("1_launch")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Launch")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.321, 0.383, 0, 0.766, 0.643, -0.5, -0.557, 0.663, 20, 40, 20)
+light_color = Color(1.0, 0.98, 0.92, 1)
+light_energy = 1.35
+shadow_enabled = true
+directional_shadow_max_distance = 60.0
+
+[node name="PadFillLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 14)
+light_color = Color(1, 0.85, 0.6, 1)
+light_energy = 0.8
+omni_range = 28.0
+
+[node name="EnvironmentWorld" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="EarthCurvatureNode" type="Node3D" parent="EnvironmentWorld"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, -395, -75)
+
+[node name="LaunchComplexNode" type="Node3D" parent="EnvironmentWorld"]
+unique_name_in_owner = true
+
+[node name="RocketNode" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+
+[node name="RocketVisual" type="Node3D" parent="RocketNode"]
+unique_name_in_owner = true
+script = ExtResource("2_rocket")
+include_hangar = false
+include_callouts = false
+initial_fairing_open = false
+
+[node name="MainEnginePlumes" type="Node3D" parent="RocketNode"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+
+[node name="VacuumPlume" type="Node3D" parent="RocketNode"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.2, 0)
+visible = false
+
+[node name="VaporConeNode" type="Node3D" parent="RocketNode"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 11.2, 0)
+visible = false
+
+[node name="DetachedBoosterNode" type="Node3D" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="JettisonedFairingLeft" type="Node3D" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="JettisonedFairingRight" type="Node3D" parent="."]
+unique_name_in_owner = true
+visible = false
+
+[node name="LaunchCamera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.966, 0.088, -0.244, 0, 0.94, 0.342, 0.259, -0.33, 0.908, -3.2, 7.5, 16.5)
+current = true
+fov = 54.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = 44.0
+grow_horizontal = 2
+theme_override_constants/separation = 12
+
+[node name="MenuSystemIcons" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SysBtn_Menu" type="Button" parent="CanvasLayer/RootUI/TopBar/MenuSystemIcons"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 13
+text = "≡"
+
+[node name="SysBtn_Doc" type="Button" parent="CanvasLayer/RootUI/TopBar/MenuSystemIcons"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "📄"
+
+[node name="SysBtn_Cube" type="Button" parent="CanvasLayer/RootUI/TopBar/MenuSystemIcons"]
+custom_minimum_size = Vector2(30, 30)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "⬡"
+
+[node name="SpacerLeft" type="Control" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="OfficersBar" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OfficerBadgeProp" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/OfficersBar"]
+custom_minimum_size = Vector2(34, 30)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CamBtn_Normal")
+
+[node name="IconHolderProp" type="Control" parent="CanvasLayer/RootUI/TopBar/OfficersBar/OfficerBadgeProp"]
+layout_mode = 2
+
+[node name="OfficerBadgeStruct" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/OfficersBar"]
+custom_minimum_size = Vector2(34, 30)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CamBtn_Normal")
+
+[node name="IconHolderStruct" type="Control" parent="CanvasLayer/RootUI/TopBar/OfficersBar/OfficerBadgeStruct"]
+layout_mode = 2
+
+[node name="OfficerBadgeAstro" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/OfficersBar"]
+custom_minimum_size = Vector2(34, 30)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CamBtn_Normal")
+
+[node name="IconHolderAstro" type="Control" parent="CanvasLayer/RootUI/TopBar/OfficersBar/OfficerBadgeAstro"]
+layout_mode = 2
+
+[node name="OfficerBadgeSys" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar/OfficersBar"]
+custom_minimum_size = Vector2(34, 30)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CamBtn_Normal")
+
+[node name="IconHolderSys" type="Control" parent="CanvasLayer/RootUI/TopBar/OfficersBar/OfficerBadgeSys"]
+layout_mode = 2
+
+[node name="SpacerRight" type="Control" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FlightTimerBox" type="PanelContainer" parent="CanvasLayer/RootUI/TopBar"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_CamBtn_Normal")
+
+[node name="ValFlightTime" type="Label" parent="CanvasLayer/RootUI/TopBar/FlightTimerBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "T- 00:03"
+
+[node name="CameraRibbon" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 24.0
+offset_top = 48.0
+offset_right = -24.0
+offset_bottom = 76.0
+grow_horizontal = 2
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="CamBtn_Pad" type="Button" parent="CanvasLayer/RootUI/CameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Active")
+theme_override_font_sizes/font_size = 11
+text = "1 PAD"
+
+[node name="CamBtn_Engine" type="Button" parent="CanvasLayer/RootUI/CameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "2 ENGINE"
+
+[node name="CamBtn_Chase" type="Button" parent="CanvasLayer/RootUI/CameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "3 CHASE"
+
+[node name="CamBtn_Wide" type="Button" parent="CanvasLayer/RootUI/CameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "4 WIDE"
+
+[node name="CamBtn_MaxQ" type="Button" parent="CanvasLayer/RootUI/CameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "5 MAX-Q"
+
+[node name="CamBtn_Sep" type="Button" parent="CanvasLayer/RootUI/CameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "6 SEPARATION"
+
+[node name="CamBtn_Orbit" type="Button" parent="CanvasLayer/RootUI/CameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "7 ORBIT"
+
+[node name="FlightObjectivePanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 80.0
+offset_right = 280.0
+offset_bottom = 166.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("Style_LaunchHUD")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/FlightObjectivePanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HeaderBox" type="HBoxContainer" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+layout_mode = 2
+
+[node name="LblObjectivePhase" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/HeaderBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.25, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "PHASE: PRE-LAUNCH PREPARATION"
+
+[node name="LblObjectiveStatus" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/HeaderBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "STATUS: STANDBY"
+
+[node name="LblObjectivePrimary" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "OBJECTIVE: Verify ground umbilicals, cryogenics, and avionics to unlock countdown."
+
+[node name="ActionBox" type="HBoxContainer" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+layout_mode = 2
+
+[node name="LblObjectiveAction" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/ActionBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.98, 0.78, 0.25, 1)
+theme_override_font_sizes/font_size = 10
+text = "ACTION: Press [V] to auto-verify checklist. Press [SPACE] to start countdown."
+
+[node name="LblObjectiveNext" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/ActionBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.82, 0.95, 1)
+theme_override_font_sizes/font_size = 10
+text = "NEXT: T-10s Countdown"
+
+[node name="LblObjectiveControls" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.7, 0.88, 1)
+theme_override_font_sizes/font_size = 9
+text = "CONTROLS: [W/S] Throttle • [A/D] Pitch • [C] Camera • [P] Pause • [X] Abort"
+
+[node name="LeftTelemetryTape" type="Control" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 16.0
+offset_top = -140.0
+offset_right = 72.0
+offset_bottom = 120.0
+grow_vertical = 2
+
+[node name="VelBoxContainer" type="VBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 78.0
+offset_top = -80.0
+offset_right = 142.0
+offset_bottom = -20.0
+grow_vertical = 2
+theme_override_constants/separation = 2
+
+[node name="LblVel" type="Label" parent="CanvasLayer/RootUI/VelBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 10
+text = "VELOCITY"
+
+[node name="ValVelocity" type="Label" parent="CanvasLayer/RootUI/VelBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1)
+theme_override_font_sizes/font_size = 13
+text = "0 m/s"
+
+[node name="ValMach" type="Label" parent="CanvasLayer/RootUI/VelBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.82, 0.92, 1)
+theme_override_font_sizes/font_size = 10
+text = "Mach 0.00"
+
+[node name="ValGLoad" type="Label" parent="CanvasLayer/RootUI/VelBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.70, 0.20, 1)
+theme_override_font_sizes/font_size = 10
+text = "1.00 G"
+
+[node name="BottomLeftControls" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -140.0
+offset_right = 210.0
+offset_bottom = -20.0
+grow_vertical = 0
+theme_override_constants/separation = 8
+
+[node name="ThrottleHolder" type="Control" parent="CanvasLayer/RootUI/BottomLeftControls"]
+custom_minimum_size = Vector2(40, 120)
+layout_mode = 2
+
+[node name="StagingHolder" type="Control" parent="CanvasLayer/RootUI/BottomLeftControls"]
+custom_minimum_size = Vector2(56, 120)
+layout_mode = 2
+
+[node name="ThrottleStepBtns" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomLeftControls"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="BtnThrotUp" type="Button" parent="CanvasLayer/RootUI/BottomLeftControls/ThrottleStepBtns"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "▲ +"
+
+[node name="ValThrottleDisplay" type="Label" parent="CanvasLayer/RootUI/BottomLeftControls/ThrottleStepBtns"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "100%"
+horizontal_alignment = 1
+
+[node name="BtnThrotDown" type="Button" parent="CanvasLayer/RootUI/BottomLeftControls/ThrottleStepBtns"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 11
+text = "▼ -"
+
+[node name="QuickFlightActions" type="VBoxContainer" parent="CanvasLayer/RootUI/BottomLeftControls"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 6
+
+[node name="BtnPauseFlight" type="Button" parent="CanvasLayer/RootUI/BottomLeftControls/QuickFlightActions"]
+custom_minimum_size = Vector2(62, 28)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 10
+text = "[P] PAUSE"
+
+[node name="BtnAbortFlight" type="Button" parent="CanvasLayer/RootUI/BottomLeftControls/QuickFlightActions"]
+custom_minimum_size = Vector2(62, 28)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 10
+text = "[X] ABORT"
+
+[node name="NavBallContainer" type="Control" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -50.0
+offset_top = -140.0
+offset_right = 50.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="PitchNavBtns" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -105.0
+offset_right = 170.0
+offset_bottom = -75.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 130
+
+[node name="BtnPitchLeft" type="Button" parent="CanvasLayer/RootUI/PitchNavBtns"]
+custom_minimum_size = Vector2(85, 28)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 10
+text = "◄ [A] ZENITH"
+
+[node name="BtnPitchRight" type="Button" parent="CanvasLayer/RootUI/PitchNavBtns"]
+custom_minimum_size = Vector2(85, 28)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_CamBtn_Normal")
+theme_override_font_sizes/font_size = 10
+text = "HORIZON [D] ►"
+
+[node name="LblPitchReadout" type="Label" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -38.0
+offset_right = 160.0
+offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.75, 0.88, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "PITCH: 90.0° • TARGET: 90.0° • FPA: 90.0°"
+horizontal_alignment = 1
+
+[node name="MaxQArcHolder" type="Control" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 800.0
+offset_top = 140.0
+offset_right = 940.0
+offset_bottom = 250.0
+
+[node name="TopRightRadarScope" type="Control" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -96.0
+offset_top = 14.0
+offset_right = -16.0
+offset_bottom = 94.0
+grow_horizontal = 0
+
+[node name="RightFlightPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = -120.0
+offset_right = -16.0
+offset_bottom = 120.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_LaunchHUD")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/RightFlightPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.25, 0.75, 1.0, 1)
+theme_override_font_sizes/font_size = 11
+text = "SYSTEM TELEMETRY"
+
+[node name="QBox" type="HBoxContainer" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="QLbl" type="Label" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/QBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Dynamic Pressure (q):"
+
+[node name="ValDynamicPressure" type="Label" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/QBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.70, 0.20, 1)
+theme_override_font_sizes/font_size = 12
+text = "0.0 kPa"
+
+[node name="StressBox" type="HBoxContainer" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="StressLbl" type="Label" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/StressBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Aero Structural Load:"
+
+[node name="ValStress" type="Label" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/StressBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.90, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "NOMINAL (0%)"
+
+[node name="FuelBox" type="VBoxContainer" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="S1FuelLbl" type="Label" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/FuelBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 10
+text = "Booster Propellant (LOX/RP-1):"
+
+[node name="BarFuelS1" type="ProgressBar" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/FuelBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="S2FuelLbl" type="Label" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/FuelBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 10
+text = "Stage 2 Vacuum Fuel (LH2/LOX):"
+
+[node name="BarFuelS2" type="ProgressBar" parent="CanvasLayer/RootUI/RightFlightPanel/VBox/FuelBox"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="HSep" type="HSeparator" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="BtnStageSeparation" type="Button" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_ActionBtn")
+theme_override_font_sizes/font_size = 11
+disabled = true
+text = "STAGE SEPARATION [SPACE]"
+
+[node name="BtnFairingJettison" type="Button" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_ActionBtn")
+theme_override_font_sizes/font_size = 11
+disabled = true
+text = "FAIRING JETTISON [J]"
+
+[node name="BtnSystemsActivate" type="Button" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_ActionBtn")
+theme_override_font_sizes/font_size = 11
+disabled = true
+text = "ACTIVATE SYSTEMS [E]"
+
+[node name="ProceedToTransferBtn" type="Button" parent="CanvasLayer/RootUI/RightFlightPanel/VBox"]
+visible = false
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_ActionBtn")
+theme_override_font_sizes/font_size = 11
+text = "PROCEED TO TRANSFER →"
+
+[node name="AdvisoryBanner" type="Label" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -24.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.35, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 11
+text = "T-MINUS 03 SECONDS • PROPULSION ENGINEER STANDBY FOR BOOSTER IGNITION"
+horizontal_alignment = 1
+
+[node name="BottomRightAttitudeScope" type="Control" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -110.0
+offset_top = -110.0
+offset_right = -18.0
+offset_bottom = -18.0
+grow_horizontal = 0
+grow_vertical = 0

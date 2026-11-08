@@ -1,0 +1,1058 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://margin/scripts/helios4_deep_space_controller.gd" id="1_deepspace"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_Space"]
+sky_top_color = Color(0.005, 0.008, 0.015, 1)
+sky_horizon_color = Color(0.01, 0.015, 0.025, 1)
+ground_bottom_color = Color(0.005, 0.005, 0.01, 1)
+ground_horizon_color = Color(0.01, 0.01, 0.02, 1)
+
+[sub_resource type="Sky" id="Sky_Space"]
+sky_material = SubResource("SkyMat_Space")
+
+[sub_resource type="Environment" id="Env_Space"]
+background_mode = 2
+sky = SubResource("Sky_Space")
+ambient_light_source = 2
+ambient_light_color = Color(0.12, 0.15, 0.22, 1)
+ambient_light_energy = 0.8
+tonemap_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_SunCore"]
+emission_enabled = true
+emission = Color(1, 0.92, 0.55, 1)
+emission_energy_multiplier = 6.0
+
+[sub_resource type="SphereMesh" id="Mesh_SunCore"]
+material = SubResource("Mat_SunCore")
+radius = 12.0
+height = 24.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_SunCorona"]
+transparency = 1
+albedo_color = Color(1, 0.75, 0.2, 0.25)
+emission_enabled = true
+emission = Color(1, 0.7, 0.15, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="SphereMesh" id="Mesh_SunCorona"]
+material = SubResource("Mat_SunCorona")
+radius = 18.0
+height = 36.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_SolarFlare"]
+transparency = 1
+albedo_color = Color(1, 0.65, 0.15, 0.85)
+emission_enabled = true
+emission = Color(1, 0.68, 0.2, 1)
+emission_energy_multiplier = 4.5
+shading_mode = 0
+
+[sub_resource type="SphereMesh" id="Mesh_FlareParticle"]
+material = SubResource("Mat_SolarFlare")
+radius = 0.25
+height = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_ProtonParticle"]
+transparency = 1
+albedo_color = Color(1, 0.88, 0.45, 0.8)
+emission_enabled = true
+emission = Color(1, 0.85, 0.35, 1)
+emission_energy_multiplier = 5.0
+shading_mode = 0
+
+[sub_resource type="SphereMesh" id="Mesh_ProtonParticle"]
+material = SubResource("Mat_ProtonParticle")
+radius = 0.08
+height = 0.25
+
+[sub_resource type="StandardMaterial3D" id="Mat_Earth"]
+albedo_color = Color(0.1, 0.32, 0.65, 1)
+roughness = 0.65
+
+[sub_resource type="SphereMesh" id="Mesh_Earth"]
+material = SubResource("Mat_Earth")
+radius = 4.5
+height = 9.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_Atmosphere"]
+transparency = 1
+albedo_color = Color(0.2, 0.7, 1, 0.35)
+emission_enabled = true
+emission = Color(0.25, 0.75, 1, 1)
+emission_energy_multiplier = 2.5
+rim_enabled = true
+rim = 0.8
+rim_tint = 0.8
+
+[sub_resource type="SphereMesh" id="Mesh_Atmosphere"]
+material = SubResource("Mat_Atmosphere")
+radius = 4.7
+height = 9.4
+
+[sub_resource type="StyleBoxFlat" id="Style_RibbonBtn"]
+bg_color = Color(0.06, 0.09, 0.15, 0.9)
+border_color = Color(0.2, 0.45, 0.7, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="Style_ObjectivePanel"]
+bg_color = Color(0.04, 0.07, 0.12, 0.94)
+border_color = Color(0.22, 0.74, 0.96, 0.85)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SideHUD"]
+bg_color = Color(0.05, 0.08, 0.13, 0.88)
+border_color = Color(0.18, 0.35, 0.55, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="Style_TacticalCrisisCard"]
+bg_color = Color(0.06, 0.08, 0.14, 0.96)
+border_color = Color(0.98, 0.55, 0.15, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 22.0
+content_margin_top = 16.0
+content_margin_right = 22.0
+content_margin_bottom = 16.0
+
+[sub_resource type="StyleBoxFlat" id="Style_DecisionSubCard"]
+bg_color = Color(0.08, 0.11, 0.18, 0.9)
+border_color = Color(0.25, 0.4, 0.65, 0.75)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_TacticalOptBtn"]
+bg_color = Color(0.1, 0.14, 0.22, 0.9)
+border_color = Color(0.3, 0.45, 0.65, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="Style_PrimaryActionBtn"]
+bg_color = Color(0.12, 0.52, 0.82, 0.95)
+border_color = Color(0.35, 0.9, 1, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+
+[sub_resource type="StyleBoxFlat" id="Style_SecondaryActionBtn"]
+bg_color = Color(0.08, 0.12, 0.18, 0.9)
+border_color = Color(0.25, 0.4, 0.6, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+
+[node name="Helios4Crisis" type="Node3D"]
+script = ExtResource("1_deepspace")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_Space")
+
+[node name="SunNode" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45, 6, -60)
+
+[node name="SunMesh" type="MeshInstance3D" parent="SunNode"]
+unique_name_in_owner = true
+mesh = SubResource("Mesh_SunCore")
+
+[node name="SunCorona" type="MeshInstance3D" parent="SunNode"]
+unique_name_in_owner = true
+mesh = SubResource("Mesh_SunCorona")
+
+[node name="SunLight" type="DirectionalLight3D" parent="SunNode"]
+unique_name_in_owner = true
+transform = Transform3D(0.853, 0.115, 0.509, 0, 0.975, -0.221, -0.522, 0.189, 0.832, 0, 0, 0)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 2.4
+shadow_enabled = true
+
+[node name="CrisisStormLight" type="DirectionalLight3D" parent="SunNode"]
+unique_name_in_owner = true
+visible = false
+light_color = Color(1, 0.65, 0.2, 1)
+light_energy = 0.0
+
+[node name="SolarFlareParticles" type="CPUParticles3D" parent="SunNode"]
+unique_name_in_owner = true
+emitting = false
+amount = 120
+lifetime = 2.0
+speed_scale = 1.5
+mesh = SubResource("Mesh_FlareParticle")
+emission_shape = 1
+emission_sphere_radius = 12.0
+direction = Vector3(0.65, -0.08, 0.75)
+spread = 25.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 25.0
+initial_velocity_max = 45.0
+
+[node name="ProtonStreamParticles" type="CPUParticles3D" parent="SunNode"]
+unique_name_in_owner = true
+emitting = false
+amount = 250
+lifetime = 1.6
+speed_scale = 2.2
+mesh = SubResource("Mesh_ProtonParticle")
+emission_shape = 1
+emission_sphere_radius = 14.0
+direction = Vector3(0.65, -0.08, 0.75)
+spread = 18.0
+gravity = Vector3(0, 0, 0)
+initial_velocity_min = 35.0
+initial_velocity_max = 60.0
+
+[node name="EarthNode" type="Node3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, -4, 40)
+
+[node name="EarthMesh" type="MeshInstance3D" parent="EarthNode"]
+unique_name_in_owner = true
+mesh = SubResource("Mesh_Earth")
+
+[node name="EarthAtmosphere" type="MeshInstance3D" parent="EarthNode"]
+unique_name_in_owner = true
+mesh = SubResource("Mesh_Atmosphere")
+
+[node name="TrajectoryArc" type="MeshInstance3D" parent="."]
+unique_name_in_owner = true
+
+[node name="ProbeNode" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="DeepSpaceCamera" type="Camera3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.866, -0.05, 0.497, 0, 0.995, 0.1, -0.5, -0.087, 0.862, 4.2, 1.8, 5)
+fov = 52.0
+current = true
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="RootUI" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopCameraRibbon" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -310.0
+offset_top = 10.0
+offset_right = 310.0
+offset_bottom = 42.0
+grow_horizontal = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="BtnCamChase" type="Button" parent="CanvasLayer/RootUI/TopCameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 11
+text = "[1] CHASE 3/4"
+
+[node name="BtnCamWide" type="Button" parent="CanvasLayer/RootUI/TopCameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 11
+text = "[2] WIDE TRAJECTORY"
+
+[node name="BtnCamSunward" type="Button" parent="CanvasLayer/RootUI/TopCameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 11
+text = "[3] SUNWARD SENSORS"
+
+[node name="BtnCamEarth" type="Button" parent="CanvasLayer/RootUI/TopCameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 11
+text = "[4] EARTH DISH"
+
+[node name="BtnCamCrisis" type="Button" parent="CanvasLayer/RootUI/TopCameraRibbon"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 11
+text = "[5] CRISIS TACTICAL"
+
+[node name="FlightObjectivePanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -380.0
+offset_top = 48.0
+offset_right = 380.0
+offset_bottom = 126.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("Style_ObjectivePanel")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/FlightObjectivePanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="HeaderBox" type="HBoxContainer" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+layout_mode = 2
+
+[node name="LblObjectivePhase" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/HeaderBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "PHASE 3A: EARTH PARKING ORBIT"
+
+[node name="LblObjectiveStatus" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/HeaderBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "ORBITAL VELOCITY: 7.75 km/s • PERIGEE: 165 km"
+
+[node name="LblObjectivePrimary" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 12
+text = "PRIMARY: Authorize Trans-L1 Deep Space Injection Burn (TLI)"
+
+[node name="ActionBox" type="HBoxContainer" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+layout_mode = 2
+
+[node name="LblObjectiveAction" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/ActionBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.92, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "ACTION: Press [Space] or click EXECUTE INJECTION BURN to escape Earth orbit"
+
+[node name="LblObjectiveNext" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox/ActionBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 10
+text = "NEXT: Hyperbolic Escape Surge & Earth Departure"
+
+[node name="LblObjectiveControls" type="Label" parent="CanvasLayer/RootUI/FlightObjectivePanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.65, 0.8, 1)
+theme_override_font_sizes/font_size = 10
+text = "CONTROLS: [Space] Ignite Burn · [C] Switch Camera · [P] Pause · [1-4] Time Warp"
+
+[node name="TopTelemetryStrip" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 10.0
+offset_right = -18.0
+offset_bottom = 44.0
+grow_horizontal = 0
+theme_override_constants/separation = 14
+alignment = 2
+
+[node name="BoxMET" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxMET"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 9
+text = "MET"
+
+[node name="ValMET" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxMET"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 11
+text = "T+00d 00h"
+
+[node name="BoxDist" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxDist"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 9
+text = "DISTANCE"
+
+[node name="ValDistance" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxDist"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "165 km / 1.5M km"
+
+[node name="BoxSpeed" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxSpeed"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 9
+text = "SPEED"
+
+[node name="ValVelocity" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxSpeed"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.96, 0.98, 1)
+theme_override_font_sizes/font_size = 11
+text = "7.75 km/s"
+
+[node name="BoxBatt" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxBatt"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 9
+text = "BATTERY"
+
+[node name="ValBattery" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxBatt"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "100% (1,200 Wh)"
+
+[node name="BoxPower" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxPower"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 9
+text = "SOLAR GEN"
+
+[node name="ValPower" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxPower"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "340 W"
+
+[node name="BoxDSN" type="VBoxContainer" parent="CanvasLayer/RootUI/TopTelemetryStrip"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxDSN"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 9
+text = "DSN CARRIER"
+
+[node name="ValDSN" type="Label" parent="CanvasLayer/RootUI/TopTelemetryStrip/BoxDSN"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.7, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "+32.0 dB"
+
+[node name="LeftFlightPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 20.0
+offset_top = -150.0
+offset_right = 280.0
+offset_bottom = 150.0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_SideHUD")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/LeftFlightPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Lbl1" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
+theme_override_font_sizes/font_size = 11
+text = "L1 TRANSFER DISTANCE"
+
+[node name="BarDistanceProgress" type="ProgressBar" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+value = 2.0
+show_percentage = false
+
+[node name="Sep1" type="HSeparator" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="HBoxFuel" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxFuel"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Probe Propellant:"
+
+[node name="ValFuelRemaining" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxFuel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 11
+text = "320.0 kg"
+
+[node name="BarFuelProgress" type="ProgressBar" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="HBoxDV" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxDV"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Available Delta-V:"
+
+[node name="ValDeltaV" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxDV"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "2,056 m/s"
+
+[node name="HBoxTraj" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxTraj"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Targeting Accuracy:"
+
+[node name="ValTrajAccuracy" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxTraj"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "99.2%"
+
+[node name="Sep2" type="HSeparator" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="HBoxRad" type="HBoxContainer" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+
+[node name="Lbl" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxRad"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Radiation Dose:"
+
+[node name="ValRadDose" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox/HBoxRad"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
+theme_override_font_sizes/font_size = 11
+text = "0.0 rad"
+
+[node name="LblInst" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 10
+text = "Instrument Health (FC • MAG • SEP):"
+
+[node name="ValInstHealth" type="Label" parent="CanvasLayer/RootUI/LeftFlightPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "FC: 100% • MAG: 100% • SEP: 100%"
+
+[node name="ReticleOverlay" type="Control" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -120.0
+offset_right = 160.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ReticleBracketTL" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
+layout_mode = 1
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 30.0
+offset_bottom = 30.0
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
+theme_override_font_sizes/font_size = 16
+text = "┌"
+
+[node name="ReticleBracketTR" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -30.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 30.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
+theme_override_font_sizes/font_size = 16
+text = "┐"
+
+[node name="ReticleBracketBL" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -30.0
+offset_right = 30.0
+offset_bottom = -10.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
+theme_override_font_sizes/font_size = 16
+text = "└"
+
+[node name="ReticleBracketBR" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -30.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
+theme_override_font_sizes/font_size = 16
+text = "┘"
+
+[node name="ReticleCrosshair" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -10.0
+offset_right = 10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.6)
+theme_override_font_sizes/font_size = 14
+text = "┼"
+horizontal_alignment = 1
+
+[node name="ReticleAngleReadout" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -70.0
+offset_top = -25.0
+offset_right = -10.0
+offset_bottom = 25.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 0.75)
+theme_override_font_sizes/font_size = 10
+text = "212.5°
+139.6°
++85%"
+horizontal_alignment = 2
+
+[node name="TacticalCrisisPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -440.0
+offset_top = -170.0
+offset_right = 440.0
+offset_bottom = 170.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_TacticalCrisisCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CrisisHeader" type="HBoxContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox"]
+layout_mode = 2
+
+[node name="LblCrisisTitle" type="Label" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CrisisHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.98, 0.65, 0.15, 1)
+theme_override_font_sizes/font_size = 13
+text = "▲ SOLAR PARTICLE EVENT (SEP) CRISIS — ACTIVE REGION AR-4890"
+
+[node name="LblCrisisAdv" type="Label" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 10
+text = "SCIENTIFIC ADVISORY: Relativistic protons (>100 MeV flux). Orientation does not block relativistic protons. Spacecraft magnetic fields CANNOT deflect Coronal Mass Ejections. Mitigation requires safe-mode isolation, instrument management, and power priorities."
+autowrap_mode = 2
+
+[node name="CardsContainer" type="HBoxContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Card01_SafeMode" type="PanelContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_DecisionSubCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
+theme_override_font_sizes/font_size = 11
+text = "01 🔒 SAFE MODE"
+
+[node name="BtnSafeOpt1" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "FULL SAFE MODE
+• 0% degradation
+• -10 science pts"
+
+[node name="BtnSafeOpt2" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "PARTIAL PROTECTION
+• 5% minor wear
+• +10 science pts"
+
+[node name="BtnSafeOpt3" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "CONTINUE SCIENCE
+• 18% wear risk
+• +25 bonus pts"
+
+[node name="Card02_Instruments" type="PanelContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_DecisionSubCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card02_Instruments"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card02_Instruments/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "02 🛡 INSTRUMENTS"
+
+[node name="BtnInstOpt1" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card02_Instruments/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "SAFE OPTICS ONLY
+• Protect Faraday Cup
+• Zero sensor damage"
+
+[node name="BtnInstOpt2" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card02_Instruments/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "PRIORITIZE SEP
+• Active spectrometer
+• +15 science pts"
+
+[node name="BtnInstOpt3" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card02_Instruments/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "FULL SUITE ACTIVE
+• Sensor degradation
+• +30 science pts"
+
+[node name="Card03_Comms" type="PanelContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("Style_DecisionSubCard")
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.45, 0.45, 1)
+theme_override_font_sizes/font_size = 11
+text = "03 📡 COMMS & POWER"
+
+[node name="BtnCommOpt1" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "CARRIER BEACON
+• Preserve Battery 95%
+• Low-rate beacon"
+
+[node name="BtnCommOpt2" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "HIGH-RATE DISH
+• Live Earth Telemetry
+• Battery draws to 65%"
+
+[node name="BtnCommOpt3" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
+theme_override_font_sizes/font_size = 10
+text = "MEMORY BUFFER
+• Store & Mute RF
+• Battery held at 90%"
+
+[node name="BtnCommitCrisis" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
+theme_override_font_sizes/font_size = 12
+text = "★ COMMIT TACTICAL RESPONSE & RUN CRISIS SIMULATION"
+
+[node name="BottomControlsDeck" type="HBoxContainer" parent="CanvasLayer/RootUI"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -380.0
+offset_top = -68.0
+offset_right = 380.0
+offset_bottom = -26.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="WarpBox" type="HBoxContainer" parent="CanvasLayer/RootUI/BottomControlsDeck"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BtnWarp1x" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck/WarpBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 10
+text = "1x"
+
+[node name="BtnWarp10x" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck/WarpBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 10
+text = "10x"
+
+[node name="BtnWarp100x" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck/WarpBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 10
+text = "100x"
+
+[node name="BtnWarp1000x" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck/WarpBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_RibbonBtn")
+theme_override_font_sizes/font_size = 10
+text = "1000x"
+
+[node name="BtnPrimaryAction" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
+theme_override_font_sizes/font_size = 12
+text = "🚀 EXECUTE INJECTION BURN"
+
+[node name="BtnSecondaryAction" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryActionBtn")
+theme_override_font_sizes/font_size = 11
+text = "⚡ ALIGN ARRAYS SUNWARD"
+
+[node name="BtnPauseSim" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryActionBtn")
+theme_override_font_sizes/font_size = 11
+text = "⏸ PAUSE"
+
+[node name="AdvisoryBanner" type="Label" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -22.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
+theme_override_font_sizes/font_size = 11
+text = "★ HELIOS-4 IN PARKING ORBIT: Systems nominal. Awaiting Trans-L1 Deep Space Injection Burn (TLI)."
+horizontal_alignment = 1
+
+[node name="SimPauseBanner" type="PanelContainer" parent="CanvasLayer/RootUI"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -30.0
+offset_right = 220.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("Style_ObjectivePanel")
+
+[node name="LblPause" type="Label" parent="CanvasLayer/RootUI/SimPauseBanner"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.35, 1)
+theme_override_font_sizes/font_size = 13
+text = "⏸ SIMULATION PAUSED — PRESS [P] OR CLICK RESUME"
+horizontal_alignment = 1

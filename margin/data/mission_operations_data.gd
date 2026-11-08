@@ -1,6 +1,8 @@
 class_name MissionOperationsData
 extends RefCounted
 
+const MissionScenario = preload("res://margin/data/mission_scenario.gd")
+
 # ==============================================================================
 # MARGIN: MISSION OPERATIONS DATABASE & OPERATIONAL MODELS
 # ==============================================================================
@@ -101,8 +103,105 @@ static func get_all_craters() -> Dictionary:
 	}
 
 static func get_crater(id: String) -> Dictionary:
-	var craters = get_all_craters()
-	return craters.get(id, craters["crater_shackleton"])
+	return get_target(id)
+
+# --- EARTH CLIMATE SENTINEL TARGETS (6 GLOBAL CLIMATE SENTINELS) ---
+static func get_all_climate_sentinels() -> Dictionary:
+	return {
+		"sentinel_greenland": {
+			"id": "sentinel_greenland",
+			"name": "Greenland Ice Sheet (Summit)",
+			"lat_deg": 72.6,
+			"lon_deg": -38.5,
+			"diameter_km": 1100.0,
+			"baseline_metric": "3,200m Ice Elevation / Melt Albedo",
+			"confidence": "High (Summit Station Ground-Truth)",
+			"science_weight": 1.40,
+			"description": "Interior ice sheet reservoir. Satellite SAR ice sounding and multispectral radiometry track surface melt extent, margin retreat, and ice sheet elevation changes.",
+			"scientific_proxy_note": "Ice surface elevation change serves as a proxy for ice sheet volume balance; firn compaction and radar penetration depth require modeling corrections."
+		},
+		"sentinel_antarctic_peninsula": {
+			"id": "sentinel_antarctic_peninsula",
+			"name": "Antarctic Peninsula (Larsen C)",
+			"lat_deg": -67.5,
+			"lon_deg": -62.5,
+			"diameter_km": 850.0,
+			"baseline_metric": "Ice Shelf Freeboard / Calving Flux",
+			"confidence": "High (CryoSat-2 SIRAL Altimetry Heritage)",
+			"science_weight": 1.45,
+			"description": "Vulnerable polar ice shelf barrier monitoring grounding-line stability, rift propagation, and major tabular iceberg calving detachment.",
+			"scientific_proxy_note": "SAR interferometric altimetry freeboard serves as a proxy for floating ice shelf thickness; tidal flexure and firn air content introduce modeling uncertainty."
+		},
+		"sentinel_amazon_basin": {
+			"id": "sentinel_amazon_basin",
+			"name": "Amazon Basin Carbon Sink",
+			"lat_deg": -3.4,
+			"lon_deg": -62.2,
+			"diameter_km": 2400.0,
+			"baseline_metric": "Vegetation Index (NDVI) / CO2 Column",
+			"confidence": "High (OCO-2 / MODIS Heritage)",
+			"science_weight": 1.30,
+			"description": "Tropical rainforest biosphere acting as a global continental carbon sink. Tracks seasonal photosynthesis and drought-induced canopy stress.",
+			"scientific_proxy_note": "Atmospheric column CO2 (XCO2) serves as a proxy for continental carbon uptake; cloud masking requires rigorous optical filtering."
+		},
+		"sentinel_sahel_boundary": {
+			"id": "sentinel_sahel_boundary",
+			"name": "Sahel Desertification Boundary",
+			"lat_deg": 14.5,
+			"lon_deg": 2.1,
+			"diameter_km": 1800.0,
+			"baseline_metric": "Soil Moisture & Aridity Gradient",
+			"confidence": "Moderate-High (Copernicus Land Heritage)",
+			"science_weight": 1.15,
+			"description": "Semi-arid ecological buffer zone between Sahara Desert and Savanna. Tracks seasonal green-up pulses and progressive desertification.",
+			"scientific_proxy_note": "Normalized Difference Vegetation Index (NDVI) acts as a proxy for vegetative biomass; atmospheric dust requires correction."
+		},
+		"sentinel_north_atlantic": {
+			"id": "sentinel_north_atlantic",
+			"name": "North Atlantic Surface Indicators for AMOC Research",
+			"lat_deg": 57.0,
+			"lon_deg": -35.0,
+			"diameter_km": 1500.0,
+			"baseline_metric": "Sea Surface Temperature & Ocean Surface Roughness",
+			"confidence": "High (Surface Proxy / Sentinel-3 Heritage)",
+			"science_weight": 1.25,
+			"description": "Monitors sea surface temperature anomalies, thermal skin gradients, and ocean surface roughness in the subpolar gyre. Note: Does not model a dedicated microwave ocean radar altimeter for direct steric dynamic-height measurements. Orbital optical and SAR observations provide indirect surface indicators only, and cannot measure full-depth Atlantic Meridional Overturning Circulation (AMOC) volume transport, which requires sustained deep-water in-situ mooring networks (e.g. RAPID/OSNAP) and ocean circulation modeling.",
+			"scientific_proxy_note": "Surface skin temperature anomalies and ocean roughness serve as indirect surface proxy indicators for subpolar gyre dynamics. Direct steric dynamic height is not measured, and evaluating full-depth AMOC transport fundamentally requires in-situ oceanographic sensor arrays (e.g. RAPID/OSNAP) and deep-ocean circulation models."
+		},
+		"sentinel_siberian_permafrost": {
+			"id": "sentinel_siberian_permafrost",
+			"name": "Siberian Tundra Permafrost",
+			"lat_deg": 68.5,
+			"lon_deg": 112.0,
+			"diameter_km": 1600.0,
+			"baseline_metric": "Atmospheric Methane (XCH4) Column",
+			"confidence": "Very High (TROPOMI Heritage)",
+			"science_weight": 1.35,
+			"description": "Continuous sub-Arctic permafrost storing immense ancient organic carbon. Sounding spectrometer monitors summer thaw methane degassing anomalies.",
+			"scientific_proxy_note": "Column-averaged methane proxy indicates wetland and thermokarst thaw emissions; high solar zenith angles limit winter readings."
+		}
+	}
+
+static func get_targets_for_scenario(scenario_id: String = "") -> Dictionary:
+	if scenario_id == "":
+		scenario_id = MissionScenario.get_active_scenario_id()
+	if scenario_id == "earth_climate_sentinel" or scenario_id == "ecs_01":
+		return get_all_climate_sentinels()
+	return get_all_craters()
+
+static func get_target(id: String, scenario_id: String = "") -> Dictionary:
+	if scenario_id == "":
+		scenario_id = MissionScenario.get_active_scenario_id()
+	var targets = get_targets_for_scenario(scenario_id)
+	if targets.has(id):
+		return targets[id]
+	var all_cr = get_all_craters()
+	if all_cr.has(id):
+		return all_cr[id]
+	var all_cl = get_all_climate_sentinels()
+	if all_cl.has(id):
+		return all_cl[id]
+	return all_cr["crater_shackleton"]
 
 # --- OPERATIONAL MODES ---
 static func get_all_modes() -> Dictionary:
@@ -194,7 +293,54 @@ static func get_window_event(window_idx: int) -> Dictionary:
 			"downlink_delta_pct": -15.0, # Atmospheric ionospheric noise at ground stations
 			"science_bonus": 0.0,
 			"sk_burn_required_ms": 12.5,
-			"recommendation": "Comm Priority mode helps push critical science packets through noisy channels."
+			"recommendation": "Comm Priority mode helps push critical science packets through noisy channels.",
+			"emergency_event": {
+				"id": "event_solar_storm",
+				"title": "EMERGENCY: Severe Solar Particle Storm Approaching",
+				"scenario": "A fast coronal mass ejection is bombarding cislunar space with high-energy proton flux. Note: Radiation-risk calculations and equipment degradation rates are in-game educational simulation models.",
+				"default_choice_id": "choice_safe_mode",
+				"choices": [
+					{
+						"id": "choice_safe_mode",
+						"name": "FULL SAFE MODE",
+						"tag": "Protective Stance",
+						"description": "Suspend non-essential science instruments while maintaining essential power, thermal control, and communications. Reduces science output during the event.",
+						"impact_summary": "Power: -40% load | Health: Protected (0% modeled wear) | Science: -40% yield this window",
+						"effects": {
+							"power_load_multiplier": 0.60,
+							"equipment_health_delta": 0.0,
+							"science_multiplier": 0.60,
+							"persistent_sensor_noise": false
+						}
+					},
+					{
+						"id": "choice_partial_protection",
+						"name": "PARTIAL PROTECTION (ATTITUDE STANCE)",
+						"tag": "Balanced Stance",
+						"description": "Perform an attitude-control maneuver to maintain sun/comm alignment. Disable vulnerable payloads while keeping selected protected secondary systems active. (Attitude-control maneuver only; does not deflect solar protons).",
+						"impact_summary": "Power: -15% load | Health: Minimal modeled wear (-2.5%) | Science: Preserves 75% yield | Lasting: No persistent noise",
+						"effects": {
+							"power_load_multiplier": 0.85,
+							"equipment_health_delta": -2.5,
+							"science_multiplier": 0.75,
+							"persistent_sensor_noise": false
+						}
+					},
+					{
+						"id": "choice_continue_science",
+						"name": "CONTINUE OPERATIONS",
+						"tag": "High-Risk Stance",
+						"description": "Continue active observations throughout the storm. Accept increased modeled radiation-related equipment degradation in exchange for observation continuity.",
+						"impact_summary": "Power: +25% load | Health: -7.5% modeled equipment wear | Science: Full points preserved | Lasting: Modeled sensor SEU noise in future windows",
+						"effects": {
+							"power_load_multiplier": 1.25,
+							"equipment_health_delta": -7.5,
+							"science_multiplier": 1.15,
+							"persistent_sensor_noise": true
+						}
+					}
+				]
+			}
 		},
 		4: {
 			"window": 4,
@@ -206,7 +352,41 @@ static func get_window_event(window_idx: int) -> Dictionary:
 			"downlink_delta_pct": -40.0, # 40% loss of downlink contact time
 			"science_bonus": 0.0,
 			"sk_burn_required_ms": 12.5,
-			"recommendation": "Comm Priority mode or Power Conservation avoids solid-state recorder overflow and permanent data loss."
+			"recommendation": "Comm Priority mode or Power Conservation avoids solid-state recorder overflow and permanent data loss.",
+			"emergency_event": {
+				"id": "event_dsn_outage",
+				"title": "COMMUNICATION EMERGENCY: DSN Madrid Tracking Outage",
+				"scenario": "A critical mechanical bearing overhaul and gearbox fault at DSS-63 has taken Madrid 70m off-air. Primary X-band contact is unavailable for this pass.",
+				"default_choice_id": "choice_store_data",
+				"choices": [
+					{
+						"id": "choice_store_data",
+						"name": "STORE DATA IN SOLID-STATE BUFFER",
+						"tag": "Buffer Science Data",
+						"description": "Halt deep-space transmissions and hold all generated spectra in onboard solid-state recorder until Madrid service resumes.",
+						"impact_summary": "Downlink: 0 Gbit | Buffer: Surges with +100% data | Cost: $0M | Risk: Overflow if next pass is missed",
+						"effects": {
+							"downlink_multiplier": 0.0,
+							"ops_cost_delta_m": 0.0,
+							"extra_power_w": 0.0,
+							"buffer_risk": true
+						}
+					},
+					{
+						"id": "choice_backup_comm",
+						"name": "USE BACKUP COMMUNICATION (COMMERCIAL S-BAND)",
+						"tag": "Active Relay Strategy",
+						"description": "Reconfigure transmitter to utilize commercial ground station networks and emergency S-band relays at reduced data rate.",
+						"impact_summary": "Downlink: Transmit 55% at reduced rate | Cost: +$0.5M commercial fee | Power: +20W RF boost | Buffer: Safely drained",
+						"effects": {
+							"downlink_multiplier": 0.55,
+							"ops_cost_delta_m": 0.5,
+							"extra_power_w": 20.0,
+							"buffer_risk": false
+						}
+					}
+				]
+			}
 		},
 		5: {
 			"window": 5,
@@ -234,15 +414,48 @@ static func get_window_event(window_idx: int) -> Dictionary:
 		},
 		7: {
 			"window": 7,
-			"name": "Annual Meteoroid Stream Transit",
-			"condition": "Spacecraft sweeps through the inbound Taurid meteoroid stream in cislunar space.",
-			"flavor": "Whipple micro-meteoroid bumper shields absorb fine particle impacts. Star tracker baffles reject glint.",
-			"effect_type": "micrometeoroid",
-			"power_delta_pct": -4.0,
+			"name": "Deep Eclipse Thermal Shock & Battery Warning",
+			"condition": "Sun-Earth-Moon orbital plane precession forces extended 48-minute orbital shadows behind the Moon under severe radiator thermal chill.",
+			"flavor": "Spacecraft battery voltage approaches the critical low-bus threshold during eclipse transit. Battery health is at risk of permanent degradation.",
+			"effect_type": "eclipse_stress",
+			"power_delta_pct": -10.0,
 			"downlink_delta_pct": 0.0,
 			"science_bonus": 0.0,
 			"sk_burn_required_ms": 12.5,
-			"recommendation": "Maintain nominal attitude; structure shielding protects internal avionics."
+			"recommendation": "Shedding non-critical loads protects battery longevity; continuing full ops risks brownout and accelerated degradation.",
+			"emergency_event": {
+				"id": "event_battery_emergency",
+				"title": "ELECTRICAL EMERGENCY: Low Battery Reserve in Shadow",
+				"scenario": "The battery reserve is falling below the safe operating threshold during an extended orbital eclipse shadow pass.",
+				"default_choice_id": "choice_shed_load",
+				"choices": [
+					{
+						"id": "choice_shed_load",
+						"name": "SHED NON-CRITICAL LOAD",
+						"tag": "Power Conservation",
+						"description": "Temporarily disable non-essential instrument heaters and secondary sensors to lower eclipse power demand.",
+						"impact_summary": "Power: -35% load | Battery: Protected (<42% DoD) | Science: -35% yield this window",
+						"effects": {
+							"power_load_multiplier": 0.65,
+							"battery_health_bonus": 1.5,
+							"science_multiplier": 0.65
+						}
+					},
+					{
+						"id": "choice_continue_full_ops",
+						"name": "CONTINUE FULL OPERATIONS",
+						"tag": "Maximum Science Risk",
+						"description": "Keep all payload sensors and heaters operating at full power throughout the eclipse shadow.",
+						"impact_summary": "Power: Full load | Battery: Deep discharge (>85% DoD, -5.0% battery SOH loss) | Risk: Elevated brownout risk",
+						"effects": {
+							"power_load_multiplier": 1.0,
+							"battery_health_penalty": 5.0,
+							"equipment_health_penalty": 2.5,
+							"science_multiplier": 1.0
+						}
+					}
+				]
+			}
 		},
 		8: {
 			"window": 8,
@@ -306,3 +519,7 @@ static func get_window_event(window_idx: int) -> Dictionary:
 		}
 	}
 	return events.get(window_idx, events[1])
+
+static func get_emergency_event(window_idx: int) -> Dictionary:
+	var ev = get_window_event(window_idx)
+	return ev.get("emergency_event", {})
