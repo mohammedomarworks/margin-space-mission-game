@@ -47,8 +47,8 @@ roughness = 0.65
 
 [sub_resource type="SphereMesh" id="Mesh_Earth_L1"]
 material = SubResource("Mat_Earth_L1")
-radius = 3.5
-height = 7.0
+radius = 0.6371
+height = 1.2742
 
 [sub_resource type="StandardMaterial3D" id="Mat_Atmosphere_L1"]
 transparency = 1
@@ -62,8 +62,8 @@ rim_tint = 0.8
 
 [sub_resource type="SphereMesh" id="Mesh_Atmosphere_L1"]
 material = SubResource("Mat_Atmosphere_L1")
-radius = 3.7
-height = 7.4
+radius = 0.66
+height = 1.32
 
 [sub_resource type="StyleBoxFlat" id="Style_ObjectivePanel"]
 bg_color = Color(0.04, 0.07, 0.12, 0.94)
@@ -136,14 +136,14 @@ script = ExtResource("1_arrival")
 environment = SubResource("Env_L1")
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -50, 2, 0)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -15000, 0, 0)
 light_color = Color(1, 0.98, 0.92, 1)
 light_energy = 2.4
 shadow_enabled = true
 
 [node name="SunMesh" type="MeshInstance3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15000, 0, 0)
 mesh = SubResource("Mesh_SunCore_L1")
 
 [node name="SunCorona" type="MeshInstance3D" parent="SunMesh"]
@@ -151,7 +151,7 @@ mesh = SubResource("Mesh_SunCorona_L1")
 
 [node name="EarthMesh" type="MeshInstance3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(0.917, 0.398, 0, -0.398, 0.917, 0, 0, 0, 1, 55, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("Mesh_Earth_L1")
 
 [node name="EarthAtmosphere" type="MeshInstance3D" parent="EarthMesh"]
@@ -159,14 +159,16 @@ mesh = SubResource("Mesh_Atmosphere_L1")
 
 [node name="HaloOrbitRing" type="MeshInstance3D" parent="."]
 unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -150, 0, 0)
 
 [node name="ProbeNode" type="Node3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 4.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -150, 0, 0)
 
 [node name="Camera3D" type="Camera3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(0.94, -0.059, 0.337, 0, 0.985, 0.174, -0.342, -0.163, 0.926, 3.4, 2.0, 5.2)
+transform = Transform3D(0.94, -0.059, 0.337, 0, 0.985, 0.174, -0.342, -0.163, 0.926, -146.6, 2.0, 5.2)
+far = 40000.0
 current = true
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]

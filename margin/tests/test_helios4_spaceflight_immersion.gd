@@ -45,6 +45,11 @@ func _run_all_tests() -> void:
 	await test_3d_spatial_starfield_parallax(ds_ctrl)
 	await test_interactive_camera_controls(ds_ctrl)
 	await test_time_warp_motion_acceleration(ds_ctrl)
+	await test_p1_earth_clearance_1000_points(ds_ctrl)
+	await test_p1_parking_to_tli_continuity(ds_ctrl)
+	await test_p1_tli_to_cruise_continuity(ds_ctrl)
+	await test_p1_floating_point_render_precision(ds_ctrl)
+	await test_p1_normal_speed_visual_motion(ds_ctrl)
 
 	ds_ctrl.queue_free()
 	await process_frame
@@ -110,10 +115,14 @@ func test_physical_trajectory_progression(ctrl: Helios4DeepSpaceController) -> v
 func test_earth_receding_and_axial_rotation(ctrl: Helios4DeepSpaceController) -> void:
 	print("\n[TEST 3] Earth Receding & Axial Rotation Over Transfer")
 	# Near Earth
+	ctrl.current_subphase = Helios4DeepSpaceController.SubPhase.PARKING_ORBIT
 	ctrl.distance_km = 165.0
+	ctrl.transfer_progress_km = 0.0
+	ctrl._process(0.01)
 	ctrl._update_celestial_transforms(0.0)
-	var scale_near = ctrl.earth_node.scale.x
 	var rot_start = ctrl.earth_mesh.rotation.y
+	_assert(ctrl.earth_node.scale == Vector3.ONE, "Earth visual scale remains strictly Vector3.ONE (no artificial distance-dependent scaling)")
+	var dist_near = ctrl.probe_node.global_position.distance_to(ctrl.earth_node.global_position)
 	
 	# Advance delta for axial rotation
 	ctrl._update_celestial_transforms(2.0)
@@ -121,10 +130,13 @@ func test_earth_receding_and_axial_rotation(ctrl: Helios4DeepSpaceController) ->
 	_assert(rot_advanced > rot_start, "Earth visibly rotates on its polar axis continuously")
 	
 	# Far out at L1 approach
+	ctrl.current_subphase = Helios4DeepSpaceController.SubPhase.CRUISE_EARLY
 	ctrl.distance_km = 1500000.0
+	ctrl._process(0.1)
 	ctrl._update_celestial_transforms(0.0)
-	var scale_far = ctrl.earth_node.scale.x
-	_assert(scale_far < scale_near * 0.35, "Earth visual scale visibly shrinks from 1.0 to <= 0.25 as spacecraft travels to L1")
+	_assert(ctrl.earth_node.scale == Vector3.ONE, "Earth scale remains strictly Vector3.ONE at L1")
+	var dist_far = ctrl.probe_node.global_position.distance_to(ctrl.earth_node.global_position)
+	_assert(dist_far > dist_near * 200.0, "Earth recedes naturally via 3D perspective distance across transfer (%.2f -> %.2f units)" % [dist_near, dist_far])
 
 func test_sunward_and_earthward_tracking(ctrl: Helios4DeepSpaceController) -> void:
 	print("\n[TEST 4] Articulated Sun-Tracking Solar Panels & Earth-Tracking High Gain Dish")
@@ -254,3 +266,123 @@ func test_l1_interactive_camera_and_dust(ctrl: Helios4L1ArrivalController) -> vo
 	ctrl._update_camera_transform(0.0)
 	var orbit_cam_pos = cam.global_position
 	_assert(base_cam_pos.distance_to(orbit_cam_pos) > 0.5, "L1 camera orbits dynamically around spacecraft in halo orbit")
+
+# --- P1 SPECIFIC VERIFICATION TESTS ---
+
+func test_p1_earth_clearance_1000_points(ctrl: Helios4DeepSpaceController) -> void:
+	print("\n[TEST P1-1] Trajectory Earth Clearance Across 1,000 Sampled Points")
+	var sample_count = 1000
+	var min_clearance_km = 999999.0
+	var min_center_dist_km = 999999.0
+	
+	# Test nominal trajectory across 1,000 points
+	for i in range(sample_count + 1):
+		var u = float(i) / float(sample_count)
+		var p_sim = ctrl.get_trajectory_point_sim_km(u)
+		var r_km = p_sim.length()
+		var clearance_km = r_km - ctrl.EARTH_RADIUS_KM
+		if clearance_km < min_clearance_km:
+			min_clearance_km = clearance_km
+		if r_km < min_center_dist_km:
+			min_center_dist_km = r_km
+			
+	print("  -> Sampled 1,000 trajectory points: Minimum Earth Center Distance = %.2f km, Minimum Physical Surface Clearance = %.2f km" % [min_center_dist_km, min_clearance_km])
+	_assert(min_center_dist_km >= ctrl.PARKING_ORBIT_RADIUS_KM - 0.01, "Trajectory center distance never drops below parking orbit radius (%.2f >= %.2f km)" % [min_center_dist_km, ctrl.PARKING_ORBIT_RADIUS_KM])
+	_assert(min_clearance_km >= 165.0 - 0.01, "Earth clearance strictly exceeds parking orbit altitude (165.0 km) across all 1,000 points (minimum: %.2f km)" % min_clearance_km)
+	
+	# Test across various initial parking orbit angles (e.g., 0, 45, 90, 180, 270 degrees)
+	var test_angles = [0.0, PI * 0.25, PI * 0.5, PI, PI * 1.5]
+	for ang in test_angles:
+		ctrl.transfer_start_x_km = cos(ang) * ctrl.PARKING_ORBIT_RADIUS_KM
+		ctrl.transfer_start_y_km = sin(ang) * 1850.0
+		ctrl.transfer_start_z_km = sin(ang) * ctrl.PARKING_ORBIT_RADIUS_KM
+		for i in range(200):
+			var u = float(i) / 200.0
+			var p = ctrl.get_trajectory_point_sim_km(u)
+			var clr = p.length() - ctrl.EARTH_RADIUS_KM
+			_assert(clr >= 165.0 - 0.01, "Arbitrary departure angle %.2f rad maintains >= 165 km clearance (got %.2f km)" % [ang, clr])
+
+func test_p1_parking_to_tli_continuity(ctrl: Helios4DeepSpaceController) -> void:
+	print("\n[TEST P1-2] Parking Orbit to TLI Transition Continuity")
+	ctrl._set_time_warp(0) # 1x nominal
+	ctrl.current_subphase = Helios4DeepSpaceController.SubPhase.PARKING_ORBIT
+	ctrl.parking_orbit_theta = 0.5
+	ctrl._process(0.01)
+	
+	var pos_parking = Vector3(ctrl.spacecraft_x_km, ctrl.spacecraft_y_km, ctrl.spacecraft_z_km)
+	var vel_parking = ctrl.velocity_kms
+	
+	# Initiate TLI
+	ctrl._on_primary_action_pressed()
+	_assert(ctrl.current_subphase == Helios4DeepSpaceController.SubPhase.INJECTION_BURN, "Transitioned to INJECTION_BURN")
+	
+	var pos_tli_start = Vector3(ctrl.spacecraft_x_km, ctrl.spacecraft_y_km, ctrl.spacecraft_z_km)
+	var pos_jump = pos_parking.distance_to(pos_tli_start)
+	_assert(pos_jump < 0.001, "Zero position jump at Parking -> TLI transition (jump: %.4f km)" % pos_jump)
+	_assert_approx(ctrl.velocity_kms, 7.75, 0.05, "Parking orbit velocity 7.75 km/s preserved at ignition start")
+
+func test_p1_tli_to_cruise_continuity(ctrl: Helios4DeepSpaceController) -> void:
+	print("\n[TEST P1-3] TLI Burnout to Cruise Continuity & Velocity Handoff")
+	ctrl._set_time_warp(0) # 1x nominal
+	_assert(ctrl.current_subphase == Helios4DeepSpaceController.SubPhase.INJECTION_BURN, "Currently in INJECTION_BURN")
+	
+	# Verify trajectory at u=0 matches exact departure anchor
+	var departure_pos = Vector3(ctrl.transfer_start_x_km, ctrl.transfer_start_y_km, ctrl.transfer_start_z_km)
+	var u0_pos = ctrl.get_trajectory_point_sim_km(0.0)
+	var departure_offset = departure_pos.distance_to(u0_pos)
+	_assert(departure_offset < 0.001, "Trajectory u=0 precisely anchors to parking orbit departure position (offset: %.4f km)" % departure_offset)
+	
+	# Advance burn to completion (duration is 4.0s)
+	ctrl._process(4.1)
+	_assert(ctrl.current_subphase == Helios4DeepSpaceController.SubPhase.CRUISE_EARLY, "Subphase transitioned to CRUISE_EARLY at burnout")
+	_assert_approx(ctrl.velocity_kms, 10.95, 0.05, "Velocity seamlessly reaches hyperbolic escape velocity 10.95 km/s")
+	
+	var burnout_pos = Vector3(ctrl.spacecraft_x_km, ctrl.spacecraft_y_km, ctrl.spacecraft_z_km)
+	var u_burnout = clamp(ctrl.transfer_progress_km / ctrl.L1_DISTANCE_KM, 0.0, 1.0)
+	var expected_burnout_pos = ctrl.get_trajectory_point_sim_km(u_burnout)
+	var burnout_jump = burnout_pos.distance_to(expected_burnout_pos)
+	_assert(burnout_jump < 0.001, "Zero position jump at TLI burnout transition (jump: %.4f km)" % burnout_jump)
+	
+	# Process next step in cruise at 1x
+	ctrl._set_time_warp(0)
+	ctrl._process(0.01)
+	var cruise_step_pos = Vector3(ctrl.spacecraft_x_km, ctrl.spacecraft_y_km, ctrl.spacecraft_z_km)
+	var step_distance = burnout_pos.distance_to(cruise_step_pos)
+	_assert(step_distance < 5.0, "Smooth continuous progression into cruise (delta: %.4f km)" % step_distance)
+
+func test_p1_floating_point_render_precision(ctrl: Helios4DeepSpaceController) -> void:
+	print("\n[TEST P1-4] Floating-Point Coordinate Frame & Visual Precision")
+	_assert(ctrl.VISUAL_SCALE == 0.0001, "Visual scale factor is exactly 0.0001 (1 Godot unit = 10,000 km)")
+	
+	# Check scalar storage types
+	_assert(typeof(ctrl.spacecraft_x_km) == TYPE_FLOAT, "spacecraft_x_km stored as 64-bit float")
+	_assert(typeof(ctrl.spacecraft_y_km) == TYPE_FLOAT, "spacecraft_y_km stored as 64-bit float")
+	_assert(typeof(ctrl.spacecraft_z_km) == TYPE_FLOAT, "spacecraft_z_km stored as 64-bit float")
+	
+	# Verify celestial positions in visual space
+	_assert(ctrl.EARTH_SIM_POS_KM == Vector3.ZERO, "Earth simulation position is strictly (0, 0, 0) km")
+	_assert(ctrl.L1_SIM_POS_KM == Vector3(-1500000.0, 0.0, 0.0), "L1 simulation position is (-1500000, 0, 0) km")
+	_assert(ctrl.SUN_SIM_POS_KM == Vector3(-150000000.0, 0.0, 0.0), "Sun simulation position is (-150000000, 0, 0) km")
+	
+	# Visual coordinates in Godot units
+	var earth_vis = ctrl.earth_node.position
+	_assert(earth_vis == Vector3.ZERO, "Earth node centered at visual (0, 0, 0)")
+	var sun_vis = ctrl.sun_node.position
+	_assert_approx(sun_vis.x, -15000.0, 0.1, "Sun node located at visual x = -15000 units")
+	
+	# Camera frustum
+	_assert(ctrl.deep_space_cam.far >= 40000.0, "Camera far clip plane >= 40000 units to view Sun at -15000 without clipping")
+
+func test_p1_normal_speed_visual_motion(ctrl: Helios4DeepSpaceController) -> void:
+	print("\n[TEST P1-5] Normal Speed (1x) Dynamic Visual Motion & Cues")
+	ctrl._set_time_warp(0) # 1x
+	_assert(ctrl.warp_factor == 1.0, "Time warp set to 1x normal speed")
+	
+	# Verify space dust particles moving even at 1x
+	ctrl._update_space_dust(0.016)
+	_assert(ctrl.space_dust_emitter.initial_velocity_min > 5.0, "Space dust velocity active at 1x speed (%.2f m/s)" % ctrl.space_dust_emitter.initial_velocity_min)
+	
+	# Verify starfield cluster centers on probe
+	var starfield_dist = ctrl.starfield_cluster.global_position.distance_to(ctrl.probe_node.global_position)
+	_assert(starfield_dist < 0.01, "Spatial starfield cluster dynamically tracks probe position (dist: %.4f units)" % starfield_dist)
+
