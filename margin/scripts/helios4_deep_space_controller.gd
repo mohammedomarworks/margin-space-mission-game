@@ -64,15 +64,42 @@ var is_sim_paused: bool = false
 var bus_mesh: MeshInstance3D
 var solar_wing_left: MeshInstance3D
 var solar_wing_right: MeshInstance3D
+var dish_pivot: Node3D
 var dish_reflector: MeshInstance3D
 var mag_boom: MeshInstance3D
 var faraday_cup: MeshInstance3D
 var engine_exhaust: CPUParticles3D
 var rcs_particles: CPUParticles3D
+var space_dust_emitter: CPUParticles3D
+var starfield_cluster: Node3D
 
-# Camera target interpolation
+# Camera target interpolation & interactive orbit controls
 var _cam_offset_target: Vector3 = Vector3(4.2, 1.8, 5.0)
 var _cam_look_target: Vector3 = Vector3(0.0, 0.4, 0.0)
+var _cam_orbit_yaw: float = 0.0
+var _cam_orbit_pitch: float = 0.0
+var _cam_zoom_mult: float = 1.0
+var _is_mouse_dragging: bool = false
+var _last_mouse_pos: Vector2 = Vector2.ZERO
+
+# 3D Trajectory & Celestial World Coordinates
+const EARTH_POS: Vector3 = Vector3(22.0, -3.0, 36.0)
+const SUN_POS: Vector3 = Vector3(-65.0, 8.0, -85.0)
+const L1_POS: Vector3 = Vector3(-32.0, 2.0, -42.0)
+const PARKING_ORBIT_RADIUS: float = 6.8
+var parking_orbit_theta: float = 0.0
+
+func get_trajectory_point(u: float) -> Vector3:
+	var p0 = Vector3(16.5, -2.0, 31.0)
+	var p1 = L1_POS
+	var curve_offset = Vector3(sin(u * PI) * 8.5, sin(u * PI) * 3.2, -sin(u * PI) * 6.5)
+	return p0.lerp(p1, u) + curve_offset
+
+func get_trajectory_tangent(u: float) -> Vector3:
+	var p0 = Vector3(16.5, -2.0, 31.0)
+	var p1 = L1_POS
+	var d_curve = Vector3(cos(u * PI) * 8.5 * PI, cos(u * PI) * 3.2 * PI, -cos(u * PI) * 6.5 * PI)
+	return (p1 - p0) + d_curve
 
 # Time Acceleration
 var time_warp_factors: Array = [1.0, 10.0, 100.0, 1000.0]
@@ -210,6 +237,7 @@ func _ready() -> void:
 	_inherit_campaign_state()
 	_build_spacecraft_model()
 	_build_3d_trajectory()
+	_build_starfield()
 	_connect_ui_signals()
 	_set_camera_mode(CamMode.CHASE_3_4)
 	_update_flight_guidance()
@@ -323,7 +351,7 @@ func _build_spacecraft_model() -> void:
 		probe_node.add_child(w_back)
 		
 	# 3. High-Gain Parabolic Dish (Mounted on top, pointing Earthward)
-	var dish_pivot := Node3D.new()
+	dish_pivot = Node3D.new()
 	dish_pivot.name = "DishPivot"
 	dish_pivot.position = Vector3(0.0, 0.9, 0.3)
 	dish_pivot.rotation_degrees = Vector3(-45.0, 0.0, 0.0)
@@ -430,24 +458,84 @@ func _build_spacecraft_model() -> void:
 	rcs_particles.position = Vector3(0.7, -0.6, 0.0)
 	probe_node.add_child(rcs_particles)
 
+	# 7. Relativistic Space Dust Field for Observable Flight Velocity
+	space_dust_emitter = CPUParticles3D.new()
+	space_dust_emitter.name = "SpaceDustParticles"
+	space_dust_emitter.emitting = true
+	space_dust_emitter.amount = 180
+	space_dust_emitter.lifetime = 1.4
+	space_dust_emitter.speed_scale = 1.0
+	space_dust_emitter.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	space_dust_emitter.emission_box_extents = Vector3(16.0, 16.0, 16.0)
+
+	var dust_mat := StandardMaterial3D.new()
+	dust_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dust_mat.albedo_color = Color(0.65, 0.88, 1.0, 0.8)
+	dust_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dust_mat.emission_enabled = true
+	dust_mat.emission = Color(0.55, 0.82, 1.0)
+	dust_mat.emission_energy_multiplier = 2.5
+
+	var dust_mesh := SphereMesh.new()
+	dust_mesh.radius = 0.035
+	dust_mesh.height = 0.07
+	dust_mesh.material = dust_mat
+
+	space_dust_emitter.mesh = dust_mesh
+	space_dust_emitter.gravity = Vector3.ZERO
+	probe_node.add_child(space_dust_emitter)
+
+func _build_starfield() -> void:
+	if starfield_cluster:
+		return
+	starfield_cluster = Node3D.new()
+	starfield_cluster.name = "SpatialStarfield"
+	add_child(starfield_cluster)
+
+	var star_mat := StandardMaterial3D.new()
+	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	star_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.95)
+	star_mat.emission_enabled = true
+	star_mat.emission = Color(0.9, 0.95, 1.0)
+	star_mat.emission_energy_multiplier = 3.5
+
+	var im := ImmediateMesh.new()
+	im.clear_surfaces()
+	im.surface_begin(Mesh.PRIMITIVE_POINTS, star_mat)
+
+	# Generate 200 real 3D spatial star vertices across depth shells (40m - 180m) for tangible parallax
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 4242
+	for i in range(200):
+		var radius = rng.randf_range(40.0, 180.0)
+		var theta = rng.randf_range(0.0, TAU)
+		var phi = rng.randf_range(-PI * 0.45, PI * 0.45)
+		var pos = Vector3(
+			radius * cos(phi) * cos(theta),
+			radius * sin(phi),
+			radius * cos(phi) * sin(theta)
+		)
+		im.surface_add_vertex(pos)
+
+	im.surface_end()
+	var mi := MeshInstance3D.new()
+	mi.mesh = im
+	starfield_cluster.add_child(mi)
+
 func _build_3d_trajectory() -> void:
 	if not trajectory_arc:
 		return
-		
+
 	var im := ImmediateMesh.new()
 	im.clear_surfaces()
 	im.surface_begin(Mesh.PRIMITIVE_LINE_STRIP, SpacecraftMaterials.get_mat("trajectory_line_cyan"))
-	
+
 	# Generate educational curved transfer arc from Earth to Sun-Earth L1
-	var steps = 40
+	var steps = 64
 	for i in range(steps + 1):
 		var t = float(i) / float(steps)
-		# Arc curves from Earth (+X, +Z) through saddle point toward L1 (-X, -Z)
-		var x = lerp(20.0, -35.0, t) + sin(t * PI) * 8.0
-		var y = sin(t * PI) * 2.5
-		var z = lerp(35.0, -45.0, t) - sin(t * PI) * 5.0
-		im.surface_add_vertex(Vector3(x, y, z))
-		
+		im.surface_add_vertex(get_trajectory_point(t))
+
 	im.surface_end()
 	trajectory_arc.mesh = im
 
@@ -494,10 +582,39 @@ func _connect_cam_btn(btn_name: String, mode: CamMode) -> void:
 		btn.pressed.connect(func(): _set_camera_mode(mode))
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb = event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT or mb.button_index == MOUSE_BUTTON_RIGHT:
+			_is_mouse_dragging = mb.pressed
+			_last_mouse_pos = mb.position
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+			_cam_zoom_mult = clamp(_cam_zoom_mult * 0.9, 0.35, 3.5)
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			_cam_zoom_mult = clamp(_cam_zoom_mult * 1.1, 0.35, 3.5)
+		return
+
+	if event is InputEventMouseMotion and _is_mouse_dragging:
+		var mm = event as InputEventMouseMotion
+		_cam_orbit_yaw -= mm.relative.x * 0.006
+		_cam_orbit_pitch = clamp(_cam_orbit_pitch - mm.relative.y * 0.006, -1.35, 1.35)
+		return
+
 	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
 		return
 	var key_ev = event as InputEventKey
 	match key_ev.keycode:
+		KEY_LEFT:
+			_cam_orbit_yaw += 0.1
+		KEY_RIGHT:
+			_cam_orbit_yaw -= 0.1
+		KEY_UP:
+			_cam_orbit_pitch = clamp(_cam_orbit_pitch + 0.1, -1.35, 1.35)
+		KEY_DOWN:
+			_cam_orbit_pitch = clamp(_cam_orbit_pitch - 0.1, -1.35, 1.35)
+		KEY_EQUAL, KEY_PLUS:
+			_cam_zoom_mult = clamp(_cam_zoom_mult * 0.9, 0.35, 3.5)
+		KEY_MINUS:
+			_cam_zoom_mult = clamp(_cam_zoom_mult * 1.1, 0.35, 3.5)
 		KEY_SPACE:
 			if btn_primary_action and not btn_primary_action.disabled and btn_primary_action.visible:
 				_on_primary_action_pressed()
@@ -538,9 +655,21 @@ func _process(delta: float) -> void:
 	# Process active sub-phase simulation
 	match current_subphase:
 		SubPhase.PARKING_ORBIT:
-			# Spacecraft slow orbit rotation around Earth
+			# Spacecraft physical orbit around Earth
+			parking_orbit_theta += delta * 0.25
+			var park_pos = EARTH_POS + Vector3(
+				cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
+				sin(parking_orbit_theta) * 1.8,
+				sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS
+			)
 			if probe_node:
-				probe_node.rotation.y += 0.05 * delta
+				probe_node.position = park_pos
+				var tangent = Vector3(
+					-sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
+					cos(parking_orbit_theta) * 1.8,
+					cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS
+				).normalized()
+				probe_node.look_at(probe_node.position + tangent, Vector3.UP)
 		
 		SubPhase.INJECTION_BURN:
 			_process_injection_burn(delta)
@@ -554,6 +683,7 @@ func _process(delta: float) -> void:
 			# Waiting for player maneuver execution
 			if is_thruster_firing:
 				_process_mcc_burn(delta)
+			_process_cruise_progression(effective_dt * 0.08)
 				
 		SubPhase.CRUISE_MID:
 			_process_cruise_progression(effective_dt)
@@ -563,19 +693,32 @@ func _process(delta: float) -> void:
 		SubPhase.SOLAR_CRISIS_ALERT:
 			# Waiting for tactical response choices
 			_animate_solar_storm_visuals(delta)
+			_process_cruise_progression(effective_dt * 0.05)
 			
 		SubPhase.CRISIS_SIMULATION:
 			_process_crisis_simulation(effective_dt)
 			_animate_solar_storm_visuals(delta)
+			_process_cruise_progression(effective_dt * 0.25)
 			
 		SubPhase.SPACECRAFT_RECOVERY:
 			# Waiting for player step-by-step recovery actions
 			_process_power_and_systems(effective_dt)
+			_process_cruise_progression(effective_dt * 0.05)
 			
 		SubPhase.L1_APPROACH_READY:
 			_process_cruise_progression(effective_dt * 0.2)
 			
-	_update_celestial_transforms()
+	# Update physical trajectory position in world space when in cruise
+	if current_subphase != SubPhase.PARKING_ORBIT and current_subphase != SubPhase.INJECTION_BURN:
+		var u = clamp((distance_km - 165.0) / (TARGET_L1_DISTANCE_KM - 165.0), 0.0, 1.0)
+		if probe_node:
+			probe_node.position = get_trajectory_point(u)
+			var tangent = get_trajectory_tangent(u).normalized()
+			probe_node.look_at(probe_node.position + tangent, Vector3.UP)
+			
+	_update_space_dust(delta)
+	_update_celestial_transforms(delta)
+	_update_spacecraft_tracking(delta)
 	_update_telemetry_ui()
 
 # --- SIMULATION ENGINES ---
@@ -591,8 +734,21 @@ func _process_injection_burn(dt: float) -> void:
 	var fuel_spent = min(probe_propellant_kg, burn_rate_kgs * dt)
 	probe_propellant_kg -= fuel_spent
 	
-	velocity_kms = lerp(7.75, 10.95, clamp(burn_timer_s / burn_duration_s, 0.0, 1.0))
+	var progress = clamp(burn_timer_s / burn_duration_s, 0.0, 1.0)
+	velocity_kms = lerp(7.75, 10.95, progress)
 	distance_km += velocity_kms * dt * 15.0 # initial escape surge
+	
+	# Smooth physical trajectory blend out of parking orbit onto interplanetary transfer
+	if probe_node:
+		var park_exit = EARTH_POS + Vector3(
+			cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
+			sin(parking_orbit_theta) * 1.8,
+			sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS
+		)
+		var traj_start = get_trajectory_point(0.02)
+		probe_node.position = park_exit.lerp(traj_start, progress)
+		var dir = (traj_start - park_exit).normalized()
+		probe_node.look_at(probe_node.position + dir, Vector3.UP)
 	
 	if burn_timer_s >= burn_duration_s:
 		is_thruster_firing = false
@@ -723,25 +879,82 @@ func _animate_solar_storm_visuals(dt: float) -> void:
 	if proton_stream_particles:
 		proton_stream_particles.emitting = true
 
-func _update_celestial_transforms() -> void:
-	var progress = clamp(distance_km / TARGET_L1_DISTANCE_KM, 0.0, 1.0)
+func _update_celestial_transforms(delta: float = 0.0) -> void:
+	var progress = clamp((distance_km - 165.0) / (TARGET_L1_DISTANCE_KM - 165.0), 0.0, 1.0)
 	
-	# Earth recedes in rear (+Z direction)
+	# Earth is stationary in world space at EARTH_POS; its visual scale recedes with distance
 	if earth_node:
-		earth_node.position.z = 25.0 + progress * 95.0
-		earth_node.position.x = 18.0 + progress * 15.0
-		var earth_scale = max(0.2, 1.0 - progress * 0.75)
+		earth_node.position = EARTH_POS
+		var earth_scale = max(0.2, 1.0 - progress * 0.78)
 		earth_node.scale = Vector3.ONE * earth_scale
 		
-	# Sun grows slightly brighter ahead
+	if earth_mesh:
+		earth_mesh.rotation.y += delta * 0.06
+	if earth_atmosphere:
+		earth_atmosphere.rotation.y += delta * 0.08
+		
+	# Sun corona & particle pulsation
+	if sun_corona:
+		var pulse = 1.0 + sin(Time.get_ticks_msec() * 0.002) * 0.05
+		sun_corona.scale = Vector3.ONE * pulse
+		
 	if sun_node:
 		var sun_scale = 1.0 + progress * 0.25
 		sun_node.scale = Vector3.ONE * sun_scale
 
-# --- CAMERA SYSTEM (Zero Velocity Lag, Pure Perspective) ---
+func _update_space_dust(_delta: float) -> void:
+	if not space_dust_emitter or not probe_node:
+		return
+	if is_sim_paused:
+		space_dust_emitter.speed_scale = 0.0
+		return
+	space_dust_emitter.speed_scale = 1.0
+	
+	# Tangent flight direction
+	var flight_dir = Vector3.FORWARD
+	if current_subphase == SubPhase.PARKING_ORBIT:
+		flight_dir = Vector3(
+			-sin(parking_orbit_theta) * PARKING_ORBIT_RADIUS,
+			cos(parking_orbit_theta) * 1.8,
+			cos(parking_orbit_theta) * PARKING_ORBIT_RADIUS
+		).normalized()
+	else:
+		var u = clamp((distance_km - 165.0) / (TARGET_L1_DISTANCE_KM - 165.0), 0.0, 1.0)
+		flight_dir = get_trajectory_tangent(u).normalized()
+		
+	# Particles stream backwards opposite to flight
+	var stream_dir = probe_node.global_transform.basis.inverse() * (-flight_dir)
+	space_dust_emitter.direction = stream_dir.normalized()
+	
+	var base_spd = 14.0 + min(55.0, warp_factor * 0.06)
+	space_dust_emitter.initial_velocity_min = base_spd * 0.8
+	space_dust_emitter.initial_velocity_max = base_spd * 1.2
+
+func _update_spacecraft_tracking(delta: float) -> void:
+	# Dish points to Earth
+	if dish_pivot and earth_node:
+		var earth_dir = (earth_node.global_position - dish_pivot.global_position).normalized()
+		var local_earth_dir = probe_node.global_transform.basis.inverse() * earth_dir
+		var target_quat = Quaternion(Vector3.BACK, local_earth_dir)
+		dish_pivot.quaternion = dish_pivot.quaternion.slerp(target_quat, clamp(delta * 4.0, 0.0, 1.0))
+		
+	# Solar wings orient towards Sun
+	if sun_node:
+		var sun_dir = (sun_node.global_position - probe_node.global_position).normalized()
+		var local_sun = probe_node.global_transform.basis.inverse() * sun_dir
+		var panel_pitch = clamp(atan2(local_sun.y, -local_sun.z), -0.5, 0.5)
+		if solar_wing_left:
+			solar_wing_left.rotation.x = lerp_angle(solar_wing_left.rotation.x, panel_pitch, delta * 3.0)
+		if solar_wing_right:
+			solar_wing_right.rotation.x = lerp_angle(solar_wing_right.rotation.x, panel_pitch, delta * 3.0)
+
+# --- CAMERA SYSTEM (Zero Velocity Lag, Pure Perspective & Interactive Orbit) ---
 
 func _set_camera_mode(mode: CamMode) -> void:
 	current_cam_mode = mode
+	_cam_orbit_yaw = 0.0
+	_cam_orbit_pitch = 0.0
+	_cam_zoom_mult = 1.0
 	match mode:
 		CamMode.CHASE_3_4:
 			_cam_offset_target = Vector3(4.2, 1.8, 5.0)
@@ -765,10 +978,17 @@ func _update_camera(dt: float) -> void:
 	if not deep_space_cam or not probe_node:
 		return
 		
-	var target_cam_pos = probe_node.global_position + _cam_offset_target
+	var yaw_basis = Basis(Vector3.UP, _cam_orbit_yaw)
+	var pitch_basis = Basis(Vector3.RIGHT, _cam_orbit_pitch)
+	var orbit_basis = yaw_basis * pitch_basis
+	
+	var base_offset = _cam_offset_target * _cam_zoom_mult
+	var rotated_offset = orbit_basis * base_offset
+	
+	var target_cam_pos = probe_node.global_position + rotated_offset
 	deep_space_cam.global_position = deep_space_cam.global_position.lerp(target_cam_pos, clamp(dt * 8.0, 0.0, 1.0))
 	
-	var target_look = probe_node.global_position + _cam_look_target
+	var target_look = probe_node.global_position + (orbit_basis * _cam_look_target)
 	deep_space_cam.look_at(target_look, Vector3.UP)
 
 func _update_cam_buttons_visual() -> void:

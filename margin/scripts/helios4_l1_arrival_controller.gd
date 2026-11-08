@@ -157,9 +157,19 @@ var _halo_angle: float = 0.0
 var mag_boom: MeshInstance3D
 var mag_head: MeshInstance3D
 var faraday_cup: MeshInstance3D
+var faraday_cover: MeshInstance3D
 var engine_exhaust: CPUParticles3D
 var rcs_particles: CPUParticles3D
 var high_gain_dish: MeshInstance3D
+var space_dust_emitter: CPUParticles3D
+var starfield_cluster: Node3D
+
+# Camera target interpolation & interactive orbit controls
+var _cam_orbit_yaw: float = 0.0
+var _cam_orbit_pitch: float = 0.0
+var _cam_zoom_mult: float = 1.0
+var _is_mouse_dragging: bool = false
+var _last_mouse_pos: Vector2 = Vector2.ZERO
 
 # UI References
 @onready var lbl_phase: Label = %LblObjectivePhase
@@ -206,6 +216,7 @@ func _ready() -> void:
 	_build_probe_visual()
 	_update_halo_orbit_visual()
 	_build_l1_marker_visual()
+	_build_starfield()
 	
 	_setup_ui_connections()
 	_set_camera_mode(CameraMode.CHASE)
@@ -267,7 +278,8 @@ func _process(delta: float) -> void:
 				-HALO_AZ * sin(_halo_angle)
 			)
 			if tan_vel.length_squared() > 0.001:
-				probe_node.look_at(probe_node.position + tan_vel.normalized(), Vector3.UP)
+				var up_dir = Vector3.UP if abs(tan_vel.normalized().dot(Vector3.UP)) < 0.9 else Vector3.FORWARD
+				probe_node.look_at(probe_node.position + tan_vel.normalized(), up_dir)
 	elif current_phase < SubPhase.STAGE_B_HOI_EXECUTION and probe_node:
 		# Approach flight toward L1
 		var approach_offset = (distance_to_l1_km / 12000.0) * 4.0
@@ -286,39 +298,71 @@ func _process(delta: float) -> void:
 	if transmission_authorized and current_phase == SubPhase.STAGE_F_TRANSMIT_WARNING:
 		_process_transmission(delta)
 		
+	# Rotate Earth
+	if earth_mesh:
+		earth_mesh.rotation.y += delta * 0.06
+		
+	# Update particle space dust velocity
+	_update_space_dust(delta)
+	
 	# Update camera tracking
 	_update_camera_transform(delta)
 	
 	# Update HUD telemetry
 	_update_telemetry_ui()
 
-func _update_camera_transform(_delta: float) -> void:
+func _update_camera_transform(delta: float) -> void:
 	if not camera or not probe_node:
 		return
 		
 	var target_pos := probe_node.global_position
+	var base_offset := Vector3(3.4, 2.0, 5.2)
+	var look_target := target_pos + Vector3(0.0, 0.2, 0.0)
+	var anchor_pos := target_pos
+	var cam_up := Vector3.UP
+	
 	match current_camera_mode:
 		CameraMode.CHASE:
-			camera.position = target_pos + Vector3(3.4, 2.0, 5.2)
-			camera.look_at(target_pos + Vector3(0.0, 0.2, 0.0), Vector3.UP)
+			base_offset = Vector3(3.4, 2.0, 5.2)
+			look_target = target_pos + Vector3(0.0, 0.2, 0.0)
 		CameraMode.WIDE:
-			camera.position = Vector3(14.0, 16.0, 32.0)
-			camera.look_at(Vector3.ZERO, Vector3.UP)
+			anchor_pos = Vector3.ZERO
+			base_offset = Vector3(14.0, 16.0, 32.0)
+			look_target = Vector3.ZERO
 		CameraMode.HALO:
-			camera.position = Vector3(0.0, 24.0, 0.2)
-			camera.look_at(Vector3.ZERO, Vector3.FORWARD)
+			anchor_pos = Vector3.ZERO
+			base_offset = Vector3(0.0, 24.0, 0.2)
+			look_target = Vector3.ZERO
+			cam_up = Vector3.FORWARD
 		CameraMode.MAG_BOOM:
-			camera.position = target_pos + Vector3(1.2, 1.6, -2.6)
-			camera.look_at(target_pos + Vector3(0.3, 0.8, -1.8), Vector3.UP)
+			base_offset = Vector3(1.2, 1.6, -2.6)
+			look_target = target_pos + Vector3(0.3, 0.8, -1.8)
 		CameraMode.FARADAY_CUP:
-			camera.position = target_pos + Vector3(-1.8, 1.4, -1.2)
-			camera.look_at(target_pos + Vector3(-0.4, 0.6, -0.6), Vector3.UP)
+			base_offset = Vector3(-1.8, 1.4, -1.2)
+			look_target = target_pos + Vector3(-0.4, 0.6, -0.6)
 		CameraMode.EARTH_DISH:
-			camera.position = target_pos + Vector3(-3.2, 0.9, 0.0)
-			camera.look_at(Vector3(45.0, 0.0, 0.0), Vector3.UP)
+			base_offset = Vector3(-3.2, 0.9, 0.0)
+			look_target = target_pos + Vector3(25.0, 0.0, 0.0)
+
+	var yaw_basis = Basis(Vector3.UP, _cam_orbit_yaw)
+	var pitch_basis = Basis(Vector3.RIGHT, _cam_orbit_pitch)
+	var orbit_basis = yaw_basis * pitch_basis
+	
+	var final_offset = orbit_basis * (base_offset * _cam_zoom_mult)
+	var desired_cam_pos = anchor_pos + final_offset
+	
+	if delta <= 0.0:
+		camera.global_position = desired_cam_pos
+	else:
+		camera.global_position = camera.global_position.lerp(desired_cam_pos, clamp(delta * 8.0, 0.0, 1.0))
+		
+	camera.look_at(look_target, cam_up)
 
 func _set_camera_mode(mode: CameraMode) -> void:
 	current_camera_mode = mode
+	_cam_orbit_yaw = 0.0
+	_cam_orbit_pitch = 0.0
+	_cam_zoom_mult = 1.0
 	_update_camera_transform(0.0)
 
 # --- 3D VISUAL BUILDERS ---
@@ -355,7 +399,7 @@ func _build_probe_visual() -> void:
 	d_sph.height = 0.32
 	high_gain_dish.mesh = d_sph
 	high_gain_dish.position = Vector3(0.68, 0.6, 0.0)
-	high_gain_dish.rotation_degrees = Vector3(0.0, 0.0, -90.0)
+	high_gain_dish.rotation_degrees = Vector3(0.0, 0.0, -90.0) if earth_comm_linked else Vector3(22.0, 15.0, -90.0)
 	high_gain_dish.material_override = SpacecraftMaterials.get_mat("antenna_reflector")
 	probe_node.add_child(high_gain_dish)
 	
@@ -379,6 +423,7 @@ func _build_probe_visual() -> void:
 	mag_boom.mesh = m_cyl
 	mag_boom.position = Vector3(0.4, 0.5, -2.1)
 	mag_boom.rotation_degrees = Vector3(68.0, 15.0, 0.0)
+	mag_boom.scale.y = 1.0 if mag_boom_deployed else 0.12
 	mag_boom.material_override = SpacecraftMaterials.get_mat("carbon_fiber")
 	probe_node.add_child(mag_boom)
 	
@@ -386,7 +431,7 @@ func _build_probe_visual() -> void:
 	var mh_box := BoxMesh.new()
 	mh_box.size = Vector3(0.24, 0.24, 0.24)
 	mag_head.mesh = mh_box
-	mag_head.position = Vector3(0.0, 1.95, 0.0)
+	mag_head.position = Vector3(0.0, 1.95 if mag_boom_deployed else 0.24, 0.0)
 	mag_head.material_override = SpacecraftMaterials.get_mat("gold_mli")
 	mag_boom.add_child(mag_head)
 	
@@ -401,6 +446,19 @@ func _build_probe_visual() -> void:
 	faraday_cup.rotation_degrees = Vector3(40.0, -25.0, 0.0)
 	faraday_cup.material_override = SpacecraftMaterials.get_mat("sensor_lens")
 	probe_node.add_child(faraday_cup)
+
+	# Faraday Cup Deployable Aperture Cover
+	faraday_cover = MeshInstance3D.new()
+	faraday_cover.name = "FaradayCover"
+	var cov_mesh = CylinderMesh.new()
+	cov_mesh.top_radius = 0.14
+	cov_mesh.bottom_radius = 0.14
+	cov_mesh.height = 0.02
+	faraday_cover.mesh = cov_mesh
+	faraday_cover.position = Vector3(0.0, 0.14, 0.0)
+	faraday_cover.rotation_degrees.x = 115.0 if faraday_door_released else 0.0
+	faraday_cover.material_override = SpacecraftMaterials.get_mat("gold_mli")
+	faraday_cup.add_child(faraday_cover)
 	
 	# 6. Main Engine Bell (Aft base)
 	var engine := MeshInstance3D.new()
@@ -446,6 +504,33 @@ func _build_probe_visual() -> void:
 	rcs_particles.mesh = r_mesh
 	rcs_particles.position = Vector3(0.7, -0.6, 0.0)
 	probe_node.add_child(rcs_particles)
+
+	# 7. Space Dust Particle Emitter for Orbital Speed Feedback
+	space_dust_emitter = CPUParticles3D.new()
+	space_dust_emitter.name = "SpaceDustParticles"
+	space_dust_emitter.emitting = true
+	space_dust_emitter.amount = 160
+	space_dust_emitter.lifetime = 1.2
+	space_dust_emitter.speed_scale = 1.0
+	space_dust_emitter.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	space_dust_emitter.emission_box_extents = Vector3(14.0, 14.0, 14.0)
+
+	var dust_mat := StandardMaterial3D.new()
+	dust_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dust_mat.albedo_color = Color(0.65, 0.88, 1.0, 0.75)
+	dust_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dust_mat.emission_enabled = true
+	dust_mat.emission = Color(0.55, 0.82, 1.0)
+	dust_mat.emission_energy_multiplier = 2.5
+
+	var dust_mesh := SphereMesh.new()
+	dust_mesh.radius = 0.03
+	dust_mesh.height = 0.06
+	dust_mesh.material = dust_mat
+
+	space_dust_emitter.mesh = dust_mesh
+	space_dust_emitter.gravity = Vector3.ZERO
+	probe_node.add_child(space_dust_emitter)
 
 func _update_halo_orbit_visual() -> void:
 	if not halo_ring:
@@ -556,6 +641,92 @@ func _generate_halo_tube_mesh(ax: float, ay: float, az: float, tube_radius: floa
 	arr_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return arr_mesh
 
+# --- IMMERSION HELPERS & DYNAMIC ANIMATIONS ---
+
+func _build_starfield() -> void:
+	if starfield_cluster:
+		return
+	starfield_cluster = Node3D.new()
+	starfield_cluster.name = "SpatialStarfield"
+	add_child(starfield_cluster)
+
+	var star_mat := StandardMaterial3D.new()
+	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	star_mat.albedo_color = Color(1.0, 1.0, 1.0, 0.95)
+	star_mat.emission_enabled = true
+	star_mat.emission = Color(0.9, 0.95, 1.0)
+	star_mat.emission_energy_multiplier = 3.5
+
+	var im := ImmediateMesh.new()
+	im.clear_surfaces()
+	im.surface_begin(Mesh.PRIMITIVE_POINTS, star_mat)
+
+	var rng = RandomNumberGenerator.new()
+	rng.seed = 8844
+	for i in range(180):
+		var radius = rng.randf_range(35.0, 140.0)
+		var theta = rng.randf_range(0.0, TAU)
+		var phi = rng.randf_range(-PI * 0.45, PI * 0.45)
+		var pos = Vector3(
+			radius * cos(phi) * cos(theta),
+			radius * sin(phi),
+			radius * cos(phi) * sin(theta)
+		)
+		im.surface_add_vertex(pos)
+
+	im.surface_end()
+	var mi := MeshInstance3D.new()
+	mi.mesh = im
+	starfield_cluster.add_child(mi)
+
+func _update_space_dust(_delta: float) -> void:
+	if not space_dust_emitter or not probe_node:
+		return
+	if is_simulation_paused:
+		space_dust_emitter.speed_scale = 0.0
+		return
+	space_dust_emitter.speed_scale = 1.0
+	
+	var tan_vel = Vector3.FORWARD
+	if current_phase >= SubPhase.STAGE_B_HOI_EXECUTION and not is_engine_firing:
+		tan_vel = Vector3(
+			2.0 * HALO_AX * sin(2.0 * _halo_angle),
+			HALO_AY * cos(_halo_angle),
+			-HALO_AZ * sin(_halo_angle)
+		)
+	else:
+		tan_vel = Vector3(0.0, 0.0, -1.0)
+		
+	var stream_dir = probe_node.global_transform.basis.inverse() * (-tan_vel.normalized())
+	space_dust_emitter.direction = stream_dir.normalized()
+	space_dust_emitter.initial_velocity_min = 10.0
+	space_dust_emitter.initial_velocity_max = 16.0
+
+func _animate_mag_boom_deployment() -> void:
+	if not mag_boom or not mag_head:
+		return
+	var tween = create_tween()
+	tween.tween_property(mag_boom, "scale:y", 1.0, 2.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(mag_head, "position:y", 1.95, 2.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(func():
+		var settle = create_tween()
+		settle.tween_property(mag_boom, "rotation_degrees:z", 3.0, 0.15)
+		settle.tween_property(mag_boom, "rotation_degrees:z", -1.5, 0.2)
+		settle.tween_property(mag_boom, "rotation_degrees:z", 0.0, 0.25)
+	)
+
+func _animate_faraday_cover_release() -> void:
+	if not faraday_cover:
+		return
+	var tween = create_tween()
+	tween.tween_property(faraday_cover, "rotation_degrees:x", 115.0, 1.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _animate_dish_earth_lock() -> void:
+	if not high_gain_dish:
+		return
+	var tween = create_tween()
+	tween.tween_property(high_gain_dish, "rotation_degrees", Vector3(0.0, 0.0, -90.0), 1.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+
 # --- UI SETUP & INPUT ---
 
 func _setup_ui_connections() -> void:
@@ -565,8 +736,37 @@ func _setup_ui_connections() -> void:
 	if pause_btn: pause_btn.pressed.connect(_toggle_simulation_pause)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb = event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT or mb.button_index == MOUSE_BUTTON_RIGHT:
+			_is_mouse_dragging = mb.pressed
+			_last_mouse_pos = mb.position
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
+			_cam_zoom_mult = clamp(_cam_zoom_mult * 0.9, 0.35, 3.5)
+		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
+			_cam_zoom_mult = clamp(_cam_zoom_mult * 1.1, 0.35, 3.5)
+		return
+
+	if event is InputEventMouseMotion and _is_mouse_dragging:
+		var mm = event as InputEventMouseMotion
+		_cam_orbit_yaw -= mm.relative.x * 0.006
+		_cam_orbit_pitch = clamp(_cam_orbit_pitch - mm.relative.y * 0.006, -1.35, 1.35)
+		return
+
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
+			KEY_LEFT:
+				_cam_orbit_yaw += 0.1
+			KEY_RIGHT:
+				_cam_orbit_yaw -= 0.1
+			KEY_UP:
+				_cam_orbit_pitch = clamp(_cam_orbit_pitch + 0.1, -1.35, 1.35)
+			KEY_DOWN:
+				_cam_orbit_pitch = clamp(_cam_orbit_pitch - 0.1, -1.35, 1.35)
+			KEY_EQUAL, KEY_PLUS:
+				_cam_zoom_mult = clamp(_cam_zoom_mult * 0.9, 0.35, 3.5)
+			KEY_MINUS:
+				_cam_zoom_mult = clamp(_cam_zoom_mult * 1.1, 0.35, 3.5)
 			KEY_1: _set_camera_mode(CameraMode.CHASE)
 			KEY_2: _set_camera_mode(CameraMode.WIDE)
 			KEY_3: _set_camera_mode(CameraMode.HALO)
@@ -909,6 +1109,7 @@ func _on_primary_action_pressed() -> void:
 			mag_stability_verified = true
 			mag_power_verified = true
 			mag_calibrated = true
+			_animate_mag_boom_deployment()
 			print("[L1Arrival] 🛰 Magnetometer boom deployed and calibrated. IMF B-field reading active.")
 			_load_subphase(SubPhase.STAGE_D_COMMISSION_FARADAY)
 			
@@ -918,6 +1119,7 @@ func _on_primary_action_pressed() -> void:
 			faraday_hv_sweep_verified = true
 			faraday_calibrated = true
 			faraday_cup_active = true
+			_animate_faraday_cover_release()
 			print("[L1Arrival] ⚡ Faraday Cup activated. Live solar wind plasma measurements streaming.")
 			_load_subphase(SubPhase.STAGE_D_SYSTEMS_VERIFY)
 			
@@ -940,6 +1142,7 @@ func _on_primary_action_pressed() -> void:
 			# Lock DSN communication
 			earth_comm_linked = true
 			antenna_slew_angle_deg = 0.0
+			_animate_dish_earth_lock()
 			print("[L1Arrival] 📡 Earth DSN carrier locked (8.4 GHz, +4.2 dB). Ready for transmission.")
 			_load_subphase(SubPhase.STAGE_F_TRANSMIT_WARNING)
 			
