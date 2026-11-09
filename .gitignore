@@ -15,13 +15,6 @@ ehthumbs.db
 *.swp
 *~
 
-# Local development exercises (preserved locally, excluded from MARGIN repo)
-/crystal_dash/
-/scripts/
-/main.tscn
-/main.gd
-/rotator.gd
-
 # Android and local SDK folders
 /android/
 
@@ -35,3 +28,5 @@ ehthumbs.db
 /build/testing_web/
 !build/web/
 !build/web/**
+.vercel
+.env*
