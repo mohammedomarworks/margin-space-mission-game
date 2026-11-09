@@ -1654,9 +1654,12 @@ func _create_floating_preview_callout(id: String, pos: Vector3, w: float, h: flo
 	var dist = delta_vec.length()
 	l_cyl.height = dist
 	leader.mesh = l_cyl
+	if delta_vec.length_squared() > 0.0001:
+		var dir = delta_vec.normalized()
+		var up = Vector3.UP if abs(dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
+		leader.transform = Transform3D().looking_at(dir, up)
+		leader.rotate_object_local(Vector3.RIGHT, deg_to_rad(90.0))
 	leader.position = delta_vec * 0.5
-	leader.look_at(leader.position + delta_vec.normalized(), Vector3.UP)
-	leader.rotate_object_local(Vector3.RIGHT, deg_to_rad(90.0))
 	leader.material_override = mat_cyan
 	callout_root.add_child(leader)
 
