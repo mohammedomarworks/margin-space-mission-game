@@ -84,6 +84,8 @@ var hold_down_clamps: Array[Node3D] = []
 var umbilical_arms: Array[Node3D] = []
 var pad_steam_emitter: CPUParticles3D = null
 var plume_smoke_emitter: CPUParticles3D = null
+var slipstream_emitter: CPUParticles3D = null
+var cloud_deck_node: Node3D = null
 
 # Pre-Launch Checklist State & Modals
 var prelaunch_checks: Dictionary = {
@@ -193,6 +195,8 @@ func _ready() -> void:
 
 	_init_flight_parameters()
 	_build_launch_environment()
+	if launch_cam:
+		launch_cam.far = 60000.0
 	_setup_procedural_hud_widgets()
 	_connect_controls()
 	_update_ui()
@@ -292,8 +296,11 @@ func _init_flight_parameters() -> void:
 func _build_launch_environment() -> void:
 	if launch_complex:
 		_build_launch_pad_facility(launch_complex)
+		_build_atmospheric_cloud_layers(launch_complex)
 	if earth_curvature:
 		_build_curved_earth_mesh(earth_curvature)
+	if rocket:
+		_build_atmospheric_slipstream(rocket)
 	if vapor_cone_node:
 		_build_transonic_vapor_cone(vapor_cone_node)
 	if main_plumes_node:
@@ -858,6 +865,64 @@ func _build_jettisoned_fairings(left_node: Node3D, right_node: Node3D) -> void:
 		shell.material_override = mat_fairing
 		node.add_child(shell)
 
+func _build_atmospheric_cloud_layers(parent: Node3D) -> void:
+	cloud_deck_node = Node3D.new()
+	cloud_deck_node.name = "AtmosphericCloudDeck"
+	
+	var mat_cloud := StandardMaterial3D.new()
+	mat_cloud.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat_cloud.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat_cloud.albedo_color = Color(0.95, 0.98, 1.0, 0.40)
+	mat_cloud.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	# Multi-tiered coastal cloud deck over spaceport (visual Y ~ 380m - 750m)
+	var cloud_banks = [
+		Vector3(-120.0, 360.0, 80.0),
+		Vector3(140.0, 420.0, -140.0),
+		Vector3(380.0, 480.0, 220.0),
+		Vector3(680.0, 540.0, -80.0),
+		Vector3(1050.0, 600.0, 260.0),
+		Vector3(1500.0, 660.0, -180.0),
+		Vector3(2050.0, 720.0, 120.0),
+	]
+	
+	for i in range(cloud_banks.size()):
+		var c_mesh := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(480.0 + (i % 3) * 140.0, 22.0 + (i % 2) * 10.0, 420.0 + (i % 2) * 160.0)
+		c_mesh.mesh = box
+		c_mesh.position = cloud_banks[i]
+		c_mesh.material_override = mat_cloud
+		cloud_deck_node.add_child(c_mesh)
+		
+	parent.add_child(cloud_deck_node)
+
+func _build_atmospheric_slipstream(parent: Node3D) -> void:
+	slipstream_emitter = CPUParticles3D.new()
+	slipstream_emitter.name = "AtmosphericSlipstream"
+	slipstream_emitter.position = Vector3(0.0, 8.0, 0.0)
+	slipstream_emitter.emitting = false
+	slipstream_emitter.amount = 70
+	slipstream_emitter.lifetime = 0.45
+	slipstream_emitter.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	slipstream_emitter.emission_ring_radius = 4.2
+	slipstream_emitter.emission_ring_inner_radius = 1.8
+	slipstream_emitter.direction = Vector3(0.0, -1.0, 0.0)
+	slipstream_emitter.spread = 4.0
+	slipstream_emitter.initial_velocity_min = 45.0
+	slipstream_emitter.initial_velocity_max = 95.0
+	slipstream_emitter.scale_amount_min = 0.25
+	slipstream_emitter.scale_amount_max = 0.95
+	slipstream_emitter.color = Color(0.92, 0.96, 1.0, 0.38)
+	
+	var mat_slip := StandardMaterial3D.new()
+	mat_slip.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat_slip.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat_slip.albedo_color = Color(0.92, 0.96, 1.0, 0.38)
+	slipstream_emitter.material_override = mat_slip
+	
+	parent.add_child(slipstream_emitter)
+
 # ==============================================================================
 # 2. PROCEDURAL VECTOR HUD WIDGETS
 # ==============================================================================
@@ -984,10 +1049,12 @@ func _set_camera_mode(mode: CameraMode, instant: bool = false) -> void:
 			_cam_relative_offset = Vector3(-18.0, 8.5, 28.0)
 			_cam_look_offset_dir = 1.0
 
-	if instant or not _cam_initialized:
-		_current_cam_offset = _cam_relative_offset
-		_current_look_dir = _cam_look_offset_dir
-		_cam_initialized = true
+	# Initialize target offset on mode switch to ensure smooth, immediate perspective update
+	_current_cam_offset = _cam_relative_offset
+	_current_look_dir = _cam_look_offset_dir
+	_cam_initialized = true
+
+	if instant:
 		if launch_cam and rocket:
 			var vehicle_flight_dir = rocket.global_transform.basis.y.normalized()
 			var vehicle_center = rocket.global_position + vehicle_flight_dir * 8.0
@@ -1877,10 +1944,37 @@ func _update_3d_visuals(delta: float) -> void:
 			sky_mat.ground_bottom_color = lerp(Color(0.05, 0.10, 0.18), Color(0.002, 0.004, 0.008), alt_space_ratio)
 			sky_mat.ground_horizon_color = lerp(Color(0.25, 0.50, 0.75), Color(0.008, 0.018, 0.035), alt_space_ratio)
 
-	# Smooth Earth relative motion: Earth curvature stays framed under ascending rocket
+	# Dynamic Earth Planetary Motion & Natural Recession:
+	# As the spacecraft ascends, the planet Earth genuinely recedes below the vehicle,
+	# and downrange flight causes the Earth surface to stream backward underneath.
 	if earth_curvature:
-		earth_curvature.position = rocket.position + Vector3(18.0, -165.0, -60.0)
-		earth_curvature.rotation_degrees.y += delta * 0.08
+		var alt_ratio = clamp(altitude_m / 160000.0, 0.0, 1.0)
+		# Smooth natural recession of the planet surface as altitude increases
+		var earth_recession_y = pow(alt_ratio, 0.6) * 180.0
+		var earth_recession_z = pow(alt_ratio, 0.6) * 75.0
+		# Downrange travel: The rocket flies faster downrange than Earth curvature,
+		# creating genuine relative motion as Earth scrolls backward underneath the vehicle
+		var earth_lag_x = visual_x * 0.45
+		
+		var target_earth_x = 18.0 + (visual_x - earth_lag_x)
+		var target_earth_y = -165.0 + visual_y * 0.85 - earth_recession_y
+		var target_earth_z = -60.0 - earth_recession_z
+		
+		earth_curvature.position = Vector3(target_earth_x, target_earth_y, target_earth_z)
+		# Earth planetary rotation speeds up with orbital velocity
+		earth_curvature.rotation_degrees.y += delta * (0.12 + velocity_ms * 0.00005)
+
+	# Atmospheric Wind & Cloud Deck Motion
+	if cloud_deck_node:
+		cloud_deck_node.position.x += delta * 3.0
+
+	# Dynamic Atmospheric Slipstream Particles:
+	# Visible during ascent through dense atmosphere (500m to 85,000m)
+	if slipstream_emitter:
+		var in_atmo = (altitude_m > 400.0 and altitude_m < 85000.0 and velocity_ms > 60.0)
+		slipstream_emitter.emitting = in_atmo
+		if in_atmo:
+			slipstream_emitter.speed_scale = clamp(velocity_ms / 320.0, 0.6, 3.5)
 
 	# Dynamic 3D-unprojected positioning of MaxQArcHolder right by rocket nose cone
 	var max_q_holder = find_child("MaxQArcHolder", true, false) as Control
@@ -1907,7 +2001,7 @@ func _update_3d_visuals(delta: float) -> void:
 
 	# Launch pad complex stays on ground at Y=0; hidden when far below in space
 	if launch_complex:
-		launch_complex.visible = (altitude_m < 35000.0)
+		launch_complex.visible = (altitude_m < 60000.0)
 
 	# Camera Shake during Max-Q
 	if dynamic_pressure_kpa > 25.0 and launch_cam:
