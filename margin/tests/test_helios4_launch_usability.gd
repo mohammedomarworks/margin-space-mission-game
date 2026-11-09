@@ -220,5 +220,112 @@ func _run_all_tests() -> void:
 		_assert_test(item["expected_phase"] in instance.lbl_obj_phase.text, "Phase label matches for %s" % item["expected_phase"])
 		_assert_test(item["expected_action"] in instance.lbl_obj_action.text, "Action label contains '%s'" % item["expected_action"])
 
+	print("\n[TEST 9] Camera-Independent 3D Motion & Multi-Perspective Verification")
+	# Reset to active flight simulation
+	instance.is_flight_paused = false
+	instance.time_warp = 1.0
+
+	# 1. Capture position at liftoff
+	instance.altitude_m = 0.0
+	instance.downrange_m = 0.0
+	instance.pitch_deg = 90.0
+	instance._update_3d_visuals(0.016)
+	var pos_liftoff = instance.rocket.global_position
+	_assert_test(pos_liftoff.is_equal_approx(Vector3(0.0, 4.0, 0.0)), "Liftoff position matches pad mount at (0, 4, 0) (actual: %s)" % pos_liftoff)
+
+	# 2. Capture position during early ascent
+	instance.altitude_m = 2500.0
+	instance.downrange_m = 1200.0
+	instance.pitch_deg = 82.0
+	instance._update_3d_visuals(0.016)
+	var pos_early = instance.rocket.global_position
+	_assert_test(pos_early.y > pos_liftoff.y, "Spacecraft altitude advances in 3D world space (early ascent Y: %.1f > %.1f)" % [pos_early.y, pos_liftoff.y])
+	_assert_test(pos_early.x > pos_liftoff.x, "Spacecraft travels downrange in 3D world space (X: %.1f > %.1f)" % [pos_early.x, pos_liftoff.x])
+
+	# 3. Capture position near Max-Q
+	instance.altitude_m = 13500.0
+	instance.downrange_m = 18000.0
+	instance.pitch_deg = 65.0
+	instance._update_3d_visuals(0.016)
+	var pos_maxq = instance.rocket.global_position
+	_assert_test(pos_maxq.y > pos_early.y, "Spacecraft reaches high altitude near Max-Q (Y: %.1f > %.1f)" % [pos_maxq.y, pos_early.y])
+	_assert_test(pos_maxq.x > pos_early.x, "Spacecraft downrange distance increases near Max-Q (X: %.1f > %.1f)" % [pos_maxq.x, pos_early.x])
+
+	# 4. Capture position before and after staging
+	instance.altitude_m = 68000.0
+	instance.downrange_m = 110000.0
+	instance.pitch_deg = 28.0
+	instance._update_3d_visuals(0.016)
+	var pos_pre_stage = instance.rocket.global_position
+
+	instance._execute_stage_separation()
+	instance.altitude_m = 72000.0
+	instance.downrange_m = 135000.0
+	instance.pitch_deg = 22.0
+	instance._update_3d_visuals(0.016)
+	var pos_post_stage = instance.rocket.global_position
+	_assert_test(pos_post_stage.y > pos_pre_stage.y, "Spacecraft continues ascent post-staging (Y: %.1f > %.1f)" % [pos_post_stage.y, pos_pre_stage.y])
+	_assert_test(pos_post_stage.x > pos_pre_stage.x, "Spacecraft accelerates downrange post-staging (X: %.1f > %.1f)" % [pos_post_stage.x, pos_pre_stage.x])
+
+	# 5. Confirm continuous 3D world motion (no freezing, no stagnation)
+	var previous_pos = pos_liftoff
+	var is_continuous = true
+	for test_alt in [500.0, 1500.0, 5000.0, 15000.0, 35000.0, 70000.0, 120000.0]:
+		instance.altitude_m = test_alt
+		instance.downrange_m = test_alt * 0.75
+		instance.pitch_deg = clamp(90.0 - (test_alt / 140000.0) * 80.0, 10.0, 90.0)
+		instance._update_3d_visuals(0.016)
+		var current_pos = instance.rocket.global_position
+		if current_pos.distance_to(previous_pos) < 1.0 or current_pos.y <= previous_pos.y:
+			is_continuous = false
+			break
+		previous_pos = current_pos
+	_assert_test(is_continuous, "Spacecraft moves continuously and monotonically through 3D world space across all flight profiles")
+
+	# 6. Switch between every existing camera mode while simulation is running
+	instance.altitude_m = 32000.0
+	instance.velocity_ms = 1250.0
+	instance.downrange_m = 48000.0
+	instance.pitch_deg = 50.0
+	instance._update_3d_visuals(0.016)
+
+	var authoritative_pos = instance.rocket.global_position
+	var authoritative_rot = instance.rocket.global_rotation
+	var authoritative_alt = instance.altitude_m
+	var authoritative_vel = instance.velocity_ms
+
+	for mode_idx in range(7):
+		instance._set_camera_mode(mode_idx)
+		instance._update_camera_smooth(0.016)
+		
+		# Confirm switching cameras does not alter spacecraft transform or physics state
+		var cam_switched_pos = instance.rocket.global_position
+		var cam_switched_rot = instance.rocket.global_rotation
+		_assert_test(cam_switched_pos.is_equal_approx(authoritative_pos), "Camera mode %d preserves exact spacecraft global_position (%s)" % [mode_idx, cam_switched_pos])
+		_assert_test(cam_switched_rot.is_equal_approx(authoritative_rot), "Camera mode %d preserves exact spacecraft global_rotation" % mode_idx)
+		_assert_test(instance.altitude_m == authoritative_alt, "Camera mode %d preserves simulation altitude (%.1fm)" % [mode_idx, authoritative_alt])
+		_assert_test(instance.velocity_ms == authoritative_vel, "Camera mode %d preserves simulation velocity (%.1fm/s)" % [mode_idx, authoritative_vel])
+
+		# Confirm camera observes the exact same rocket instance
+		var cam_forward = -instance.launch_cam.global_transform.basis.z.normalized()
+		var to_rocket = (instance.rocket.global_position + Vector3(0, 8, 0) - instance.launch_cam.global_position).normalized()
+		var cam_dot = cam_forward.dot(to_rocket)
+		_assert_test(cam_dot > 0.65, "Camera mode %d is oriented toward the authoritative spacecraft (dot=%.3f)" % [mode_idx, cam_dot])
+
+	# 7. Confirm Earth natural recession & relative motion
+	instance.altitude_m = 0.0
+	instance.downrange_m = 0.0
+	instance._update_3d_visuals(0.016)
+	var earth_pos_pad = instance.earth_curvature.global_position
+	var dist_pad = instance.rocket.global_position.distance_to(earth_pos_pad)
+
+	instance.altitude_m = 160000.0
+	instance.downrange_m = 600000.0
+	instance._update_3d_visuals(0.016)
+	var earth_pos_orbit = instance.earth_curvature.global_position
+	var dist_orbit = instance.rocket.global_position.distance_to(earth_pos_orbit)
+	_assert_test(dist_orbit > dist_pad + 500.0, "Earth visibly recedes below spacecraft as altitude increases (dist: %.1f > pad: %.1f)" % [dist_orbit, dist_pad])
+	_assert_test(earth_pos_orbit.x < instance.rocket.global_position.x, "Spacecraft visibly travels downrange ahead of Earth surface (rocket X: %.1f > Earth X: %.1f)" % [instance.rocket.global_position.x, earth_pos_orbit.x])
+
 	instance.queue_free()
 	_finish_tests()
