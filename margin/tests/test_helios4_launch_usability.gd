@@ -57,6 +57,18 @@ func _run_all_tests() -> void:
 	_assert_test(lbl_next != null, "LblObjectiveNext exists")
 	var lbl_ctrls = instance.find_child("LblObjectiveControls", true, false)
 	_assert_test(lbl_ctrls != null, "LblObjectiveControls exists")
+	var hud_panel_style := obj_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	_assert_test(hud_panel_style != null and hud_panel_style.bg_color.a >= 0.85 and hud_panel_style.border_color.a >= 0.8, "Objective HUD has an opaque dark panel and clear border")
+	var launch_root_ui := instance.find_child("RootUI", true, false) as Control
+	_assert_test(launch_root_ui.theme.get_color("font_outline_color", "Label").a >= 0.9 and launch_root_ui.theme.get_constant("shadow_offset_x", "Label") >= 1, "HUD labels inherit a high-contrast outline and shadow")
+	var cloud_corridor_clear: bool = instance.cloud_deck_node != null and instance.cloud_deck_node.get_child_count() == 7
+	if cloud_corridor_clear:
+		for bank in instance.cloud_deck_node.get_children():
+			var cloud_mesh := bank as MeshInstance3D
+			var cloud_box := cloud_mesh.mesh as BoxMesh
+			var cloud_mat := cloud_mesh.material_override as StandardMaterial3D
+			cloud_corridor_clear = cloud_corridor_clear and Vector2(bank.position.x, bank.position.z).length() >= 1000.0 and cloud_box.size.x <= 400.0 and cloud_box.size.z <= 300.0 and cloud_mat.albedo_color.a <= 0.15 and not cloud_mat.emission_enabled
+	_assert_test(cloud_corridor_clear, "Reduced translucent cloud banks stay outside the pad/ascent corridor")
 
 	print("\n[TEST 2] Dynamic Player Controls & Actions Presence")
 	var btn_fairing = instance.find_child("BtnFairingJettison", true, false) as Button
@@ -100,7 +112,24 @@ func _run_all_tests() -> void:
 		_assert_test(instance.velocity_ms == init_vel, "Velocity unchanged during camera switch to %d" % mode_idx)
 		_assert_test(instance.flight_time_s == init_time, "Flight time unchanged during camera switch to %d" % mode_idx)
 
-	print("\n[TEST 4] Dynamic Camera Zero Velocity Lag & Rocket Framing")
+	print("\n[TEST 4] Interactive Camera Switches Ease Between Views")
+	instance._set_camera_mode(instance.CameraMode.PAD, true)
+	var cam_start = instance.launch_cam.position
+	instance.current_phase = instance.FlightPhase.PRE_LAUNCH_PREPARATION
+	instance.time_warp = 1000.0
+	instance._set_camera_mode(instance.CameraMode.ENGINE)
+	_assert_test(instance.launch_cam.position.distance_to(cam_start) < 0.001, "Camera pose is preserved when a non-instant switch is requested")
+	instance._physics_process(1.0 / 60.0)
+	var engine_target = instance.rocket.global_position + instance.rocket.global_transform.basis.y.normalized() * 8.0 + instance._cam_relative_offset
+	_assert_test(instance.launch_cam.position.distance_to(cam_start) > 0.01, "Camera begins moving toward the selected view at 1000x time warp")
+	_assert_test(instance.launch_cam.position.distance_to(engine_target) > 0.1, "Camera does not snap to the destination on the first update at 1000x time warp")
+	for frame in range(180):
+		instance._update_camera_smooth(1.0 / 60.0)
+	_assert_test(instance.launch_cam.position.distance_to(engine_target) < 0.05, "Camera eases to the selected view")
+	instance.time_warp = 1.0
+	instance.current_phase = init_phase
+
+	print("\n[TEST 5] Dynamic Camera Zero Velocity Lag & Rocket Framing")
 	print("DEBUG: instance.rocket = ", instance.rocket)
 	print("DEBUG: instance.launch_cam = ", instance.launch_cam)
 	# Set Chase camera and test tracking across high ascent velocities
@@ -136,7 +165,7 @@ func _run_all_tests() -> void:
 		_assert_test(dot_nose > 0.80, "At alt %.0fm, nose cone is centered in camera view (dot=%.3f)" % [alt, dot_nose])
 		_assert_test(dot_engine > 0.80, "At alt %.0fm, engines/exhaust are centered in camera view (dot=%.3f)" % [alt, dot_engine])
 
-	print("\n[TEST 5] Simulation Pause / Resume Mechanics")
+	print("\n[TEST 6] Simulation Pause / Resume Mechanics")
 	_assert_test(instance.is_flight_paused == false, "Simulation initially unpaused")
 	instance._toggle_flight_pause()
 	_assert_test(instance.is_flight_paused == true, "Simulation paused via _toggle_flight_pause()")
@@ -155,7 +184,7 @@ func _run_all_tests() -> void:
 	instance._physics_process(0.1)
 	_assert_test(instance.flight_time_s > paused_time, "Flight time advances normally when resumed")
 
-	print("\n[TEST 6] Interactive Fairing Jettison Gating")
+	print("\n[TEST 7] Interactive Fairing Jettison Gating")
 	instance.altitude_m = 45000.0
 	instance.fairing_separated = false
 	instance.btn_fairing_jettison.disabled = true
@@ -174,7 +203,7 @@ func _run_all_tests() -> void:
 	_assert_test(instance.btn_fairing_jettison.disabled == true, "Fairing button disabled after jettison")
 	_assert_test(instance.btn_fairing_jettison.text == "FAIRING JETTISONED ✓", "Fairing button shows confirmed checkmark")
 
-	print("\n[TEST 7] Steering and Throttle Controls Direction")
+	print("\n[TEST 8] Steering and Throttle Controls Direction")
 	instance.throttle = 1.0
 	# Test throttle down
 	var ev_s = InputEventKey.new()

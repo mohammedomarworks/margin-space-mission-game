@@ -10,6 +10,7 @@ extends Control
 # ==============================================================================
 
 const Helios4CampaignData = preload("res://margin/data/helios4_campaign_data.gd")
+const DonkiService = preload("res://margin/data/donki_service.gd")
 
 enum CrisisStep {
 	EVENT_A_SOLAR_STORM,
@@ -36,8 +37,24 @@ var science_bonus_pts: float = 0.0
 var propellant_lost_kg: float = 0.0
 var attitude_accuracy_deg: float = 0.05
 var decisions_log: Array = []
+var battery_capacity_wh: float = 1200.0
+var battery_charge_wh: float = 1200.0
+var solar_generation_w: float = 0.0
+var subsystem_load_w: float = 0.0
+var thermal_temp_c: float = 20.0
+var thermal_shield_oriented: bool = true
+const STORM_DURATION_HOURS: float = 6.0
 
 func _ready() -> void:
+	theme = MarginTheme.get_theme()
+	var probe_config: Dictionary = Helios4CampaignData.probe_config
+	battery_capacity_wh = probe_config.get("battery_capacity_wh", 1200.0)
+	battery_charge_wh = clamp(Helios4CampaignData.transfer_telemetry.get("battery_charge_wh", battery_capacity_wh), 0.0, battery_capacity_wh)
+	var instrument_load := 0.0
+	for instrument in probe_config.get("instruments", {}).values():
+		instrument_load += instrument.get("power_w", 0.0)
+	solar_generation_w = probe_config.get("solar_array_area_m2", 6.5) * probe_config.get("solar_efficiency", 0.31) * 1388.0
+	subsystem_load_w = probe_config.get("avionics_power_w", 65.0) + probe_config.get("adcs_power_w", 35.0) + probe_config.get("thermal_power_w", 25.0) + probe_config.get("comms_power_w", 45.0) + instrument_load
 	opt1_btn.pressed.connect(func(): _make_choice(1))
 	opt2_btn.pressed.connect(func(): _make_choice(2))
 	opt3_btn.pressed.connect(func(): _make_choice(3))
@@ -56,9 +73,10 @@ func _load_crisis_step(step: CrisisStep) -> void:
 	match step:
 		CrisisStep.EVENT_A_SOLAR_STORM:
 			step_title.text = "EVENT A: PRECURSOR SOLAR PARTICLE EVENT (SPE) / RADIATION SURGE"
-			warning_banner.text = "▲ PROTON FLUX WARNING: High-energy solar proton event (>1,200 pfu at >10 MeV) from flaring at Active Region AR-4890 sweeping past spacecraft bus."
+				var event: Dictionary = DonkiService.OFFLINE_EVENT_CATALOG[0]
+				warning_banner.text = "▲ CME EVENT (OFFLINE 2038 SCENARIO): %.0f km/s • Kp %.1f • Bz %.1f nT • proton flux >1,200 pfu (>10 MeV). Not live DONKI data." % [event["cme_speed_kms"], event["predicted_kp"], event["interplanetary_magnetic_field_bz_nt"]]
 			warning_banner.add_theme_color_override("font_color", Color(0.98, 0.55, 0.15))
-			step_desc.text = "Pre-storm flares at Active Region AR-4890 have accelerated relativistic protons along interplanetary magnetic field lines. While the critical CME shock front itself has not yet erupted toward Earth, this proton flux threatens unshielded sensor optics and high-voltage power lines. Changing spacecraft orientation does NOT deflect incoming relativistic protons."
+				step_desc.text = "Pre-storm flares at Active Region AR-4890 have accelerated relativistic protons along interplanetary magnetic field lines. This offline NASA DONKI-inspired scenario uses a %.0f km/s CME, Kp %.1f and Bz %.1f nT. The six-hour gameplay interval models equipment exposure, not real-time mission duration. Pointing the thermal shield Sunward protects thermal hardware; it does NOT deflect relativistic protons." % [event["cme_speed_kms"], event["predicted_kp"], event["interplanetary_magnetic_field_bz_nt"]]
 			
 			role_advice_label.text = "ADVISORY: Systems Officer advises Safe Mode to prevent single-event latchups. Astrogator verifies deep-space comm link remains stable."
 			
@@ -125,6 +143,7 @@ func _make_choice(choice_idx: int) -> void:
 					equipment_degradation_pct += 18.0
 					science_bonus_pts += 25.0
 					title = "Continue Science"
+			_apply_storm_response(choice_idx)
 			decisions_log.append({"event": "Solar Storm", "choice": choice_idx, "title": title, "role": Helios4CampaignData.ROLE_SYSTEMS})
 			Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_SYSTEMS, "Precursor Solar Storm Mitigation", title)
 			current_step = CrisisStep.EVENT_B_MICROMETEOROID
@@ -170,7 +189,37 @@ func _on_proceed_to_l1_pressed() -> void:
 		"science_bonus_pts": science_bonus_pts,
 		"propellant_lost_kg": propellant_lost_kg,
 		"attitude_accuracy_deg": attitude_accuracy_deg,
-		"decisions_log": decisions_log
+		"decisions_log": decisions_log,
+		"battery_charge_wh": battery_charge_wh,
+		"solar_generation_w": solar_generation_w,
+		"subsystem_load_w": subsystem_load_w,
+		"thermal_temp_c": thermal_temp_c,
+		"thermal_shield_oriented": thermal_shield_oriented
 	}
+	Helios4CampaignData.transfer_telemetry["battery_charge_wh"] = battery_charge_wh
 	print("[Crisis] All emergencies resolved. Advancing to Phase 5: L1 Halo-Orbit Insertion")
 	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_5_L1_INSERTION, get_tree())
+
+func _apply_storm_response(choice_idx: int) -> void:
+	var probe_config: Dictionary = Helios4CampaignData.probe_config
+	var instrument_load := 0.0
+	for instrument_id in probe_config.get("instruments", {}):
+		if choice_idx == 3 or (choice_idx == 2 and instrument_id in ["magnetometer", "faraday_cup"]):
+			instrument_load += probe_config["instruments"][instrument_id].get("power_w", 0.0)
+	var avionics := probe_config.get("avionics_power_w", 65.0)
+	var adcs := probe_config.get("adcs_power_w", 35.0)
+	var thermal := probe_config.get("thermal_power_w", 25.0)
+	var comms := probe_config.get("comms_power_w", 45.0)
+	# Safe mode powers down the high-gain transmitter during the modeled exposure.
+	subsystem_load_w = avionics + adcs + thermal + instrument_load + (0.0 if choice_idx == 1 else comms)
+	thermal_shield_oriented = choice_idx != 3
+	var battery_before := battery_charge_wh
+	battery_charge_wh = clamp(battery_charge_wh + (solar_generation_w - subsystem_load_w) * STORM_DURATION_HOURS, 0.0, battery_capacity_wh)
+	var thermal_shortfall := max(0.0, 30.0 - thermal)
+	thermal_temp_c += thermal_shortfall * STORM_DURATION_HOURS * (0.25 if thermal_shield_oriented else 1.0)
+	if battery_charge_wh <= 0.0:
+		equipment_degradation_pct += 10.0
+	if thermal_temp_c > 60.0:
+		equipment_degradation_pct += min(15.0, (thermal_temp_c - 60.0) * 0.25)
+	role_advice_label.text = "STORM RESPONSE: Solar %.0f W • Load %.0f W • Battery %.0f→%.0f Wh • Bus %.1f°C • Shield %s" % [solar_generation_w, subsystem_load_w, battery_before, battery_charge_wh, thermal_temp_c, "SUNWARD" if thermal_shield_oriented else "OFF-AXIS"]
+	Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_SYSTEMS, "Storm Power/Thermal Budget", "Solar %.0f W; load %.0f W; battery %.0f Wh; thermal bus %.1f C; shield %s." % [solar_generation_w, subsystem_load_w, battery_charge_wh, thermal_temp_c, "sunward" if thermal_shield_oriented else "off-axis"])

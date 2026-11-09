@@ -11,6 +11,9 @@ const ComponentDatabase = preload("res://margin/data/component_data.gd")
 var continue_btn: Button = null
 
 func _ready() -> void:
+	var menu_ui := find_child("RootUI", true, false) as Control
+	if menu_ui:
+		menu_ui.theme = MarginTheme.get_theme()
 	# Configure default 3D spacecraft for title display
 	var default_cfg = ComponentDatabase.get_default_configuration()
 	# Equip DSCOVR plasma boom if available for title display
@@ -67,7 +70,12 @@ func _on_continue_campaign_pressed() -> void:
 	if Helios4CampaignData.load_campaign_state():
 		Helios4CampaignData.load_stage(Helios4CampaignData.current_stage, get_tree())
 	else:
-		_on_new_campaign_pressed()
+		var status := find_child("MDesc", true, false) as Label
+		if status:
+			status.text = "SAVE COULD NOT BE LOADED. Your file was not changed; choose NEW CAMPAIGN only if you want to restart."
+			status.add_theme_color_override("font_color", Color(1.0, 0.62, 0.28))
+		continue_btn.disabled = false
+		continue_btn.text = "RETRY LOADING CAMPAIGN"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):

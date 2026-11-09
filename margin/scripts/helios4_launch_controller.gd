@@ -178,6 +178,9 @@ const TARGET_ORBIT_ALT_M: float = 185000.0 # 185 km parking orbit
 const TARGET_ORBIT_VEL_MS: float = 7780.0
 
 func _ready() -> void:
+	var launch_ui := find_child("RootUI", true, false) as Control
+	if launch_ui:
+		launch_ui.theme = MarginTheme.get_theme()
 	# Cache UI node references
 	obj_panel = find_child("FlightObjectivePanel", true, false) as PanelContainer
 	lbl_obj_phase = find_child("LblObjectivePhase", true, false) as Label
@@ -320,14 +323,21 @@ func _build_launch_pad_facility(parent: Node3D) -> void:
 	var mat_twr_white := SpacecraftMaterials.get_mat("launch_tower_white")
 	var mat_steel := SpacecraftMaterials.get_mat("hangar_truss_steel")
 	var mat_yellow := SpacecraftMaterials.get_mat("industrial_crane_safety")
-	var mat_terrain := SpacecraftMaterials.get_mat("spaceport_terrain")
+	var mat_terrain := SpacecraftMaterials.get_mat("spaceport_terrain").duplicate() as StandardMaterial3D
 	var mat_tarmac := SpacecraftMaterials.get_mat("spaceport_tarmac")
-	var mat_ocean := SpacecraftMaterials.get_mat("spaceport_ocean")
+	var mat_ocean := SpacecraftMaterials.get_mat("spaceport_ocean").duplicate() as StandardMaterial3D
+	mat_terrain.albedo_color = Color(0.12, 0.17, 0.14, 1.0)
+	mat_terrain.emission_enabled = false
+	mat_ocean.albedo_color = Color(0.025, 0.08, 0.18, 1.0)
+	mat_ocean.metallic = 0.05
+	mat_ocean.roughness = 0.65
+	mat_ocean.clearcoat_enabled = false
+	mat_ocean.emission_enabled = false
 
-	# --- A. Spaceport Coastal Terrain (600m x 600m) ---
+	# --- A. Spaceport Coastal Terrain (480m x 480m) ---
 	var terrain := MeshInstance3D.new()
 	var t_box := BoxMesh.new()
-	t_box.size = Vector3(600.0, 1.0, 600.0)
+	t_box.size = Vector3(480.0, 1.0, 480.0)
 	terrain.mesh = t_box
 	terrain.position = Vector3(0.0, -0.5, 0.0)
 	terrain.material_override = mat_terrain
@@ -336,7 +346,7 @@ func _build_launch_pad_facility(parent: Node3D) -> void:
 	# Spaceport Tarmac Perimeter
 	var tarmac := MeshInstance3D.new()
 	var tm_box := BoxMesh.new()
-	tm_box.size = Vector3(120.0, 0.2, 120.0)
+	tm_box.size = Vector3(96.0, 0.2, 96.0)
 	tarmac.mesh = tm_box
 	tarmac.position = Vector3(0.0, 0.1, 0.0)
 	tarmac.material_override = mat_tarmac
@@ -345,7 +355,7 @@ func _build_launch_pad_facility(parent: Node3D) -> void:
 	# Coastal Atlantic Ocean Water (East side)
 	var water := MeshInstance3D.new()
 	var w_box := BoxMesh.new()
-	w_box.size = Vector3(300.0, 0.8, 600.0)
+	w_box.size = Vector3(220.0, 0.8, 480.0)
 	water.mesh = w_box
 	water.position = Vector3(250.0, -0.3, 0.0)
 	water.material_override = mat_ocean
@@ -872,24 +882,25 @@ func _build_atmospheric_cloud_layers(parent: Node3D) -> void:
 	var mat_cloud := StandardMaterial3D.new()
 	mat_cloud.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat_cloud.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat_cloud.albedo_color = Color(0.95, 0.98, 1.0, 0.40)
+	mat_cloud.albedo_color = Color(0.52, 0.61, 0.72, 0.14)
 	mat_cloud.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_cloud.emission_enabled = false
 
-	# Multi-tiered coastal cloud deck over spaceport (visual Y ~ 380m - 750m)
+	# Compact distant cloud banks stay at least ~1 km laterally from the pad/ascent corridor.
 	var cloud_banks = [
-		Vector3(-120.0, 360.0, 80.0),
-		Vector3(140.0, 420.0, -140.0),
-		Vector3(380.0, 480.0, 220.0),
-		Vector3(680.0, 540.0, -80.0),
-		Vector3(1050.0, 600.0, 260.0),
-		Vector3(1500.0, 660.0, -180.0),
-		Vector3(2050.0, 720.0, 120.0),
+		Vector3(-1100.0, 320.0, 900.0),
+		Vector3(1150.0, 370.0, -1000.0),
+		Vector3(1750.0, 430.0, 1150.0),
+		Vector3(-2050.0, 480.0, -1250.0),
+		Vector3(2700.0, 540.0, 1500.0),
+		Vector3(-3200.0, 600.0, -1750.0),
+		Vector3(3800.0, 660.0, 2200.0),
 	]
 	
 	for i in range(cloud_banks.size()):
 		var c_mesh := MeshInstance3D.new()
 		var box := BoxMesh.new()
-		box.size = Vector3(480.0 + (i % 3) * 140.0, 22.0 + (i % 2) * 10.0, 420.0 + (i % 2) * 160.0)
+		box.size = Vector3(220.0 + (i % 3) * 60.0, 8.0 + (i % 2) * 4.0, 180.0 + (i % 2) * 60.0)
 		c_mesh.mesh = box
 		c_mesh.position = cloud_banks[i]
 		c_mesh.material_override = mat_cloud
@@ -1049,9 +1060,17 @@ func _set_camera_mode(mode: CameraMode, instant: bool = false) -> void:
 			_cam_relative_offset = Vector3(-18.0, 8.5, 28.0)
 			_cam_look_offset_dir = 1.0
 
-	# Initialize target offset on mode switch to ensure smooth, immediate perspective update
-	_current_cam_offset = _cam_relative_offset
-	_current_look_dir = _cam_look_offset_dir
+	# Preserve the current pose on interactive switches so the follow loop can ease
+	# toward the new view instead of snapping straight to its destination.
+	if instant or not _cam_initialized:
+		_current_cam_offset = _cam_relative_offset
+		_current_look_dir = _cam_look_offset_dir
+	elif launch_cam and rocket:
+		var vehicle_flight_dir = rocket.global_transform.basis.y.normalized()
+		var vehicle_center = rocket.global_position + vehicle_flight_dir * 8.0
+		_current_cam_offset = launch_cam.position - vehicle_center
+		var current_target = launch_cam.global_position - launch_cam.global_transform.basis.z * maxf(1.0, launch_cam.global_position.distance_to(vehicle_center))
+		_current_look_dir = (current_target - vehicle_center).dot(vehicle_flight_dir)
 	_cam_initialized = true
 
 	if instant:
@@ -1494,20 +1513,21 @@ func _on_abort_countdown_pressed() -> void:
 	_refresh_prelaunch_checklist_ui()
 
 func _physics_process(delta: float) -> void:
+	var camera_delta = delta
 	if is_flight_paused:
-		_update_camera_smooth(delta)
+		_update_camera_smooth(camera_delta)
 		_update_ui()
 		return
 
 	delta *= time_warp
 	if current_phase == FlightPhase.FLIGHT_COMPLETED or current_phase == FlightPhase.FLIGHT_ABORTED or current_phase == FlightPhase.READINESS_HOLD:
-		_update_camera_smooth(delta)
+		_update_camera_smooth(camera_delta)
 		return
 
 	# Pre-Launch Preparation
 	if current_phase == FlightPhase.PRE_LAUNCH_PREPARATION:
 		_update_ui()
-		_update_camera_smooth(delta)
+		_update_camera_smooth(camera_delta)
 		return
 
 	# Countdown
@@ -1520,7 +1540,7 @@ func _physics_process(delta: float) -> void:
 				countdown_s = 0.0
 				_execute_ignition_liftoff()
 		_update_ui()
-		_update_camera_smooth(delta)
+		_update_camera_smooth(camera_delta)
 		return
 
 	flight_time_s += delta
@@ -1528,7 +1548,7 @@ func _physics_process(delta: float) -> void:
 	_update_3d_visuals(delta)
 	_update_ui()
 	_check_phase_transitions()
-	_update_camera_smooth(delta)
+	_update_camera_smooth(camera_delta)
 
 func _execute_ignition_liftoff() -> void:
 	var all_checked: bool = true
@@ -1700,8 +1720,8 @@ func _check_phase_transitions() -> void:
 			btn_fairing_jettison.disabled = false
 			print("[Launch] FAIRING RELEASE AVAILABLE: Vehicle in vacuum (>68 km). Press [J] or click FAIRING JETTISON.")
 
-	# Orbital Injection check (Velocity >= 7,700 m/s, Altitude >= 160,000 m, and flight path angle near horizontal <= 8 deg)
-	if velocity_ms >= 7700.0 and altitude_m >= 160000.0 and flight_path_angle_deg <= 8.0 and not orbit_achieved:
+	# Orbital insertion target is 185 km with a 160–210 km playable tolerance; fairing must already be jettisoned.
+	if fairing_separated and velocity_ms >= 7700.0 and altitude_m >= TARGET_ORBIT_ALT_M - 25000.0 and altitude_m <= TARGET_ORBIT_ALT_M + 25000.0 and flight_path_angle_deg <= 8.0 and not orbit_achieved:
 		orbit_achieved = true
 		current_phase = FlightPhase.ORBITAL_INJECTION
 		throttle = 0.0
@@ -1712,6 +1732,12 @@ func _check_phase_transitions() -> void:
 
 func _execute_stage_separation() -> void:
 	if stage1_separated:
+		return
+	if current_phase != FlightPhase.STAGE1_BURNOUT:
+		var advisory_lbl := find_child("AdvisoryBanner", true, false) as Label
+		if advisory_lbl:
+			advisory_lbl.text = "STAGE SEPARATION HOLD: Continue the Stage 1 burn through MECO before separating the booster."
+			advisory_lbl.add_theme_color_override("font_color", Color(1.0, 0.62, 0.28))
 		return
 
 	stage1_separated = true
@@ -2029,7 +2055,7 @@ func _update_camera_smooth(delta: float) -> void:
 
 	if current_cam_mode == CameraMode.PAD:
 		var pad_pos = Vector3(-20.0, 6.0, 24.0)
-		launch_cam.position = pad_pos
+		launch_cam.position = launch_cam.position.lerp(pad_pos, clamp(delta * _cam_lerp_speed, 0.0, 1.0))
 		var look_target = rocket.global_position + Vector3(0.0, 8.0, 0.0)
 		launch_cam.look_at(look_target, Vector3.UP)
 	else:

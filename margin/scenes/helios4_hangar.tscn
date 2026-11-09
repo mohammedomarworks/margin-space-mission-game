@@ -283,6 +283,14 @@ theme_override_styles/normal = SubResource("Style_SecondaryBtn")
 theme_override_font_sizes/font_size = 10
 text = "FAIRING: OPEN"
 
+[node name="BaselinePresetBtn" type="Button" parent="CanvasLayer/RootUI/TopBar"]
+custom_minimum_size = Vector2(174, 28)
+layout_mode = 2
+theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_font_sizes/font_size = 9
+tooltip_text = "Load the game’s NASA-inspired educational reference configuration. Not an official NASA design."
+text = "NASA-INSPIRED BASELINE"
+
 [node name="Spacer" type="Control" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -868,7 +876,7 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="ReadinessBarsHolder" type="Control" parent="CanvasLayer/RootUI/BottomCardsRow/CenterReadinessCard/HBox"]
-custom_minimum_size = Vector2(160, 48)
+custom_minimum_size = Vector2(200, 74)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4

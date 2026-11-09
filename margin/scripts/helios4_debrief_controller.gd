@@ -24,6 +24,7 @@ var letter_grade: String = "A"
 var is_success: bool = true
 
 func _ready() -> void:
+	theme = MarginTheme.get_theme()
 	_calculate_debrief_score()
 	_populate_ui()
 	
@@ -60,11 +61,17 @@ func _populate_ui() -> void:
 	
 	var c_res = Helios4CampaignData.crisis_results
 	var l1_tel = Helios4CampaignData.l1_telemetry
-	var lead_time = l1_tel.get("lead_time_minutes", 10.33)
-	var shock_speed = l1_tel.get("solar_wind_speed_kms", 2420.0)
+	var lead_time = l1_tel.get("lead_time_minutes", 0.0)
+	var shock_speed = l1_tel.get("solar_wind_speed_kms", 0.0)
 	var l1_dist = l1_tel.get("l1_distance_km", Helios4CampaignData.L1_DISTANCE_KM)
-	var equip_health = 100.0 - c_res.get("equipment_degradation_pct", 5.0)
-	var rem_fuel = l1_tel.get("final_propellant_kg", 205.0)
+	var equip_health = 100.0 - c_res.get("equipment_degradation_pct", 0.0)
+	var rem_fuel = l1_tel.get("final_propellant_kg", 0.0)
+	var design_telemetry: Dictionary = Helios4CampaignData.calculate_hangar_telemetry()
+	var science_score: float = l1_tel.get("science_score", design_telemetry.get("science_score", 0.0)) + c_res.get("science_bonus_pts", 0.0)
+	var power_remaining: float = l1_tel.get("battery_remaining_wh", 0.0)
+	var payload_mass: float = design_telemetry.get("probe_wet_mass_kg", 0.0)
+	var mass_margin: float = 1250.0 - payload_mass
+	var power_margin: float = l1_tel.get("power_margin_w", design_telemetry.get("power_margin_w", 0.0))
 	
 	var p1 = Helios4CampaignData.final_debrief_data.get("launch_pillar", 25.0)
 	var p2 = Helios4CampaignData.final_debrief_data.get("crisis_pillar", 25.0)
@@ -76,7 +83,12 @@ func _populate_ui() -> void:
 • [color=#4ade80]Space Weather Warning Lead Time:[/color] [b]%.2f Minutes Advance Notice Delivered to Earth[/b] (Shock Speed: %.0f km/s • Baseline Distance: %.1fM km; t = d / v / 60).
 • [color=#fbbf24]Stationkeeping Propellant Reserve:[/color] %.1f kg (Exceeds > 35 kg illustrative threshold; modeled ~15–30 m/s/yr educational assumption, not a guaranteed operational lifetime).
 • [color=#c084fc]Subsystem Health:[/color] %.1f%% Sensor Suite Integrity (Rad-Hardened Avionics Nominal).
-• [color=#f87171]Heritage Benchmark:[/color] Validates NASA DSCOVR PlasMag operational architecture.
+	• [color=#f87171]NASA Heritage:[/color] Educational design inspired by DSCOVR PlasMag instrumentation; not an operational validation.
+
+[b]DESIGN TRADE-OFFS & REMAINING MARGINS:[/b]
+	• Science return: %.1f instrument + crisis points • Payload wet mass: %.1f kg (%.1f kg below the 1,250 kg fairing limit)
+• Remaining battery: %.1f Wh • Power margin: %+.1f W • Probe propellant: %.1f kg
+• Selected trajectory: %s • Selected payload instruments: %d
 
 [b]EVALUATION BREAKDOWN & SCORING PILLARS:[/b]
 • [color=#fb923c]Launch & Staging (Pillar 1):[/color] %.1f / 25.0 pts
@@ -86,6 +98,8 @@ func _populate_ui() -> void:
 • [color=#fbbf24][b]Total Score:[/b][/color] %.1f + %.1f + %.1f + %.1f = [b]%.1f / 100.0 PTS[/b]""" % [
 		lead_time, shock_speed, l1_dist / 1000000.0,
 		rem_fuel, equip_health,
+		science_score, payload_mass, mass_margin, power_remaining, power_margin, rem_fuel,
+		str(Helios4CampaignData.vehicle_config.get("trajectory_mode", "direct_injection")), Helios4CampaignData.probe_config.get("instruments", {}).size(),
 		p1, p2, p3, p4,
 		p1, p2, p3, p4, total_score
 	]
@@ -131,10 +145,16 @@ func _populate_ui() -> void:
 	]
 
 func _on_save_and_complete_pressed() -> void:
-	Helios4CampaignData.advance_to_stage(Helios4CampaignData.Stage.CAMPAIGN_COMPLETED)
-	save_btn.text = "★ CAMPAIGN PROGRESS SAVED!"
-	save_btn.disabled = true
-	print("[Debrief] HELIOS-4 campaign completed and persisted to user://helios4_campaign.json")
+	if Helios4CampaignData.advance_to_stage(Helios4CampaignData.Stage.CAMPAIGN_COMPLETED):
+		save_btn.text = "★ CAMPAIGN PROGRESS SAVED!"
+		save_btn.disabled = true
+		print("[Debrief] HELIOS-4 campaign completed and persisted to user://helios4_campaign.json")
+	else:
+		save_btn.text = "SAVE FAILED — CLICK TO RETRY"
+		save_btn.disabled = false
+		if outcome_lbl:
+			outcome_lbl.text = "DEBRIEF COMPLETE — SAVE FAILED; YOUR MISSION REPORT REMAINS OPEN"
+			outcome_lbl.add_theme_color_override("font_color", Color(1.0, 0.62, 0.28))
 
 func _on_replay_pressed() -> void:
 	Helios4CampaignData.reset_campaign()

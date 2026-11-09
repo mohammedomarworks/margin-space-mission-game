@@ -807,7 +807,7 @@ text = "▲ SOLAR PARTICLE EVENT (SEP) CRISIS — ACTIVE REGION AR-4890"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
 theme_override_font_sizes/font_size = 10
-text = "SCIENTIFIC ADVISORY: Relativistic protons (>100 MeV flux). Orientation does not block relativistic protons. Spacecraft magnetic fields CANNOT deflect Coronal Mass Ejections. Mitigation requires safe-mode isolation, instrument management, and power priorities."
+text = "OFFLINE HYPOTHETICAL 2038 DONKI-INSPIRED CME: 2,450 km/s, Kp 9, Bz −34 nT; these are scenario inputs, not live DONKI data. Point the thermal shield Sunward to reduce bus heating; orientation does not deflect relativistic protons or the CME. Manage instruments and power loads."
 autowrap_mode = 2
 
 [node name="CardsContainer" type="HBoxContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox"]
@@ -835,8 +835,8 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
 theme_override_font_sizes/font_size = 10
 text = "FULL SAFE MODE
-• 0% degradation
-• -10 science pts"
+• Sunward thermal shield
+• -10 science pts; low power"
 
 [node name="BtnSafeOpt2" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode/VBox"]
 unique_name_in_owner = true
@@ -844,7 +844,7 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
 theme_override_font_sizes/font_size = 10
 text = "PARTIAL PROTECTION
-• 5% minor wear
+• Sunward thermal shield; 5% wear
 • +10 science pts"
 
 [node name="BtnSafeOpt3" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode/VBox"]
@@ -853,7 +853,7 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
 theme_override_font_sizes/font_size = 10
 text = "CONTINUE SCIENCE
-• 18% wear risk
+• Shield off-axis; 18% wear risk
 • +25 bonus pts"
 
 [node name="Card02_Instruments" type="PanelContainer" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer"]
@@ -919,8 +919,8 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
 theme_override_font_sizes/font_size = 10
 text = "CARRIER BEACON
-• Preserve Battery 95%
-• Low-rate beacon"
+• Low-rate, lower comms load
+• Preserve available battery"
 
 [node name="BtnCommOpt2" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms/VBox"]
 unique_name_in_owner = true
@@ -928,8 +928,8 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
 theme_override_font_sizes/font_size = 10
 text = "HIGH-RATE DISH
-• Live Earth Telemetry
-• Battery draws to 65%"
+• High-rate telemetry
+• Highest comms load"
 
 [node name="BtnCommOpt3" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms/VBox"]
 unique_name_in_owner = true
@@ -937,8 +937,8 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("Style_TacticalOptBtn")
 theme_override_font_sizes/font_size = 10
 text = "MEMORY BUFFER
-• Store & Mute RF
-• Battery held at 90%"
+• Store & mute RF
+• Lowest comms load"
 
 [node name="BtnCommitCrisis" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox"]
 unique_name_in_owner = true

@@ -110,6 +110,10 @@ var hoi_min_delta_v_ms: float = 220.0
 var hoi_max_delta_v_ms: float = 340.0
 var hoi_burn_duration_s: float = 5.0
 var hoi_burn_timer_s: float = 0.0
+var hoi_fuel_required_kg: float = 0.0
+var hoi_fuel_burn_kg: float = 0.0
+var hoi_fuel_consumed_kg: float = 0.0
+var hoi_actual_delta_v_ms: float = 0.0
 var is_engine_firing: bool = false
 var is_rcs_firing: bool = false
 
@@ -214,6 +218,9 @@ var _last_mouse_pos: Vector2 = Vector2.ZERO
 @onready var sim_pause_banner: PanelContainer = %SimPauseBanner
 
 func _ready() -> void:
+	var arrival_ui := find_child("RootUI", true, false) as Control
+	if arrival_ui:
+		arrival_ui.theme = MarginTheme.get_theme()
 	_load_inherited_campaign_state()
 	lead_time_minutes = Helios4CampaignData.calculate_warning_lead_time_minutes(shock_velocity_km_s, L1_DISTANCE_KM)
 	
@@ -241,16 +248,26 @@ func _ready() -> void:
 
 func _load_inherited_campaign_state() -> void:
 	# Inherit telemetry from Part 3 Transfer / Crisis without resets
+	var probe_config: Dictionary = Helios4CampaignData.probe_config
 	var transfer_rem = Helios4CampaignData.transfer_telemetry.get("propellant_remaining_kg", -1.0)
 	if transfer_rem > 0.0:
 		propellant_kg = transfer_rem
 	else:
 		var crisis_lost = Helios4CampaignData.crisis_results.get("propellant_lost_kg", 0.0)
-		var base_prop = Helios4CampaignData.probe_config.get("propellant_mass_kg", 320.0)
+		var base_prop = probe_config.get("propellant_mass_kg", 320.0)
 		propellant_kg = max(20.0, base_prop - 60.2 - crisis_lost) # ~259.8 kg
-	
-	dry_mass_kg = Helios4CampaignData.probe_config.get("dry_mass_kg", 372.4)
-	probe_isp_s = Helios4CampaignData.probe_config.get("probe_isp_s", 315.0)
+
+	dry_mass_kg = probe_config.get("dry_mass_kg", 372.4)
+	probe_isp_s = probe_config.get("probe_isp_s", 315.0)
+	battery_capacity_wh = probe_config.get("battery_capacity_wh", 1200.0)
+	battery_charge_wh = clamp(Helios4CampaignData.transfer_telemetry.get("battery_charge_wh", battery_capacity_wh), 0.0, battery_capacity_wh)
+	var instrument_config: Dictionary = probe_config.get("instruments", {})
+	var instrument_load_w := 0.0
+	for instrument_id in ["faraday_cup", "magnetometer", "radiation_monitor"]:
+		var instrument: Dictionary = instrument_config.get(instrument_id, {})
+		instrument_load_w += instrument.get("power_w", 0.0)
+	solar_power_w = probe_config.get("solar_array_area_m2", 6.5) * probe_config.get("solar_efficiency", 0.31) * 1388.0
+	spacecraft_power_load_w = probe_config.get("avionics_power_w", 65.0) + probe_config.get("adcs_power_w", 35.0) + probe_config.get("thermal_power_w", 25.0) + probe_config.get("comms_power_w", 45.0) + instrument_load_w
 	
 	# Inherit Instrument health & radiation
 	var inherited_inst = Helios4CampaignData.transfer_telemetry.get("instruments_health", {})
@@ -261,10 +278,15 @@ func _load_inherited_campaign_state() -> void:
 		var crisis_deg = Helios4CampaignData.crisis_results.get("equipment_degradation_pct", 0.0)
 		mag_health_pct = max(50.0, 100.0 - crisis_deg)
 		faraday_health_pct = max(50.0, 100.0 - crisis_deg * 1.5)
-	
+	if not probe_config.is_empty() and probe_config.has("instruments"):
+		if not instrument_config.has("magnetometer"):
+			mag_health_pct = 0.0
+		if not instrument_config.has("faraday_cup"):
+			faraday_health_pct = 0.0
+
 	accumulated_rad_dose_rad = Helios4CampaignData.transfer_telemetry.get("accumulated_radiation_dose_rad", 4.5)
 	equipment_degradation_pct = Helios4CampaignData.crisis_results.get("equipment_degradation_pct", 0.0)
-	battery_charge_wh = Helios4CampaignData.transfer_telemetry.get("battery_charge_wh", 1180.0)
+	battery_charge_wh = clamp(Helios4CampaignData.transfer_telemetry.get("battery_charge_wh", battery_capacity_wh), 0.0, battery_capacity_wh)
 	trajectory_accuracy_pct = Helios4CampaignData.transfer_telemetry.get("trajectory_accuracy_pct", 99.2)
 
 func _process(delta: float) -> void:
@@ -864,7 +886,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "🚀 EXECUTE HOI INSERTION BURN (-35.0 kg) →"
+				action_btn.text = "🚀 EXECUTE HOI INSERTION BURN (-%.1f kg) →" % _required_hoi_propellant_kg()
 			if secondary_btn:
 				secondary_btn.visible = true
 				if secondary_btn: secondary_btn.text = "TUNE BURN MAGNITUDE (%.0f m/s)" % hoi_planned_delta_v_ms
@@ -873,7 +895,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			if detail_title_lbl: detail_title_lbl.text = "HALO-ORBIT INSERTION (HOI) MANEUVER PLANNING"
 			if detail_body_lbl:
 				detail_body_lbl.text = "Collinear Sun-Earth L1 is an unstable saddle equilibrium requiring insertion into a periodic 3D halo orbit:\n" + \
-					"• Planned Braking Δv: %.1f m/s (Propellant required: ~35.0 kg)\n" % hoi_planned_delta_v_ms + \
+					"• Planned Braking Δv: %.1f m/s (Propellant required: ~%.1f kg)\n" % [hoi_planned_delta_v_ms, _required_hoi_propellant_kg()] + \
 					"• Burn Direction: Retrograde / Saddle-manifold alignment\n" + \
 					"• Target Amplitudes: Ax=%.2f, Ay=%.2f, Az=%.2f (Educational Parametric Model)\n" % [HALO_AX, HALO_AY, HALO_AZ] + \
 					"• Scientific Label: Educational 3D model; not full CR3BP numerical propagation."
@@ -908,14 +930,14 @@ func _load_subphase(phase: SubPhase) -> void:
 			if detail_body_lbl:
 				detail_body_lbl.text = "Spacecraft captured into 3D periodic halo orbit around L1:\n" + \
 					"• Orbital Stability: %.1f%% (Corridor Error: %.2f%%)\n" % [halo_stability_pct, halo_capture_error_pct] + \
-					"• Remaining Propellant: %.1f kg (Exceeds > 35 kg illustrative reserve threshold)\n" % propellant_kg + \
+					"• Remaining Propellant: %.1f kg (%s 35 kg illustrative reserve threshold)\n" % [propellant_kg, "Meets" if sk_ok else "Below"] + \
 					"• Stationkeeping Assumption: Modeled as ~15–30 m/s/yr educational assumption, not a guaranteed lifetime."
 			if detail_metric_lbl: detail_metric_lbl.text = "Remaining Fuel: %.1f kg • Reserve Δv: %.1f m/s" % [propellant_kg, available_delta_v_ms]
 			if progress_bar: progress_bar.value = 99.4
 			
 			if advisory_lbl:
-				advisory_lbl.text = "● HALO CAPTURE CONFIRMED: Stationkeeping reserve threshold satisfied."
-				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
+				advisory_lbl.text = "● HALO CAPTURE CONFIRMED: Stationkeeping reserve threshold %s." % ("satisfied" if sk_ok else "not met; mission continues with reduced reserve")
+				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55) if sk_ok else Color(1.0, 0.62, 0.28))
 				
 		SubPhase.STAGE_D_COMMISSION_MAG:
 			current_step = StageStep.BOOM_DEPLOY
@@ -1094,7 +1116,7 @@ func _on_primary_action_pressed() -> void:
 	match current_phase:
 		SubPhase.STAGE_A_APPROACH_NAVIGATION:
 			# Execute approach trim burn
-			propellant_kg = max(5.0, propellant_kg - 2.4)
+			propellant_kg = max(0.0, propellant_kg - min(propellant_kg, 2.4))
 			distance_to_l1_km = 450.0
 			relative_velocity_kms = 1.05
 			trajectory_accuracy_pct = 99.8
@@ -1111,31 +1133,38 @@ func _on_primary_action_pressed() -> void:
 			
 		SubPhase.STAGE_C_STATIONKEEPING:
 			# Execute stationkeeping trim burn
-			propellant_kg = max(5.0, propellant_kg - 8.5)
-			halo_stability_pct = 99.6
-			halo_capture_error_pct = 0.22
+			var sk_fuel_spent: float = min(propellant_kg, 8.5)
+			propellant_kg -= sk_fuel_spent
+			halo_stability_pct = 99.6 if sk_fuel_spent >= 8.5 else 72.0
+			halo_capture_error_pct = 0.22 if sk_fuel_spent >= 8.5 else 2.8
 			_fire_rcs_burst(0.8)
-			print("[L1Arrival] ⚡ Stationkeeping burn executed (-8.5 kg). Halo stability locked to 99.6%.")
+			print("[L1Arrival] ⚡ Stationkeeping trim used %.1f kg; modeled stability %.1f%%." % [sk_fuel_spent, halo_stability_pct])
 			_load_subphase(SubPhase.STAGE_D_COMMISSION_MAG)
 			
 		SubPhase.STAGE_D_COMMISSION_MAG:
 			# Commission Magnetometer
-			mag_boom_deployed = true
-			mag_stability_verified = true
-			mag_power_verified = true
-			mag_calibrated = true
-			_animate_mag_boom_deployment()
-			print("[L1Arrival] 🛰 Magnetometer boom deployed and calibrated. IMF B-field reading active.")
+			mag_boom_deployed = mag_health_pct > 0.0
+			mag_stability_verified = mag_boom_deployed
+			mag_power_verified = mag_boom_deployed and battery_charge_wh > 0.0
+			mag_calibrated = mag_power_verified
+			if mag_boom_deployed:
+				_animate_mag_boom_deployment()
+				print("[L1Arrival] 🛰 Magnetometer boom deployed; health %.1f%%." % mag_health_pct)
+			else:
+				if advisory_lbl: advisory_lbl.text = "▲ MAGNETOMETER NOT INSTALLED: continue commissioning; science return will be reduced."
 			_load_subphase(SubPhase.STAGE_D_COMMISSION_FARADAY)
 			
 		SubPhase.STAGE_D_COMMISSION_FARADAY:
 			# Commission Faraday Cup
-			faraday_door_released = true
-			faraday_hv_sweep_verified = true
-			faraday_calibrated = true
-			faraday_cup_active = true
-			_animate_faraday_cover_release()
-			print("[L1Arrival] ⚡ Faraday Cup activated. Live solar wind plasma measurements streaming.")
+			faraday_door_released = faraday_health_pct > 0.0
+			faraday_hv_sweep_verified = faraday_door_released and battery_charge_wh > 0.0
+			faraday_calibrated = faraday_hv_sweep_verified
+			faraday_cup_active = faraday_calibrated
+			if faraday_cup_active:
+				_animate_faraday_cover_release()
+				print("[L1Arrival] ⚡ Faraday Cup activated; health %.1f%%." % faraday_health_pct)
+			else:
+				if advisory_lbl: advisory_lbl.text = "▲ FARADAY CUP UNAVAILABLE: continue commissioning; science return will be reduced."
 			_load_subphase(SubPhase.STAGE_D_SYSTEMS_VERIFY)
 			
 		SubPhase.STAGE_D_SYSTEMS_VERIFY:
@@ -1190,7 +1219,15 @@ func _on_secondary_action_pressed() -> void:
 		SubPhase.STAGE_F_EARTH_COMM_LOCK:
 			_set_camera_mode(CameraMode.EARTH_DISH)
 
+func _required_hoi_propellant_kg() -> float:
+	return 35.0 * (hoi_planned_delta_v_ms / 280.0)
+
 func _start_hoi_burn_execution() -> void:
+	hoi_fuel_required_kg = _required_hoi_propellant_kg()
+	hoi_fuel_burn_kg = min(propellant_kg, hoi_fuel_required_kg)
+	hoi_fuel_consumed_kg = 0.0
+	var fuel_fraction: float = hoi_fuel_burn_kg / max(hoi_fuel_required_kg, 0.001)
+	hoi_actual_delta_v_ms = hoi_planned_delta_v_ms * fuel_fraction
 	is_engine_firing = true
 	hoi_burn_timer_s = 0.0
 	if engine_exhaust: engine_exhaust.emitting = true
@@ -1200,18 +1237,21 @@ func _start_hoi_burn_execution() -> void:
 	if action_btn: action_btn.visible = false
 	if secondary_btn: secondary_btn.visible = false
 	if advisory_lbl:
-		advisory_lbl.text = "🚀 MAIN ENGINE ACTIVE: Burning hydrazine propellant to capture into halo orbit..."
+		advisory_lbl.text = "🚀 MAIN ENGINE ACTIVE: %.1f / %.1f kg propellant available for %.0f m/s planned capture." % [hoi_fuel_burn_kg, hoi_fuel_required_kg, hoi_planned_delta_v_ms]
 		advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.55, 0.15))
+	if hoi_fuel_burn_kg < hoi_fuel_required_kg and advisory_lbl:
+		advisory_lbl.text = "▲ INSERTION FUEL SHORTFALL: %.1f kg of %.1f kg required. Executing partial degraded capture; proceed and final grade will reflect the miss." % [hoi_fuel_burn_kg, hoi_fuel_required_kg]
 
 func _process_hoi_burn(delta: float) -> void:
 	hoi_burn_timer_s += delta
 	var progress = clamp(hoi_burn_timer_s / hoi_burn_duration_s, 0.0, 1.0)
 	
-	# Consume fuel proportionally to burn progress
-	var burn_fuel_total = 35.0
-	var fuel_chunk = (burn_fuel_total / hoi_burn_duration_s) * delta
-	propellant_kg = max(5.0, propellant_kg - fuel_chunk)
-	relative_velocity_kms = lerp(1.05, 0.28, progress)
+	# Consume only the available fuel, with tuned Δv controlling burn requirement and capture result.
+	var target_consumed = hoi_fuel_burn_kg * progress
+	var fuel_chunk = target_consumed - hoi_fuel_consumed_kg
+	hoi_fuel_consumed_kg = target_consumed
+	propellant_kg = max(0.0, propellant_kg - fuel_chunk)
+	relative_velocity_kms = lerp(1.05, max(0.05, 1.05 - hoi_actual_delta_v_ms / 1000.0), progress)
 	distance_to_l1_km = lerp(450.0, 0.0, progress)
 	
 	if progress_bar: progress_bar.value = progress * 100.0
@@ -1220,9 +1260,10 @@ func _process_hoi_burn(delta: float) -> void:
 	if hoi_burn_timer_s >= hoi_burn_duration_s:
 		is_engine_firing = false
 		if engine_exhaust: engine_exhaust.emitting = false
-		halo_stability_pct = 99.4
-		halo_capture_error_pct = 0.35
-		print("[L1Arrival] 🚀 HOI BURN COMPLETE: Spacecraft captured into Sun-Earth L1 Halo Orbit!")
+		var capture_fraction: float = hoi_actual_delta_v_ms / max(hoi_planned_delta_v_ms, 0.001)
+		halo_stability_pct = lerp(72.0, 99.4, capture_fraction)
+		halo_capture_error_pct = lerp(2.8, 0.35, capture_fraction)
+		print("[L1Arrival] 🚀 HOI BURN COMPLETE: %.1f%% of planned delta-v achieved; modeled stability %.1f%%." % [capture_fraction * 100.0, halo_stability_pct])
 		_load_subphase(SubPhase.STAGE_C_STATIONKEEPING)
 
 func _process_scientific_observation(delta: float) -> void:
@@ -1244,8 +1285,8 @@ func _process_transmission(delta: float) -> void:
 	
 	if transmission_progress_pct >= 100.0:
 		transmission_authorized = false
-		earth_ack_received = true
-		warning_packet_sent = true
+		warning_packet_sent = battery_charge_wh > 0.0 and earth_comm_linked and cme_shock_detected and mag_calibrated and faraday_cup_active
+		earth_ack_received = warning_packet_sent
 		_load_subphase(SubPhase.MISSION_SUCCESS_DEBRIEF)
 
 func _handle_mission_commissioned_success() -> void:
@@ -1268,9 +1309,10 @@ func _handle_mission_commissioned_success() -> void:
 			"• Coronal Mass Ejection Shock Velocity: %.0f km/s\n" % shock_velocity_km_s + \
 			"• Advance Warning Lead Time Delivered: %.2f Minutes (t = d / v / 60)\n" % lead_time_minutes + \
 			"• Stationkeeping Propellant Remaining: %.1f kg (Reserve threshold satisfied)\n" % propellant_kg + \
-			"• Scientific Instruments: Magnetometer (100%%) & Faraday Cup (100%%) Online\n" + \
-			"• Earth power grids, satellite operators, and aviation networks notified."
-	if detail_metric_lbl: detail_metric_lbl.text = "Scorecard Evaluation: A+ (100 / 100 PTS Ready)"
+			"• Scientific Instruments: Magnetometer %.0f%%, Faraday Cup %.0f%%\n" % [mag_health_pct if mag_calibrated else 0.0, faraday_health_pct if faraday_cup_active else 0.0] + \
+			("• Earth warning packet acknowledged by DSN." if warning_packet_sent else "• Warning packet not acknowledged; telemetry/battery margin insufficient.")
+		if not warning_packet_sent and lbl_status: lbl_status.text = "MISSION DEGRADED: early-warning packet was not acknowledged; score reflects the missing downlink."
+	if detail_metric_lbl: detail_metric_lbl.text = "Science score: %.1f • Remaining power: %.0f Wh" % [Helios4CampaignData.calculate_hangar_telemetry().get("science_score", 0.0), battery_charge_wh]
 	if progress_bar: progress_bar.value = 100.0
 	
 	if advisory_lbl:
@@ -1294,6 +1336,13 @@ func _on_proceed_to_debrief_pressed() -> void:
 		"l1_distance_km": L1_DISTANCE_KM,
 		"solar_wind_speed_kms": shock_velocity_km_s,
 		"lead_time_minutes": lead_time_minutes,
+		"battery_remaining_wh": battery_charge_wh,
+		"solar_power_w": solar_power_w,
+		"power_load_w": spacecraft_power_load_w,
+		"power_margin_w": net_power_surplus_w,
+		"science_score": Helios4CampaignData.calculate_hangar_telemetry().get("science_score", 0.0),
+		"magnetometer_health_pct": mag_health_pct if mag_calibrated else 0.0,
+		"faraday_health_pct": faraday_health_pct if faraday_cup_active else 0.0,
 		"imf_bz_nt": -31.5,
 		"data_product_verified": true
 	}

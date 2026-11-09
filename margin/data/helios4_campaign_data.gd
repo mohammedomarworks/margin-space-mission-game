@@ -148,6 +148,7 @@ static var hangar_time_remaining: float = 600.0 # 10 minutes
 static var vehicle_config: Dictionary = {}
 static var probe_config: Dictionary = {}
 static var is_launch_authorized: bool = false
+static var launch_readiness_override: bool = false
 
 # Cooperative Team Decision & Attribution History
 static var team_decision_log: Array = []
@@ -262,6 +263,7 @@ static func get_default_probe_config() -> Dictionary:
 				"heritage": "NASA DSCOVR PlasMag & SOHO CELIAS",
 				"mass_kg": 14.0,
 				"power_w": 18.0,
+				"science_score": 18.0,
 				"cost_m": 9.0,
 				"data_rate_kbps": 8.0
 			},
@@ -271,6 +273,7 @@ static func get_default_probe_config() -> Dictionary:
 				"heritage": "NASA DSCOVR Magnetometer",
 				"mass_kg": 12.0,
 				"power_w": 12.0,
+				"science_score": 16.0,
 				"cost_m": 8.0,
 				"data_rate_kbps": 6.0
 			},
@@ -280,6 +283,7 @@ static func get_default_probe_config() -> Dictionary:
 				"heritage": "NOAA GOES EPS & DSCOVR Space Weather Suite",
 				"mass_kg": 9.0,
 				"power_w": 15.0,
+				"science_score": 12.0,
 				"cost_m": 6.0,
 				"data_rate_kbps": 4.0
 			}
@@ -314,11 +318,13 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	var inst_mass: float = 0.0
 	var inst_power_load: float = 0.0
 	var inst_cost: float = 0.0
+	var science_score: float = 0.0
 	for inst_key in p_cfg.get("instruments", {}):
 		var inst = p_cfg["instruments"][inst_key]
 		inst_mass += inst.get("mass_kg", 0.0)
 		inst_power_load += inst.get("power_w", 0.0)
 		inst_cost += inst.get("cost_m", 0.0)
+		science_score += inst.get("science_score", 0.0)
 	
 	probe_dry_mass += inst_mass
 	# Electrical harness and plumbing (approx 4% of dry mass)
@@ -447,7 +453,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"name": "1. Propulsion Readiness (Liftoff TWR)",
 		"value_str": "%.2f TWR (Thrust: %.0f kN)" % [liftoff_twr, s1_thrust_kn],
 		"target_str": "1.20 – 1.85 TWR",
-		"status": "PASS" if twr_valid else ("WARN" if liftoff_twr > 1.10 else "FAIL"),
+		"status": "PASS" if twr_valid else "FAIL",
 		"role": ROLE_PROPULSION,
 		"subsystem": "propulsion",
 		"advice": "Nominal liftoff thrust. Positive launchpad clearance verified." if twr_valid else ("TWR too low (<1.20). Vehicle cannot safely clear pad or will fail to liftoff." if liftoff_twr < 1.20 else "Excessive acceleration (>1.85 TWR) risks structural G-force overstress."),
@@ -588,6 +594,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"power_generation_w": power_generation_w,
 		"total_power_load_w": total_power_load_w,
 		"power_margin_w": power_margin_w,
+		"science_score": science_score,
 		"total_cost_m": total_project_cost_m,
 		"budget_cap_m": BUDGET_CAP_M,
 		"trajectory_mode": traj_mode,
@@ -623,7 +630,7 @@ static func calculate_debrief_score(l_tel: Dictionary, c_res: Dictionary, l1_tel
 	p3_score = snappedf(p3_score, 0.1)
 	
 	# 4. Early-Warning & Data Quality Pillar (Max 25.0 pts)
-	var warning_sent: bool = l1_tel.get("warning_packet_sent", true)
+	var warning_sent: bool = l1_tel.get("warning_packet_sent", false)
 	var p4_score: float = 25.0 if warning_sent else 0.0
 	p4_score = snappedf(p4_score, 0.1)
 	
@@ -668,6 +675,7 @@ static func save_campaign_state() -> bool:
 		"vehicle_config": vehicle_config,
 		"probe_config": probe_config,
 		"is_launch_authorized": is_launch_authorized,
+		"launch_readiness_override": launch_readiness_override,
 		"launch_telemetry": launch_telemetry,
 		"transfer_telemetry": transfer_telemetry,
 		"crisis_results": crisis_results,
@@ -703,9 +711,14 @@ static func load_campaign_state() -> bool:
 	var data = json.get_data()
 	if not data is Dictionary:
 		return false
+	var saved_stage := int(data.get("current_stage", Stage.PROLOGUE))
+	var saved_highest := int(data.get("highest_unlocked_stage", Stage.PROLOGUE))
+	if saved_stage < Stage.PROLOGUE or saved_stage > Stage.CAMPAIGN_COMPLETED or saved_highest < Stage.PROLOGUE or saved_highest > Stage.CAMPAIGN_COMPLETED:
+		printerr("[Helios4CampaignData] Invalid campaign stage in save; refusing to load or overwrite it.")
+		return false
 		
-	current_stage = data.get("current_stage", Stage.PROLOGUE) as Stage
-	highest_unlocked_stage = data.get("highest_unlocked_stage", Stage.PROLOGUE) as Stage
+	current_stage = saved_stage as Stage
+	highest_unlocked_stage = saved_highest as Stage
 	player_count = data.get("player_count", 1)
 	if data.has("team_player_names"):
 		team_player_names = data["team_player_names"]
@@ -713,9 +726,10 @@ static func load_campaign_state() -> bool:
 		team_decision_log = data["team_decision_log"]
 	if data.has("vehicle_config"):
 		vehicle_config = data["vehicle_config"]
-	if data.has("probe_config"):
-		probe_config = data["probe_config"]
-	is_launch_authorized = data.get("is_launch_authorized", false)
+		if data.has("probe_config"):
+			probe_config = data["probe_config"]
+		is_launch_authorized = data.get("is_launch_authorized", false)
+		launch_readiness_override = data.get("launch_readiness_override", false)
 	if data.has("launch_telemetry"):
 		launch_telemetry = data["launch_telemetry"]
 	if data.has("transfer_telemetry"):
@@ -732,11 +746,13 @@ static func load_campaign_state() -> bool:
 
 static func set_launch_authorized(authorized: bool) -> void:
 	is_launch_authorized = authorized
+	if not authorized:
+		launch_readiness_override = false
 	save_campaign_state()
 
 static func is_spacecraft_ready_for_flight() -> bool:
 	var tel = calculate_hangar_telemetry()
-	return tel.get("all_gate_checks_passed", false) and is_launch_authorized
+	return is_launch_authorized and (tel.get("all_gate_checks_passed", false) or launch_readiness_override)
 
 static func has_saved_campaign() -> bool:
 	return FileAccess.file_exists(SAVE_PATH)
@@ -756,6 +772,7 @@ static func reset_campaign() -> void:
 	vehicle_config = get_default_vehicle_config()
 	probe_config = get_default_probe_config()
 	is_launch_authorized = false
+	launch_readiness_override = false
 	launch_telemetry = {}
 	transfer_telemetry = {}
 	crisis_results = {}
@@ -763,11 +780,11 @@ static func reset_campaign() -> void:
 	final_debrief_data = {}
 	save_campaign_state()
 
-static func advance_to_stage(next_stage: Stage) -> void:
+static func advance_to_stage(next_stage: Stage) -> bool:
 	current_stage = next_stage
 	if int(next_stage) > int(highest_unlocked_stage):
 		highest_unlocked_stage = next_stage
-	save_campaign_state()
+	return save_campaign_state()
 
 static func get_scene_path_for_stage(stage: Stage) -> String:
 	match stage:

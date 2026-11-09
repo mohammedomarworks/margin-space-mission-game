@@ -46,6 +46,9 @@ var sparkline_power: Helios4HUDWidgets.SparklineWave = null
 var readiness_bars: Helios4HUDWidgets.ReadinessBars = null
 
 func _ready() -> void:
+	var hangar_ui := find_child("RootUI", true, false) as Control
+	if hangar_ui:
+		hangar_ui.theme = MarginTheme.get_theme()
 	if Helios4CampaignData.vehicle_config.is_empty():
 		Helios4CampaignData.vehicle_config = Helios4CampaignData.get_default_vehicle_config()
 	if Helios4CampaignData.probe_config.is_empty():
@@ -265,7 +268,11 @@ func _connect_ui_signals() -> void:
 	var tab_sys = find_child("TabSystems", true, false) as Button
 	if tab_sys: tab_sys.pressed.connect(func(): _switch_role(Helios4CampaignData.ROLE_SYSTEMS))
 
-	# Camera Focus Presets
+	var baseline_btn = find_child("BaselinePresetBtn", true, false) as Button
+	if baseline_btn:
+		baseline_btn.pressed.connect(_apply_educational_baseline)
+
+		# Camera Focus Presets
 	var btn_focus_full = find_child("FocusFullStackBtn", true, false) as Button
 	if btn_focus_full: btn_focus_full.pressed.connect(func(): _set_camera_focus(Vector3(0, 7.5, 0), 17.5))
 
@@ -301,6 +308,31 @@ func _connect_ui_signals() -> void:
 
 	# Connect role workstation interactive hardware selectors
 	_setup_hardware_selector_signals()
+
+func _apply_educational_baseline() -> void:
+	Helios4CampaignData.vehicle_config = Helios4CampaignData.get_default_vehicle_config().duplicate(true)
+	Helios4CampaignData.probe_config = Helios4CampaignData.get_default_probe_config().duplicate(true)
+	Helios4CampaignData.is_launch_authorized = false
+	Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_ASTROGATOR, "Educational Baseline Preset", "Loaded the game’s NASA-inspired reference configuration; this is not an official NASA design.")
+	var controls := [
+		["OptStage1Engine", 0], ["SldPropellantLoad", 1.0], ["ChkGridFins", true],
+		["OptHullMaterial", 0], ["OptTrajectoryMode", 0], ["SldSolarArea", 6.5], ["OptAvionics", 0]
+	]
+	for entry in controls:
+		var control := find_child(entry[0], true, false) as Control
+		if control:
+			control.set_block_signals(true)
+			if control is OptionButton:
+				control.select(entry[1])
+			elif control is Range:
+				control.value = entry[1]
+			elif control is BaseButton:
+				control.button_pressed = entry[1]
+			control.set_block_signals(false)
+	if rocket_3d and rocket_3d.grid_fins_node:
+		rocket_3d.grid_fins_node.visible = true
+	Helios4CampaignData.save_campaign_state()
+	_recalculate_and_refresh_ui()
 
 func _setup_hardware_selector_signals() -> void:
 	# Propulsion: Booster Engine
@@ -514,7 +546,7 @@ func _recalculate_and_refresh_ui() -> void:
 
 	_update_label("ValTWR", "%.2f" % current_telemetry["liftoff_twr"])
 	_update_label("ValStaticMargin", "+%.2f calibers" % current_telemetry["static_margin_calibers"])
-	_update_label("ValPowerMargin", "+%.0f W" % current_telemetry["power_margin_w"])
+	_update_label("ValPowerMargin", "%+.0f W" % current_telemetry["power_margin_w"])
 	_update_label("ValBudget", "$%.1fM / $%.1fM" % [current_telemetry["total_cost_m"], current_telemetry["budget_cap_m"]])
 
 	# Update Circular Dial Gauge (Delta-V target ~ 11,000 m/s)
@@ -526,10 +558,13 @@ func _recalculate_and_refresh_ui() -> void:
 
 	# Update Bottom Center Readiness Progress Bars (Values normalized)
 	if readiness_bars:
-		var dv_val = clamp(current_telemetry["total_launch_delta_v"] / 9500.0, 0.0, 1.0)
-		var stab_val = clamp(current_telemetry["static_margin_calibers"] / 1.8, 0.0, 1.0)
-		var pwr_val = clamp(current_telemetry["power_margin_w"] / 2600.0, 0.0, 1.0)
-		readiness_bars.values = [dv_val, stab_val, pwr_val]
+		var mass_val: float = clamp(1.0 - current_telemetry["probe_wet_mass_kg"] / 1250.0, 0.0, 1.0)
+		var pwr_val: float = clamp(current_telemetry["power_margin_w"] / 2600.0, 0.0, 1.0)
+		var dv_val: float = clamp(current_telemetry["total_launch_delta_v"] / max(current_telemetry["req_launch_dv"], 1.0), 0.0, 1.0)
+		var thermal_mass: float = Helios4CampaignData.probe_config.get("thermal_mass_kg", 18.0)
+		var thermal_val: float = clamp(thermal_mass / 30.0, 0.0, 1.0) # Explicit game proxy: thermal-control hardware mass reserve.
+		var budget_val: float = clamp(1.0 - current_telemetry["total_cost_m"] / max(current_telemetry["budget_cap_m"], 1.0), 0.0, 1.0)
+		readiness_bars.values = [mass_val, pwr_val, dv_val, thermal_val, budget_val]
 
 	# Update Launch Gate Badge
 	var gate_badge = find_child("GateBadge", true, false) as Label
@@ -544,7 +579,7 @@ func _recalculate_and_refresh_ui() -> void:
 			btn_review.text = "PROCEED TO FLIGHT READINESS REVIEW"
 	else:
 		if gate_badge:
-			gate_badge.text = "ENGINEERING CHECKS PENDING - RESOLVE WARNINGS"
+			gate_badge.text = "ENGINEERING CHECKS PENDING - REVIEW OR USE DIRECTOR WAIVER"
 			gate_badge.add_theme_color_override("font_color", Color(0.98, 0.55, 0.15))
 		if btn_review:
 			btn_review.disabled = false

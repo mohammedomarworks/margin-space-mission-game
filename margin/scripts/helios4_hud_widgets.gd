@@ -20,6 +20,7 @@ extends RefCounted
 # ------------------------------------------------------------------------------
 # 1. RADIAL DIAL GAUGE
 # ------------------------------------------------------------------------------
+
 class DialGauge extends Control:
 	var value: float = 0.72 # 0.0 to 1.0
 	var label_top: String = "Δ"
@@ -66,10 +67,12 @@ class DialGauge extends Control:
 		if font:
 			var str_top = label_top
 			var top_sz = font.get_string_size(str_top, HORIZONTAL_ALIGNMENT_CENTER, -1, 14)
+			draw_string_outline(font, center + Vector2(-top_sz.x * 0.5, -radius * 0.22), str_top, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, 2, Color(0.005, 0.01, 0.025, 0.98))
 			draw_string(font, center + Vector2(-top_sz.x * 0.5, -radius * 0.22), str_top, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color(0.35, 0.85, 1.0))
 
 			var str_bot = label_bottom
 			var bot_sz = font.get_string_size(str_bot, HORIZONTAL_ALIGNMENT_CENTER, -1, 10)
+			draw_string_outline(font, center + Vector2(-bot_sz.x * 0.5, radius * 0.58), str_bot, HORIZONTAL_ALIGNMENT_CENTER, -1, 10, 2, Color(0.005, 0.01, 0.025, 0.98))
 			draw_string(font, center + Vector2(-bot_sz.x * 0.5, radius * 0.58), str_bot, HORIZONTAL_ALIGNMENT_CENTER, -1, 10, Color(0.9, 0.92, 0.96))
 
 # ------------------------------------------------------------------------------
@@ -307,41 +310,31 @@ class StatusPips extends Control:
 			draw_rect(r, col, true)
 
 # ------------------------------------------------------------------------------
-# 7. READINESS PROGRESS BARS (3 Horizontal Bars matching Reference Center Card)
+# 7. LIVE MARGIN BARS (Mass, Power, ΔV, Thermal, Budget)
 # ------------------------------------------------------------------------------
 class ReadinessBars extends Control:
-	var values: Array = [0.90, 0.90, 0.90] # 90%, 90%, 90%
-	var colors: Array = [
-		Color(0.25, 0.85, 1.0), # Cyan
-		Color(0.25, 0.95, 0.5), # Green
-		Color(0.2, 0.7, 0.95)   # Blue
-	]
+	var labels: Array = ["MASS", "POWER", "ΔV", "THERMAL", "BUDGET"]
+	var values: Array = [0.90, 0.90, 0.90, 0.90, 0.90]:
+		set(value):
+			values = value
+			queue_redraw()
 
 	func _draw() -> void:
 		var font = ThemeDB.fallback_font
-		var row_h = size.y / 3.0
-		var bar_h = 7.0
-		var chk_sz = 9.0
+		var row_h = size.y / 5.0
+		var bar_h = 5.0
 
-		for i in range(3):
+		for i in range(min(values.size(), labels.size())):
 			var y_center = (i + 0.5) * row_h
-			var col = colors[i]
-			var val = clamp(values[i], 0.0, 1.0)
-
-			# Checkmark Box
-			var chk_rect = Rect2(2.0, y_center - chk_sz * 0.5, chk_sz, chk_sz)
-			draw_rect(chk_rect, Color(0.1, 0.2, 0.25, 0.8), true)
-			draw_rect(chk_rect, col, false, 1.2)
-
-			# Little checkmark inside box
-			var p1 = chk_rect.position + Vector2(2.0, 4.5)
-			var p2 = chk_rect.position + Vector2(4.0, 7.0)
-			var p3 = chk_rect.position + Vector2(7.5, 2.5)
-			draw_polyline(PackedVector2Array([p1, p2, p3]), col, 1.5, true)
+			var val = clamp(float(values[i]), 0.0, 1.0)
+			var col = Color(0.96, 0.28, 0.25) if val < 0.4 else (Color(1.0, 0.68, 0.18) if val < 0.7 else Color(0.25, 0.9, 0.58))
+			if font:
+				draw_string_outline(font, Vector2(0.0, y_center + 3.0), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 48.0, 8, 2, Color(0.005, 0.01, 0.025, 0.98))
+				draw_string(font, Vector2(0.0, y_center + 3.0), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 48.0, 8, Color(0.84, 0.89, 0.95))
 
 			# Progress Bar Track & Fill
-			var bar_x = 18.0
-			var bar_w = size.x - bar_x - 38.0
+			var bar_x = 54.0
+			var bar_w = size.x - bar_x - 34.0
 			var track_rect = Rect2(bar_x, y_center - bar_h * 0.5, bar_w, bar_h)
 			draw_rect(track_rect, Color(0.12, 0.16, 0.22, 0.8), true)
 
@@ -349,15 +342,11 @@ class ReadinessBars extends Control:
 			draw_rect(fill_rect, col, true)
 
 			# Diagonal striped overlay on progress bar fill
-			var num_stripes = int((bar_w * val) / 6.0)
-			for s in range(num_stripes):
-				var sx = bar_x + s * 6.0
-				draw_line(Vector2(sx, y_center + bar_h * 0.5), Vector2(sx + 3.0, y_center - bar_h * 0.5), Color(1, 1, 1, 0.25), 1.0)
-
-			# Percentage Text (e.g. "90%")
+			# Percentage label and shadow keep all five gauges readable on the hangar view.
 			if font:
 				var pct_str = "%d%%" % int(val * 100)
-				draw_string(font, Vector2(size.x - 32.0, y_center + 4.0), pct_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.85, 0.9, 0.95))
+				draw_string_outline(font, Vector2(size.x - 29.0, y_center + 3.0), pct_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 2, Color(0.005, 0.01, 0.025, 0.98))
+				draw_string(font, Vector2(size.x - 29.0, y_center + 3.0), pct_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.85, 0.9, 0.95))
 
 # ------------------------------------------------------------------------------
 # 8. LEFT VERTICAL TOOLBAR ICON (Sliders, Tools, Box, Rocket, Target, Eye, Layers)
@@ -489,6 +478,7 @@ class NavBall extends Control:
 				var line_w = 14.0 if p != 80 else 22.0
 				draw_line(Vector2(center.x - line_w, py_offset), Vector2(center.x + line_w, py_offset), Color(1.0, 1.0, 1.0, 0.75), 1.5, true)
 				if font and p != 80:
+					draw_string_outline(font, Vector2(center.x + line_w + 2.0, py_offset + 3.0), str(p), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 2, Color(0.005, 0.01, 0.025, 0.98))
 					draw_string(font, Vector2(center.x + line_w + 2.0, py_offset + 3.0), str(p), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(1.0, 1.0, 1.0, 0.8))
 
 		# Center Flight Reticle (Yellow Aircraft symbol -- • --)
@@ -586,6 +576,7 @@ class MaxQArcWidget extends Control:
 
 		var font = ThemeDB.fallback_font
 		if font:
+			draw_string_outline(font, q_badge_pos + Vector2(-4.0, 4.0), "Q", HORIZONTAL_ALIGNMENT_CENTER, -1, 11, 2, Color(0.005, 0.01, 0.025, 0.98))
 			draw_string(font, q_badge_pos + Vector2(-4.0, 4.0), "Q", HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(0.98, 0.85, 0.3))
 
 		# Callout arrow pointing towards bottom-left (rocket direction)
@@ -635,6 +626,7 @@ class AltitudeTape extends Control:
 				draw_line(Vector2(ruler_x, y_pos), Vector2(ruler_x + tick_len, y_pos), Color(0.7, 0.85, 1.0, 0.8 if is_major else 0.4), 1.2, true)
 				if is_major and font:
 					var txt = "%.0f" % k
+					draw_string_outline(font, Vector2(4.0, y_pos + 3.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 2, Color(0.005, 0.01, 0.025, 0.98))
 					draw_string(font, Vector2(4.0, y_pos + 3.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.65, 0.75, 0.90, 0.8))
 
 		# Active Pointer Box in Center
@@ -653,7 +645,9 @@ class AltitudeTape extends Control:
 
 		if font:
 			var alt_txt = "%.1f" % altitude_km
+			draw_string_outline(font, Vector2(ruler_x + 4.0, center_y + 4.0), alt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, 2, Color(0.005, 0.01, 0.025, 0.98))
 			draw_string(font, Vector2(ruler_x + 4.0, center_y + 4.0), alt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(1.0, 1.0, 1.0))
+			draw_string_outline(font, Vector2(ruler_x + 4.0, center_y + 11.0), "km", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 2, Color(0.005, 0.01, 0.025, 0.98))
 			draw_string(font, Vector2(ruler_x + 4.0, center_y + 11.0), "km", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.8, 0.95, 1.0))
 
 # ------------------------------------------------------------------------------
@@ -678,6 +672,7 @@ class VerticalThrottleGauge extends Control:
 		# Header %
 		var font = ThemeDB.fallback_font
 		if font:
+			draw_string_outline(font, Vector2(w * 0.5 - 4.0, 14.0), "%", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, 2, Color(0.005, 0.01, 0.025, 0.98))
 			draw_string(font, Vector2(w * 0.5 - 4.0, 14.0), "%", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color(0.7, 0.85, 1.0))
 
 		# Progress bar area
@@ -800,4 +795,3 @@ class AttitudeScope extends Control:
 		draw_circle(bug_pos, 3.5, Color(0.35, 0.95, 1.0, 0.95))
 		draw_line(bug_pos - Vector2(8, 0), bug_pos + Vector2(8, 0), Color(0.35, 0.95, 1.0, 0.9), 1.5, true)
 		draw_line(bug_pos - Vector2(0, 8), bug_pos + Vector2(0, 8), Color(0.35, 0.95, 1.0, 0.9), 1.5, true)
-

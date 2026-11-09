@@ -5,6 +5,7 @@ const Helios4CampaignData = preload("res://margin/data/helios4_campaign_data.gd"
 
 @onready var check_list: VBoxContainer = %CheckList
 @onready var launch_btn: Button = %ProceedToLaunchBtn
+@onready var override_launch_btn: Button = %OverrideAndProceedBtn
 @onready var return_hangar_btn: Button = %ReturnToHangarBtn
 @onready var status_banner: Label = %StatusBanner
 
@@ -19,12 +20,17 @@ var votes: Dictionary = {
 var telemetry: Dictionary = {}
 
 func _ready() -> void:
+	theme = MarginTheme.get_theme()
 	telemetry = Helios4CampaignData.calculate_hangar_telemetry()
 	_populate_checks()
 	_setup_role_voting_buttons()
 	
 	launch_btn.pressed.connect(_on_launch_pressed)
+	override_launch_btn.pressed.connect(_on_override_launch_pressed)
 	return_hangar_btn.pressed.connect(_on_return_hangar_pressed)
+	launch_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	override_launch_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	return_hangar_btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	
 	_update_launch_button_state()
 
@@ -128,22 +134,26 @@ func _setup_role_voting_buttons() -> void:
 		if btn:
 			var role_name = Helios4CampaignData.team_player_names.get(r_id, "Specialist")
 			btn.text = "SIGN OFF [GO]: %s" % role_name
-			btn.pressed.connect(func():
-				votes[r_id] = not votes[r_id]
-				btn.button_pressed = votes[r_id]
-				btn.text = ("SIGNED [GO]: %s" % role_name) if votes[r_id] else ("SIGN OFF [GO]: %s" % role_name)
-				_update_launch_button_state()
-			)
+			btn.mouse_filter = Control.MOUSE_FILTER_STOP
+			btn.focus_mode = Control.FOCUS_ALL
+			btn.disabled = false
+			btn.pressed.connect(_on_role_vote_pressed.bind(r_id, btn, role_name))
+
+func _on_role_vote_pressed(role_id: String, btn: Button, role_name: String) -> void:
+	votes[role_id] = not bool(votes.get(role_id, false))
+	btn.button_pressed = votes[role_id]
+	btn.text = ("SIGNED [GO]: %s" % role_name) if votes[role_id] else ("SIGN OFF [GO]: %s" % role_name)
+	_update_launch_button_state()
 
 func _update_launch_button_state() -> void:
 	var all_checks_passed: bool = telemetry.get("all_gate_checks_passed", false)
 	var all_voted: bool = (votes[Helios4CampaignData.ROLE_PROPULSION] and votes[Helios4CampaignData.ROLE_STRUCTURAL] and votes[Helios4CampaignData.ROLE_ASTROGATOR] and votes[Helios4CampaignData.ROLE_SYSTEMS])
 	
 	if not all_checks_passed:
-		status_banner.text = "▲ LAUNCH HOLD: Resolve failing engineering checks in the 3D Hangar before flight authorization."
+		status_banner.text = "▲ REVIEW HOLD: use WAIVE CHECKS + AUTO-GO to proceed with trade-offs, or return to the Hangar."
 		status_banner.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
 		launch_btn.disabled = true
-		launch_btn.text = "LAUNCH LOCKED (CRITICAL CHECKS FAILED)"
+		launch_btn.text = "REVIEW HOLD — WAIVER AVAILABLE"
 		Helios4CampaignData.is_launch_authorized = false
 	elif not all_voted:
 		status_banner.text = "● ENGINEERING CHECKS PASSED: All 4 workstations must sign off [GO] for final launchpad clearance."
@@ -160,8 +170,23 @@ func _update_launch_button_state() -> void:
 
 func _on_launch_pressed() -> void:
 	print("[EngineeringReview] FRR Approval Unanimous! Advancing to Earth Launch Pad (Phase 2)")
+	Helios4CampaignData.launch_readiness_override = false
+	Helios4CampaignData.set_launch_authorized(true)
+	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_2_LAUNCH, get_tree())
+
+func _on_override_launch_pressed() -> void:
+	print("[EngineeringReview] Flight Director waiver used; auto-resolving four GO votes and entering Launch.")
+	for role_id in [Helios4CampaignData.ROLE_PROPULSION, Helios4CampaignData.ROLE_STRUCTURAL, Helios4CampaignData.ROLE_ASTROGATOR, Helios4CampaignData.ROLE_SYSTEMS]:
+		votes[role_id] = true
+		var vote_btn := find_child("VoteBtn_" + role_id, true, false) as Button
+		if vote_btn:
+			vote_btn.button_pressed = true
+			vote_btn.text = "SIGNED [GO]: %s" % Helios4CampaignData.team_player_names.get(role_id, "Specialist")
+	Helios4CampaignData.launch_readiness_override = true
+	Helios4CampaignData.record_team_decision(Helios4CampaignData.active_role, "Flight Readiness Waiver", "Auto-resolved four GO votes and waived failed engineering gates to enter Launch.")
 	Helios4CampaignData.set_launch_authorized(true)
 	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_2_LAUNCH, get_tree())
 
 func _on_return_hangar_pressed() -> void:
+	Helios4CampaignData.set_launch_authorized(false)
 	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_1_HANGAR, get_tree())
