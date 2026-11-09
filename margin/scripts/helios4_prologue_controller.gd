@@ -15,6 +15,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			donki_modal.visible = false
 
 func _ready() -> void:
+	var prologue_ui := find_child("RootUI", true, false) as Control
+	if prologue_ui:
+		prologue_ui.theme = MarginTheme.get_theme()
 	if donki_modal:
 		donki_modal.visible = false
 		
@@ -88,8 +91,9 @@ func _populate_donki_modal() -> void:
 		vbox.add_child(title_lbl)
 		
 		var detail_lbl := Label.new()
-		detail_lbl.text = "CME Speed: %.0f km/s • Risk: %s • Lead Time: ~%.0f min\nSource: %s\n%s" % [
-			ev["cme_speed_kms"], ev["educational_risk_level"], ev["transit_time_hours"] * 60.0 / 24.0, ev["source"], ev["impact_description"]
+		var l1_warning_min := Helios4CampaignData.calculate_warning_lead_time_minutes(ev["cme_speed_kms"])
+		detail_lbl.text = "CME Speed: %.0f km/s • Risk: %s • Idealized L1→Earth warning: ~%.1f min\nCatalog transit: %.1f h (separate estimate)\nSource: %s\n%s" % [
+			ev["cme_speed_kms"], ev["educational_risk_level"], l1_warning_min, ev["transit_time_hours"], ev["source"], ev["impact_description"]
 		]
 		detail_lbl.add_theme_color_override("font_color", Color(0.75, 0.8, 0.88))
 		detail_lbl.add_theme_font_size_override("font_size", 10)

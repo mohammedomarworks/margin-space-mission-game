@@ -10,14 +10,18 @@ static func get_theme() -> Theme:
 	_theme = Theme.new()
 	
 	# Colors
-	var col_bg_dark := Color(0.06, 0.08, 0.11, 0.92)
-	var col_panel_bg := Color(0.09, 0.12, 0.16, 0.88)
-	var col_panel_alt := Color(0.12, 0.16, 0.22, 0.90)
-	var col_border := Color(0.22, 0.28, 0.36, 0.6)
+	var col_bg_dark := Color(0.03, 0.055, 0.10, 0.92)
+	var col_panel_bg := Color(0.0314, 0.0549, 0.1020, 0.85) # rgba(8, 14, 26, 0.85)
+	var col_panel_alt := Color(0.055, 0.085, 0.14, 0.90)
+	var col_border := Color(0.22, 0.74, 0.96, 0.62)
 	var col_border_highlight := Color(0.22, 0.74, 0.96, 0.8) # Cyan aerospace accent
 	var col_text_white := Color(0.95, 0.96, 0.98, 1.0)
 	var col_text_dim := Color(0.65, 0.70, 0.78, 1.0)
 	var col_accent_cyan := Color(0.22, 0.74, 0.96, 1.0)
+	_theme.set_color("font_shadow_color", "Label", Color(0.005, 0.012, 0.028, 0.96))
+	_theme.set_constant("shadow_offset_x", "Label", 1)
+	_theme.set_constant("shadow_offset_y", "Label", 1)
+	_theme.set_constant("shadow_outline_size", "Label", 1)
 	
 	# Base Panel Style
 	var panel_box := StyleBoxFlat.new()

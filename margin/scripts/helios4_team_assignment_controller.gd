@@ -20,6 +20,7 @@ const Helios4CampaignData = preload("res://margin/data/helios4_campaign_data.gd"
 var selected_player_count: int = 1
 
 func _ready() -> void:
+	theme = MarginTheme.get_theme()
 	selected_player_count = Helios4CampaignData.player_count
 	timed_check.button_pressed = Helios4CampaignData.is_timed_challenge
 	
@@ -71,6 +72,7 @@ func _update_ui_for_player_count() -> void:
 func _on_confirm_pressed() -> void:
 	Helios4CampaignData.player_count = selected_player_count
 	Helios4CampaignData.is_timed_challenge = timed_check.button_pressed
+	Helios4CampaignData.hangar_time_remaining = 600.0 if timed_check.button_pressed else 0.0
 	
 	var names: Dictionary = {
 		Helios4CampaignData.ROLE_PROPULSION: name_propulsion.text.strip_edges() if not name_propulsion.text.is_empty() else "Propulsion Lead",
