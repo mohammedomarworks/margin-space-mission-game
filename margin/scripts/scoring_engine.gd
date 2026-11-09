@@ -9,7 +9,6 @@ extends RefCounted
 const SpacecraftState = preload("res://margin/scripts/spacecraft_state.gd")
 const ComponentDatabase = preload("res://margin/data/component_data.gd")
 const MissionData = preload("res://margin/data/mission_data.gd")
-const MissionOperationsData = preload("res://margin/data/mission_operations_data.gd")
 const MissionScenario = preload("res://margin/data/mission_scenario.gd")
 const TeamData = preload("res://margin/data/team_data.gd")
 
