@@ -322,21 +322,21 @@ class ReadinessBars extends Control:
 	func _draw() -> void:
 		var font = ThemeDB.fallback_font
 		var row_h = size.y / 5.0
-		var bar_h = 5.0
+		var bar_h = 6.0
 
 		for i in range(min(values.size(), labels.size())):
 			var y_center = (i + 0.5) * row_h
 			var val = clamp(float(values[i]), 0.0, 1.0)
 			var col = Color(0.96, 0.28, 0.25) if val < 0.4 else (Color(1.0, 0.68, 0.18) if val < 0.7 else Color(0.25, 0.9, 0.58))
 			if font:
-				draw_string_outline(font, Vector2(0.0, y_center + 3.0), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 48.0, 8, 2, Color(0.005, 0.01, 0.025, 0.98))
-				draw_string(font, Vector2(0.0, y_center + 3.0), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 48.0, 8, Color(0.84, 0.89, 0.95))
+				draw_string_outline(font, Vector2(0.0, y_center + 3.5), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 54.0, 9, 2, Color(0.005, 0.01, 0.025, 0.98))
+				draw_string(font, Vector2(0.0, y_center + 3.5), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 54.0, 9, Color(0.88, 0.93, 0.98))
 
 			# Progress Bar Track & Fill
-			var bar_x = 54.0
-			var bar_w = size.x - bar_x - 34.0
+			var bar_x = 58.0
+			var bar_w = max(20.0, size.x - bar_x - 36.0)
 			var track_rect = Rect2(bar_x, y_center - bar_h * 0.5, bar_w, bar_h)
-			draw_rect(track_rect, Color(0.12, 0.16, 0.22, 0.8), true)
+			draw_rect(track_rect, Color(0.12, 0.16, 0.22, 0.85), true)
 
 			var fill_rect = Rect2(bar_x, y_center - bar_h * 0.5, bar_w * val, bar_h)
 			draw_rect(fill_rect, col, true)
@@ -345,8 +345,8 @@ class ReadinessBars extends Control:
 			# Percentage label and shadow keep all five gauges readable on the hangar view.
 			if font:
 				var pct_str = "%d%%" % int(val * 100)
-				draw_string_outline(font, Vector2(size.x - 29.0, y_center + 3.0), pct_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, 2, Color(0.005, 0.01, 0.025, 0.98))
-				draw_string(font, Vector2(size.x - 29.0, y_center + 3.0), pct_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.85, 0.9, 0.95))
+				draw_string_outline(font, Vector2(size.x - 32.0, y_center + 3.5), pct_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, 2, Color(0.005, 0.01, 0.025, 0.98))
+				draw_string(font, Vector2(size.x - 32.0, y_center + 3.5), pct_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col.lightened(0.25))
 
 # ------------------------------------------------------------------------------
 # 8. LEFT VERTICAL TOOLBAR ICON (Sliders, Tools, Box, Rocket, Target, Eye, Layers)

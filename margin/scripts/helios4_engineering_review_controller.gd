@@ -150,7 +150,7 @@ func _update_launch_button_state() -> void:
 	var all_voted: bool = (votes[Helios4CampaignData.ROLE_PROPULSION] and votes[Helios4CampaignData.ROLE_STRUCTURAL] and votes[Helios4CampaignData.ROLE_ASTROGATOR] and votes[Helios4CampaignData.ROLE_SYSTEMS])
 	
 	if not all_checks_passed:
-		status_banner.text = "▲ REVIEW HOLD: use WAIVE CHECKS + AUTO-GO to proceed with trade-offs, or return to the Hangar."
+		status_banner.text = "▲ REVIEW HOLD: use SIGN OFF ALL / FLIGHT DIRECTOR WAIVER to proceed with trade-offs, or return to the Hangar."
 		status_banner.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
 		launch_btn.disabled = true
 		launch_btn.text = "REVIEW HOLD — WAIVER AVAILABLE"

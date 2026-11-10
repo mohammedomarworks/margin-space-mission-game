@@ -76,6 +76,22 @@ content_margin_top = 6.0
 content_margin_right = 12.0
 content_margin_bottom = 6.0
 
+[sub_resource type="StyleBoxFlat" id="Style_BaselineBtn"]
+bg_color = Color(0.08, 0.38, 0.62, 0.96)
+border_color = Color(0.35, 0.92, 1.0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+
 [sub_resource type="StyleBoxFlat" id="Style_InvCard"]
 bg_color = Color(0.06, 0.09, 0.13, 0.85)
 border_color = Color(0.2, 0.32, 0.46, 0.6)
@@ -234,24 +250,24 @@ offset_top = 10.0
 offset_right = -16.0
 offset_bottom = 44.0
 grow_horizontal = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
 [node name="BackToTeamBtn" type="Button" parent="CanvasLayer/RootUI/TopBar"]
-custom_minimum_size = Vector2(100, 30)
+custom_minimum_size = Vector2(88, 28)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn")
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 text = "CREW ROSTER"
 
 [node name="ActiveRoleBanner" type="Label" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
-theme_override_font_sizes/font_size = 12
-text = "ACTIVE WORKSTATION: PROPULSION ENGINEER"
+theme_override_font_sizes/font_size = 11
+text = "PROPULSION ENGINEER"
 
 [node name="CamPresets" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="FocusFullStackBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/CamPresets"]
 layout_mode = 2
@@ -284,12 +300,12 @@ theme_override_font_sizes/font_size = 10
 text = "FAIRING: OPEN"
 
 [node name="BaselinePresetBtn" type="Button" parent="CanvasLayer/RootUI/TopBar"]
-custom_minimum_size = Vector2(174, 28)
+custom_minimum_size = Vector2(180, 28)
 layout_mode = 2
-theme_override_styles/normal = SubResource("Style_SecondaryBtn")
+theme_override_styles/normal = SubResource("Style_BaselineBtn")
 theme_override_font_sizes/font_size = 9
 tooltip_text = "Load the game’s NASA-inspired educational reference configuration. Not an official NASA design."
-text = "NASA-INSPIRED BASELINE"
+text = "LOAD NASA BASELINE PRESET"
 
 [node name="Spacer" type="Control" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
@@ -298,14 +314,14 @@ size_flags_horizontal = 3
 [node name="TimerLabel" type="Label" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "TIME: 10:00"
 
 [node name="GateBadge" type="Label" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
-theme_override_font_sizes/font_size = 11
-text = "ALL SYSTEMS NOMINAL - GO FOR FLIGHT REVIEW"
+theme_override_font_sizes/font_size = 10
+text = "NOMINAL - GO FOR REVIEW"
 
 [node name="LeftInventoryPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
 layout_mode = 1
