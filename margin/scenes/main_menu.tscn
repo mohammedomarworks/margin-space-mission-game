@@ -239,7 +239,7 @@ custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryBtn_Menu")
 theme_override_font_sizes/font_size = 14
-text = "► 1. NEW CAMPAIGN (HELIOS-4)"
+text = "> 1. NEW CAMPAIGN (HELIOS-4)"
 
 [node name="ContinueCampaignBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
 unique_name_in_owner = true

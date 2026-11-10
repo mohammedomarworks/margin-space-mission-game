@@ -250,24 +250,24 @@ offset_top = 10.0
 offset_right = -16.0
 offset_bottom = 44.0
 grow_horizontal = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
 [node name="BackToTeamBtn" type="Button" parent="CanvasLayer/RootUI/TopBar"]
-custom_minimum_size = Vector2(100, 30)
+custom_minimum_size = Vector2(88, 28)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn")
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 text = "CREW ROSTER"
 
 [node name="ActiveRoleBanner" type="Label" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
-theme_override_font_sizes/font_size = 12
-text = "ACTIVE WORKSTATION: PROPULSION ENGINEER"
+theme_override_font_sizes/font_size = 11
+text = "PROPULSION ENGINEER"
 
 [node name="CamPresets" type="HBoxContainer" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="FocusFullStackBtn" type="Button" parent="CanvasLayer/RootUI/TopBar/CamPresets"]
 layout_mode = 2
@@ -300,10 +300,10 @@ theme_override_font_sizes/font_size = 10
 text = "FAIRING: OPEN"
 
 [node name="BaselinePresetBtn" type="Button" parent="CanvasLayer/RootUI/TopBar"]
-custom_minimum_size = Vector2(188, 28)
+custom_minimum_size = Vector2(180, 28)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_BaselineBtn")
-theme_override_font_sizes/font_size = 10
+theme_override_font_sizes/font_size = 9
 tooltip_text = "Load the game’s NASA-inspired educational reference configuration. Not an official NASA design."
 text = "LOAD NASA BASELINE PRESET"
 
@@ -314,14 +314,14 @@ size_flags_horizontal = 3
 [node name="TimerLabel" type="Label" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 12
 text = "TIME: 10:00"
 
 [node name="GateBadge" type="Label" parent="CanvasLayer/RootUI/TopBar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.9, 0.55, 1)
-theme_override_font_sizes/font_size = 11
-text = "ALL SYSTEMS NOMINAL - GO FOR FLIGHT REVIEW"
+theme_override_font_sizes/font_size = 10
+text = "NOMINAL - GO FOR REVIEW"
 
 [node name="LeftInventoryPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
 layout_mode = 1

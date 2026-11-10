@@ -528,7 +528,7 @@ func _switch_role(role_id: String) -> void:
 	if active_role_lbl:
 		var meta = Helios4CampaignData.ROLE_METADATA[role_id]
 		var player_name = Helios4CampaignData.team_player_names.get(role_id, "Specialist")
-		active_role_lbl.text = "ACTIVE WORKSTATION: %s [%s]" % [meta["title"].to_upper(), player_name.to_upper()]
+		active_role_lbl.text = "%s [%s]" % [meta["title"].to_upper(), player_name.to_upper()]
 		active_role_lbl.add_theme_color_override("font_color", meta["color"])
 
 func _recalculate_and_refresh_ui() -> void:
@@ -572,14 +572,14 @@ func _recalculate_and_refresh_ui() -> void:
 
 	if current_telemetry["all_gate_checks_passed"]:
 		if gate_badge:
-			gate_badge.text = "ALL SYSTEMS NOMINAL - GO FOR FLIGHT REVIEW"
+			gate_badge.text = "NOMINAL - GO FOR REVIEW"
 			gate_badge.add_theme_color_override("font_color", Color(0.35, 0.9, 0.55))
 		if btn_review:
 			btn_review.disabled = false
 			btn_review.text = "PROCEED TO FLIGHT READINESS REVIEW"
 	else:
 		if gate_badge:
-			gate_badge.text = "ENGINEERING CHECKS PENDING - REVIEW OR USE DIRECTOR WAIVER"
+			gate_badge.text = "PENDING - REVIEW / WAIVER"
 			gate_badge.add_theme_color_override("font_color", Color(0.98, 0.55, 0.15))
 		if btn_review:
 			btn_review.disabled = false
