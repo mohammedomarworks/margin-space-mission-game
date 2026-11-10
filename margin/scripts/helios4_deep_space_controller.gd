@@ -82,6 +82,11 @@ var _cam_orbit_pitch: float = 0.0
 var _cam_zoom_mult: float = 1.0
 var _is_mouse_dragging: bool = false
 var _last_mouse_pos: Vector2 = Vector2.ZERO
+var _attitude_slew_deg: Vector3 = Vector3.ZERO
+var _target_attitude_slew_deg: Vector3 = Vector3.ZERO
+var _auto_warp_banner: PanelContainer = null
+var _auto_warp_label: Label = null
+var _auto_warp_tween: Tween = null
 
 # 3D Trajectory & Celestial World Coordinates
 # --- Frozen Sun–Earth Aligned Reference Frame ---
@@ -331,9 +336,15 @@ func _ready() -> void:
 	_build_3d_trajectory()
 	_build_starfield()
 	_connect_ui_signals()
+	_setup_perk_and_autowarp_hud()
 	_set_camera_mode(CamMode.CHASE_3_4)
 	_update_flight_guidance()
 	_update_telemetry_ui()
+	if transfer_ui:
+		MarginTheme.apply_interactive_polish(transfer_ui)
+	if current_subphase == SubPhase.SOLAR_CRISIS_ALERT:
+		_sync_crisis_mode_attitude()
+		_trigger_auto_warp_drop("SOLAR CME DETECTED", Color(0.98, 0.35, 0.20))
 
 	if sim_pause_banner:
 		sim_pause_banner.visible = false
@@ -793,8 +804,10 @@ func _process(delta: float) -> void:
 				_enter_solar_crisis()
 
 		SubPhase.SOLAR_CRISIS_ALERT:
-			# Waiting for tactical response choices
+			# Waiting for tactical response choices; live power & thermal preview continues
 			_animate_solar_storm_visuals(delta)
+			_process_power_and_systems(effective_dt * 0.25)
+			_process_crisis_thermal(effective_dt * 0.25)
 			_process_cruise_progression(effective_dt * 0.05)
 
 		SubPhase.CRISIS_SIMULATION:
@@ -821,6 +834,11 @@ func _process(delta: float) -> void:
 			probe_node.position = sim_pos * VISUAL_SCALE
 			var tangent = get_trajectory_tangent_sim_km(u).normalized()
 			probe_node.look_at(probe_node.position + tangent, Vector3.UP)
+			_attitude_slew_deg = _attitude_slew_deg.lerp(_target_attitude_slew_deg, clamp(delta * 5.0, 0.0, 1.0))
+			if _attitude_slew_deg.length_squared() > 0.01:
+				probe_node.rotate_object_local(Vector3.UP, deg_to_rad(_attitude_slew_deg.y))
+				probe_node.rotate_object_local(Vector3.RIGHT, deg_to_rad(_attitude_slew_deg.x))
+				probe_node.rotate_object_local(Vector3.FORWARD, deg_to_rad(_attitude_slew_deg.z))
 
 	if starfield_cluster and probe_node:
 		starfield_cluster.global_position = probe_node.global_position
@@ -913,6 +931,8 @@ func _process_power_and_systems(dt: float) -> void:
 		total_load_w = base_avionics_power_w + adcs_power_w + thermal_power_w + (comms_power_w * 0.25) + inst_load_w
 
 	var net_w = gen_w - total_load_w
+	if net_w < 0.0 and Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_SYSTEMS:
+		net_w *= 0.85 # Systems Lead Perk: -15% Crisis battery drain
 
 	# Battery charge integration (Wh).
 	var dt_hours = dt / 3600.0
@@ -920,7 +940,7 @@ func _process_power_and_systems(dt: float) -> void:
 
 func _enter_midcourse_correction() -> void:
 	current_subphase = SubPhase.MIDCOURSE_CORRECTION
-	_set_time_warp(0) # Drop to 1x for manual maneuver
+	_trigger_auto_warp_drop("MCC-1 BURN WINDOW ACTIVE", Color(0.35, 0.88, 1.0))
 	trajectory_accuracy_pct = 84.2 # Simulated trajectory drift off L1 saddle point
 	_show_advisory("▲ ASTROGATOR ALERT: Trajectory drift detected at 300,000 km. MCC-1 burn required.")
 	_update_flight_guidance()
@@ -940,11 +960,12 @@ func _process_mcc_burn(dt: float) -> void:
 
 func _enter_solar_crisis() -> void:
 	current_subphase = SubPhase.SOLAR_CRISIS_ALERT
-	_set_time_warp(0) # Halt warp
+	_trigger_auto_warp_drop("SOLAR CME DETECTED", Color(0.98, 0.35, 0.18))
 	_set_camera_mode(CamMode.CRISIS_TACTICAL)
+	_sync_crisis_mode_attitude()
 
 	current_proton_flux_pfu = 1200.0
-	_show_advisory("▲ SPACE WEATHER ALERT: Solar Energetic Particle (SEP) flux detected from Active Region AR-4890!")
+	_show_advisory("▲ SPACE WEATHER ALERT: TIME WARP AUTO-DROPPED TO 1x — SOLAR CME DETECTED FROM AR-4890!")
 	if tactical_crisis_panel:
 		tactical_crisis_panel.visible = true
 	_update_flight_guidance()
@@ -1063,15 +1084,19 @@ func _update_spacecraft_tracking(delta: float) -> void:
 		var target_quat = Quaternion(Vector3.BACK, local_earth_dir)
 		dish_pivot.quaternion = dish_pivot.quaternion.slerp(target_quat, clamp(delta * 4.0, 0.0, 1.0))
 
-	# Solar wings orient towards Sun
+	# Solar wings orient towards Sun (feathered on safe/partial mode)
 	if sun_node:
 		var sun_dir = (sun_node.global_position - probe_node.global_position).normalized()
 		var local_sun = probe_node.global_transform.basis.inverse() * sun_dir
 		var panel_pitch = clamp(atan2(local_sun.y, -local_sun.z), -0.5, 0.5)
+		if is_in_safe_mode:
+			panel_pitch = 0.65 # Canted edge-on during Safe Mode
+		elif crisis_choice_safemode == 2 and thermal_shield_sunward:
+			panel_pitch = clamp(panel_pitch + 0.25, -0.65, 0.65)
 		if solar_wing_left:
-			solar_wing_left.rotation.x = lerp_angle(solar_wing_left.rotation.x, panel_pitch, delta * 3.0)
+			solar_wing_left.rotation.x = lerp_angle(solar_wing_left.rotation.x, panel_pitch, delta * 3.5)
 		if solar_wing_right:
-			solar_wing_right.rotation.x = lerp_angle(solar_wing_right.rotation.x, panel_pitch, delta * 3.0)
+			solar_wing_right.rotation.x = lerp_angle(solar_wing_right.rotation.x, panel_pitch, delta * 3.5)
 
 # --- CAMERA SYSTEM (Zero Velocity Lag, Pure Perspective & Interactive Orbit) ---
 
@@ -1129,11 +1154,106 @@ func _update_cam_buttons_visual() -> void:
 # --- USER INTERACTION & TACTICAL DECISIONS ---
 
 func _set_time_warp(idx: int) -> void:
+	if idx > 0 and current_subphase in [SubPhase.INJECTION_BURN, SubPhase.MIDCOURSE_CORRECTION, SubPhase.SOLAR_CRISIS_ALERT]:
+		idx = 0
+		_show_advisory("TIME WARP LOCKED AT 1x — COMPLETE ACTIVE BURN / CME DECISION FIRST")
 	current_warp_idx = clamp(idx, 0, time_warp_factors.size() - 1)
 	var warp_btns = [btn_warp_1x, btn_warp_10x, btn_warp_100x, btn_warp_1000x]
 	for i in range(warp_btns.size()):
 		if warp_btns[i]:
 			warp_btns[i].modulate = Color(0.35, 1.0, 0.55) if (i == current_warp_idx) else Color(0.7, 0.75, 0.8)
+
+func _trigger_auto_warp_drop(reason: String, accent_col: Color) -> void:
+	_set_time_warp(0)
+	if _auto_warp_banner == null:
+		_setup_perk_and_autowarp_hud()
+	if not _auto_warp_banner or not _auto_warp_label:
+		return
+	_auto_warp_label.text = "TIME WARP AUTO-DROPPED TO 1x — %s" % reason
+	_auto_warp_label.add_theme_color_override("font_color", accent_col.lerp(Color.WHITE, 0.40))
+	var sb := _auto_warp_banner.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb:
+		sb.border_color = accent_col
+	if not is_inside_tree():
+		_auto_warp_banner.visible = true
+		return
+	if _auto_warp_tween and _auto_warp_tween.is_valid():
+		_auto_warp_tween.kill()
+	_auto_warp_banner.visible = true
+	_auto_warp_banner.modulate.a = 0.0
+	_auto_warp_tween = create_tween()
+	_auto_warp_tween.tween_property(_auto_warp_banner, "modulate:a", 1.0, 0.22)
+	_auto_warp_tween.tween_interval(4.0)
+	_auto_warp_tween.tween_property(_auto_warp_banner, "modulate:a", 0.0, 0.35)
+	_auto_warp_tween.finished.connect(func():
+		if is_instance_valid(_auto_warp_banner):
+			_auto_warp_banner.visible = false
+	)
+
+func _setup_perk_and_autowarp_hud() -> void:
+	var root_ui := find_child("RootUI", true, false) as Control
+	if not root_ui:
+		return
+	if not root_ui.has_node("TeamPerkBadgePanel"):
+		var perk := Helios4CampaignData.get_active_team_perk()
+		var p_panel := PanelContainer.new()
+		p_panel.name = "TeamPerkBadgePanel"
+		p_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		p_panel.offset_left = 18.0
+		p_panel.offset_top = 10.0
+		p_panel.add_theme_stylebox_override("panel", MarginTheme.create_pill_style(perk.get("color", Color(0.25, 0.78, 1.0))))
+		p_panel.add_child(MarginTheme.build_perk_badge_label(perk))
+		root_ui.add_child(p_panel)
+	if _auto_warp_banner == null:
+		_auto_warp_banner = PanelContainer.new()
+		_auto_warp_banner.name = "AutoWarpAlertBanner"
+		_auto_warp_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_auto_warp_banner.visible = false
+		_auto_warp_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_auto_warp_banner.offset_left = -290.0
+		_auto_warp_banner.offset_top = 48.0
+		_auto_warp_banner.offset_right = 290.0
+		_auto_warp_banner.offset_bottom = 80.0
+		_auto_warp_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		var st := StyleBoxFlat.new()
+		st.bg_color = Color(0.14, 0.04, 0.03, 0.94)
+		st.border_color = Color(0.98, 0.40, 0.18, 0.95)
+		st.set_border_width_all(2)
+		st.set_corner_radius_all(6)
+		st.content_margin_left = 12
+		st.content_margin_right = 12
+		st.content_margin_top = 5
+		st.content_margin_bottom = 5
+		_auto_warp_banner.add_theme_stylebox_override("panel", st)
+		_auto_warp_label = Label.new()
+		_auto_warp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_auto_warp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_auto_warp_label.add_theme_font_size_override("font_size", 11)
+		_auto_warp_banner.add_child(_auto_warp_label)
+		root_ui.add_child(_auto_warp_banner)
+
+func _sync_crisis_mode_attitude() -> void:
+	match crisis_choice_safemode:
+		1:
+			is_in_safe_mode = true
+			thermal_shield_sunward = true
+			_target_attitude_slew_deg = Vector3(0.0, 0.0, 0.0)
+		2:
+			is_in_safe_mode = false
+			thermal_shield_sunward = true
+			_target_attitude_slew_deg = Vector3(8.0, 24.0, 6.0)
+		3:
+			is_in_safe_mode = false
+			thermal_shield_sunward = false
+			_target_attitude_slew_deg = Vector3(18.0, 58.0, 12.0)
+	match crisis_choice_comms:
+		1:
+			comms_power_w = 15.0
+		2:
+			comms_power_w = 45.0
+		3:
+			comms_power_w = 5.0
 
 func _toggle_simulation_pause() -> void:
 	is_sim_paused = not is_sim_paused
@@ -1147,12 +1267,15 @@ func _select_crisis_option(card_idx: int, option_idx: int) -> void:
 		1: # Safe Mode
 			crisis_choice_safemode = option_idx
 			_highlight_choice_btns([btn_safe_opt1, btn_safe_opt2, btn_safe_opt3], option_idx)
+			_sync_crisis_mode_attitude()
 		2: # Instruments
 			crisis_choice_instruments = option_idx
 			_highlight_choice_btns([btn_inst_opt1, btn_inst_opt2, btn_inst_opt3], option_idx)
 		3: # Comms & Power
 			crisis_choice_comms = option_idx
 			_highlight_choice_btns([btn_comm_opt1, btn_comm_opt2, btn_comm_opt3], option_idx)
+			_sync_crisis_mode_attitude()
+	_update_telemetry_ui()
 
 func _highlight_choice_btns(btns: Array, active_idx: int) -> void:
 	for i in range(btns.size()):
@@ -1164,6 +1287,9 @@ func _highlight_choice_btns(btns: Array, active_idx: int) -> void:
 
 func _on_commit_crisis_pressed() -> void:
 	crisis_decisions_committed = true
+
+	# Apply Team Lead Perk modifiers safely when active
+	var deg_mult: float = 0.88 if (Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_STRUCTURAL) else 1.0
 
 	# Apply Consequences of Decision 1: Safe Mode
 	match crisis_choice_safemode:
@@ -1180,23 +1306,24 @@ func _on_commit_crisis_pressed() -> void:
 		2: # Partial Protection
 			is_in_safe_mode = false
 			thermal_shield_sunward = true
-			equipment_degradation_pct += 5.0
+			equipment_degradation_pct += 5.0 * deg_mult
 			science_bonus_pts += 10.0
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_SYSTEMS,
 				"Spacecraft Safe Mode",
-				"Partial Protection Selected: Non-optical sensors kept active. Minor 5% degradation."
+				"Partial Protection Selected: Non-optical sensors kept active. Minor %.1f%% degradation." % (5.0 * deg_mult)
 			)
 		3: # Continue Science
 			is_in_safe_mode = false
 			thermal_shield_sunward = false
-			equipment_degradation_pct += 18.0
+			equipment_degradation_pct += 18.0 * deg_mult
 			science_bonus_pts += 25.0
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_SYSTEMS,
 				"Spacecraft Safe Mode",
-				"Continue Science Authorized: Full payload active through peak storm. 18% wear, +25 science pts."
+				"Continue Science Authorized: Full payload active through peak storm. %.1f%% wear, +25 science pts." % (18.0 * deg_mult)
 			)
+	_sync_crisis_mode_attitude()
 
 	# Apply Consequences of Decision 2: Instruments
 	match crisis_choice_instruments:
@@ -1235,7 +1362,8 @@ func _on_commit_crisis_pressed() -> void:
 func _on_primary_action_pressed() -> void:
 	match current_subphase:
 		SubPhase.PARKING_ORBIT:
-			# Authorize Trans-L1 Injection Burn
+			# Authorize Trans-L1 Injection Burn — auto-drop time warp to 1x
+			_trigger_auto_warp_drop("TLI ESCAPE BURN ACTIVE", Color(0.98, 0.65, 0.20))
 			current_subphase = SubPhase.INJECTION_BURN
 			burn_timer_s = 0.0
 			burn_duration_s = 4.0
@@ -1249,10 +1377,11 @@ func _on_primary_action_pressed() -> void:
 
 		SubPhase.MIDCOURSE_CORRECTION:
 			# Execute MCC-1 Burn
-			# Calibrated burn: 16.2 kg fuel, restores accuracy to 99.6%
-			if probe_propellant_kg >= 16.2:
-				probe_propellant_kg -= 16.2
-				trajectory_accuracy_pct = 99.6
+			# Calibrated burn: 16.2 kg fuel (or -5% with Propulsion Lead perk)
+			var req_mcc_fuel: float = 15.39 if (Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_PROPULSION) else 16.2
+			if probe_propellant_kg >= req_mcc_fuel:
+				probe_propellant_kg -= req_mcc_fuel
+				trajectory_accuracy_pct = 99.8 if (Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_ASTROGATOR) else 99.6
 				is_thruster_firing = true
 				burn_timer_s = 0.0
 				Helios4CampaignData.record_team_decision(
@@ -1466,7 +1595,15 @@ func _update_telemetry_ui() -> void:
 		var progress = clamp(distance_km / TARGET_L1_DISTANCE_KM, 0.0, 1.0)
 		var solar_flux = lerp(1361.0, 1388.0, progress)
 		var gen_w = solar_array_area_m2 * solar_efficiency * solar_flux * cos(deg_to_rad(solar_alignment_deg))
-		val_power.text = "%.0f W" % gen_w
+		if is_in_safe_mode:
+			gen_w *= 0.75
+		var inst_load_w := 0.0
+		for iid in instruments_active:
+			if instruments_active[iid]:
+				inst_load_w += instrument_power_loads_w.get(iid, 0.0)
+		var load_w = base_avionics_power_w + adcs_power_w + thermal_power_w + (comms_power_w * (0.25 if is_in_safe_mode else 1.0)) + inst_load_w
+		var net_w = gen_w - load_w
+		val_power.text = "%.0f W (Net %+.0f W • %.0f°C)" % [gen_w, net_w, thermal_bus_temp_c]
 	if val_dsn:
 		val_dsn.text = "%.1f dB" % dsn_signal_db
 

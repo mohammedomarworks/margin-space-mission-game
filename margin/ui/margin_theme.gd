@@ -149,3 +149,102 @@ static func create_pill_style(color: Color) -> StyleBoxFlat:
 	box.content_margin_top = 2
 	box.content_margin_bottom = 2
 	return box
+
+static func apply_interactive_polish(root: Node) -> void:
+	if root == null:
+		return
+	var queue: Array[Node] = [root]
+	while not queue.is_empty():
+		var node: Node = queue.pop_front()
+		for child in node.get_children():
+			queue.append(child)
+		if node is Label or node is HSeparator or node is VSeparator:
+			(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+		elif node is PanelContainer:
+			var nm: String = node.name
+			if (nm.contains("Banner") or nm.contains("Badge") or nm.contains("BuildBadge")) and not _has_interactive_descendant(node):
+				(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+		elif node is BaseButton:
+			_polish_button(node as BaseButton)
+
+static func _has_interactive_descendant(root: Node) -> bool:
+	for child in root.get_children():
+		if child is BaseButton or child is LineEdit or child is OptionButton or child is Slider:
+			return true
+		if _has_interactive_descendant(child):
+			return true
+	return false
+
+static func _polish_button(btn: BaseButton) -> void:
+	if btn == null:
+		return
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	if btn is Button and not (btn is CheckBox) and not (btn is OptionButton):
+		if btn.has_theme_stylebox_override("normal") and not btn.has_theme_stylebox_override("hover"):
+			var norm_box := btn.get_theme_stylebox("normal")
+			if norm_box is StyleBoxFlat:
+				var flat := norm_box as StyleBoxFlat
+				var hover_box := flat.duplicate() as StyleBoxFlat
+				hover_box.bg_color = Color(
+					clampf(flat.bg_color.r + 0.08, 0.0, 1.0),
+					clampf(flat.bg_color.g + 0.10, 0.0, 1.0),
+					clampf(flat.bg_color.b + 0.14, 0.0, 1.0),
+					clampf(maxf(flat.bg_color.a, 0.85) + 0.05, 0.0, 1.0)
+				)
+				hover_box.border_color = flat.border_color.lerp(Color(0.35, 0.92, 1.0, 1.0), 0.6)
+				hover_box.set_border_width_all(maxi(1, flat.border_width_left))
+				btn.add_theme_stylebox_override("hover", hover_box)
+				if not btn.has_theme_stylebox_override("pressed"):
+					var pressed_box := flat.duplicate() as StyleBoxFlat
+					pressed_box.bg_color = Color(
+						clampf(flat.bg_color.r * 0.72, 0.02, 1.0),
+						clampf(flat.bg_color.g + 0.04, 0.04, 1.0),
+						clampf(flat.bg_color.b + 0.12, 0.08, 1.0),
+						0.96
+					)
+					pressed_box.border_color = Color(0.35, 0.95, 1.0, 1.0)
+					pressed_box.set_border_width_all(maxi(2, flat.border_width_left))
+					btn.add_theme_stylebox_override("pressed", pressed_box)
+	if btn.has_meta("_margin_polish_wired"):
+		return
+	btn.set_meta("_margin_polish_wired", true)
+	btn.mouse_entered.connect(func():
+		if is_instance_valid(btn) and not btn.disabled:
+			_tween_btn_modulate(btn, Color(1.07, 1.10, 1.15, 1.0), 0.09)
+	)
+	btn.mouse_exited.connect(func():
+		if is_instance_valid(btn):
+			_tween_btn_modulate(btn, Color.WHITE, 0.12)
+	)
+	btn.button_down.connect(func():
+		if is_instance_valid(btn) and not btn.disabled:
+			_tween_btn_modulate(btn, Color(0.84, 0.93, 1.0, 1.0), 0.06)
+	)
+	btn.button_up.connect(func():
+		if is_instance_valid(btn) and not btn.disabled:
+			var target_col: Color = Color(1.07, 1.10, 1.15, 1.0) if btn.is_hovered() else Color.WHITE
+			_tween_btn_modulate(btn, target_col, 0.09)
+	)
+
+static func _tween_btn_modulate(btn: BaseButton, target: Color, dur: float) -> void:
+	if not btn.is_inside_tree():
+		btn.self_modulate = target
+		return
+	if btn.has_meta("_polish_tween"):
+		var prev = btn.get_meta("_polish_tween")
+		if prev is Tween and prev.is_valid():
+			prev.kill()
+	var tw := btn.create_tween()
+	tw.tween_property(btn, "self_modulate", target, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	btn.set_meta("_polish_tween", tw)
+
+static func build_perk_badge_label(perk: Dictionary) -> Label:
+	var lbl := Label.new()
+	lbl.name = "TeamPerkBadge"
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lbl.text = str(perk.get("badge_text", "LEAD: PROPULSION"))
+	lbl.tooltip_text = str(perk.get("summary", ""))
+	var col: Color = perk.get("color", Color(0.25, 0.78, 1.0))
+	lbl.add_theme_color_override("font_color", col.lerp(Color.WHITE, 0.25))
+	lbl.add_theme_font_size_override("font_size", 10)
+	return lbl

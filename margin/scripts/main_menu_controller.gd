@@ -14,6 +14,7 @@ func _ready() -> void:
 	var menu_ui := find_child("RootUI", true, false) as Control
 	if menu_ui:
 		menu_ui.theme = MarginTheme.get_theme()
+		MarginTheme.apply_interactive_polish(menu_ui)
 	# Configure default 3D spacecraft for title display
 	var default_cfg = ComponentDatabase.get_default_configuration()
 	# Equip DSCOVR plasma boom if available for title display

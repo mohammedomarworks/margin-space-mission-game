@@ -237,8 +237,11 @@ func _ready() -> void:
 	_build_starfield()
 	
 	_setup_ui_connections()
-	_set_camera_mode(CameraMode.CHASE)
+	_setup_team_perk_badge()
+	_set_camera_mode(CameraMode.CHASE, true)
 	_load_subphase(current_phase)
+	if arrival_ui:
+		MarginTheme.apply_interactive_polish(arrival_ui)
 	
 	get_tree().process_frame.connect(func():
 		if action_btn: print("[L1Arrival] CommissionActionBtn center: ", action_btn.get_global_rect().get_center())
@@ -283,6 +286,11 @@ func _load_inherited_campaign_state() -> void:
 			mag_health_pct = 0.0
 		if not instrument_config.has("faraday_cup"):
 			faraday_health_pct = 0.0
+	if Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_SYSTEMS:
+		if mag_health_pct > 0.0:
+			mag_health_pct = clampf(mag_health_pct + 2.0, 0.0, 100.0)
+		if faraday_health_pct > 0.0:
+			faraday_health_pct = clampf(faraday_health_pct + 2.0, 0.0, 100.0)
 
 	accumulated_rad_dose_rad = Helios4CampaignData.transfer_telemetry.get("accumulated_radiation_dose_rad", 4.5)
 	equipment_degradation_pct = Helios4CampaignData.crisis_results.get("equipment_degradation_pct", 0.0)
@@ -394,12 +402,33 @@ func _update_camera_transform(delta: float) -> void:
 		
 	camera.look_at(look_target, cam_up)
 
-func _set_camera_mode(mode: CameraMode) -> void:
+func _set_camera_mode(mode: CameraMode, instant: bool = false) -> void:
 	current_camera_mode = mode
 	_cam_orbit_yaw = 0.0
 	_cam_orbit_pitch = 0.0
-	_cam_zoom_mult = 1.0
-	_update_camera_transform(0.0)
+	if instant:
+		_cam_zoom_mult = 1.0
+		_update_camera_transform(0.0)
+	else:
+		_cam_zoom_mult = 1.16
+		if is_inside_tree():
+			var ztw := create_tween()
+			ztw.tween_property(self, "_cam_zoom_mult", 1.0, 0.52).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+func _setup_team_perk_badge() -> void:
+	var top_banner := find_child("TopBanner", true, false) as HBoxContainer
+	if not top_banner or top_banner.has_node("TeamPerkBadgePanel"):
+		return
+	var perk := Helios4CampaignData.get_active_team_perk()
+	var panel := PanelContainer.new()
+	panel.name = "TeamPerkBadgePanel"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", MarginTheme.create_pill_style(perk.get("color", Color(0.25, 0.78, 1.0))))
+	panel.add_child(MarginTheme.build_perk_badge_label(perk))
+	top_banner.add_child(panel)
+	var spacer := top_banner.get_node_or_null("Spacer")
+	if spacer:
+		top_banner.move_child(panel, spacer.get_index())
 
 # --- 3D VISUAL BUILDERS ---
 
@@ -878,7 +907,8 @@ func _load_subphase(phase: SubPhase) -> void:
 				
 		SubPhase.STAGE_B_HOI_PLANNING:
 			current_step = StageStep.APPROACH
-			if lbl_phase: lbl_phase.text = "STAGE B: HALO-ORBIT INSERTION PLANNING"
+			_set_camera_mode(CameraMode.CHASE)
+			if lbl_phase: lbl_phase.text = "STAGE B: HALO-ORBIT INSERTION PLANNING (WARP LOCKED 1x)"
 			if lbl_status: lbl_status.text = "PREVIEWING 3D PERIODIC HALO ORBIT CORRIDOR"
 			if lbl_primary: lbl_primary.text = "Configure HOI braking burn magnitude and authorize main propulsion ignition."
 			if lbl_action: lbl_action.text = "Propulsion & Astrogator: Review burn parameters and click AUTHORIZE & EXECUTE HOI BURN"
@@ -941,6 +971,7 @@ func _load_subphase(phase: SubPhase) -> void:
 				
 		SubPhase.STAGE_D_COMMISSION_MAG:
 			current_step = StageStep.BOOM_DEPLOY
+			_set_camera_mode(CameraMode.MAG_BOOM)
 			if lbl_phase: lbl_phase.text = "STAGE D: INSTRUMENT COMMISSIONING — MAGNETOMETER"
 			if lbl_status: lbl_status.text = "MAGNETOMETER HEALTH: %.1f%% • BOOM STATUS: %s" % [mag_health_pct, "DEPLOYED" if mag_boom_deployed else "STOWED"]
 			if lbl_primary: lbl_primary.text = "Extend 3.8m carbon-fiber boom, verify vibration stability, and calibrate IMF sensors."
@@ -968,6 +999,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 		SubPhase.STAGE_D_COMMISSION_FARADAY:
 			current_step = StageStep.FARADAY_ACTIVATE
+			_set_camera_mode(CameraMode.FARADAY_CUP)
 			if lbl_phase: lbl_phase.text = "STAGE D: INSTRUMENT COMMISSIONING — FARADAY CUP"
 			if lbl_status: lbl_status.text = "FARADAY CUP HEALTH: %.1f%% • APERTURE: %s" % [faraday_health_pct, "ACTIVE" if faraday_cup_active else "RELEASE COVER"]
 			if lbl_primary: lbl_primary.text = "Release aperture cover, execute high-voltage modulator sweep, and calibrate plasma stream."
@@ -995,6 +1027,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 		SubPhase.STAGE_D_SYSTEMS_VERIFY:
 			current_step = StageStep.FARADAY_ACTIVATE
+			_set_camera_mode(CameraMode.CHASE)
 			if lbl_phase: lbl_phase.text = "STAGE D: SPACECRAFT BUS & ELECTRICAL VERIFICATION"
 			if lbl_status: lbl_status.text = "POWER SURPLUS: +%.0f W • BATTERY RESERVE: %.0f Wh" % [net_power_surplus_w, battery_charge_wh]
 			if lbl_primary: lbl_primary.text = "Verify solar array tracking, electrical power margins, thermal balance, and avionics."
@@ -1020,6 +1053,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 		SubPhase.STAGE_E_SCIENTIFIC_OBSERVATION:
 			current_step = StageStep.EARTH_LINK
+			_set_camera_mode(CameraMode.WIDE)
 			observation_active = true
 			if lbl_phase: lbl_phase.text = "STAGE E: LIVE SOLAR-WIND OBSERVATION SESSION"
 			if lbl_status: lbl_status.text = "STREAMING SCIENCE: MAGNETOMETER & FARADAY CUP ONLINE"
@@ -1051,6 +1085,7 @@ func _load_subphase(phase: SubPhase) -> void:
 				
 		SubPhase.STAGE_F_EARTH_COMM_LOCK:
 			current_step = StageStep.EARTH_LINK
+			_set_camera_mode(CameraMode.EARTH_DISH)
 			if lbl_phase: lbl_phase.text = "STAGE F: DEEP SPACE NETWORK EARTH COMMUNICATION LOCK"
 			if lbl_status: lbl_status.text = "HIGH-GAIN DISH: SLEWING TOWARD EARTH • DSN FREQUENCY: 8.4 GHz"
 			if lbl_primary: lbl_primary.text = "Point high-gain Cassegrain parabolic antenna toward Earth and establish carrier lock."
@@ -1147,6 +1182,7 @@ func _on_primary_action_pressed() -> void:
 			mag_stability_verified = mag_boom_deployed
 			mag_power_verified = mag_boom_deployed and battery_charge_wh > 0.0
 			mag_calibrated = mag_power_verified
+			_set_camera_mode(CameraMode.MAG_BOOM)
 			if mag_boom_deployed:
 				_animate_mag_boom_deployment()
 				print("[L1Arrival] 🛰 Magnetometer boom deployed; health %.1f%%." % mag_health_pct)
@@ -1193,6 +1229,7 @@ func _on_primary_action_pressed() -> void:
 		SubPhase.STAGE_F_TRANSMIT_WARNING:
 			# Authorize and start transmission
 			transmission_authorized = true
+			_set_camera_mode(CameraMode.WIDE)
 			print("[L1Arrival] ★ Early warning transmission authorized! Beaming to Earth...")
 
 func _on_secondary_action_pressed() -> void:
@@ -1220,7 +1257,10 @@ func _on_secondary_action_pressed() -> void:
 			_set_camera_mode(CameraMode.EARTH_DISH)
 
 func _required_hoi_propellant_kg() -> float:
-	return 35.0 * (hoi_planned_delta_v_ms / 280.0)
+	var base := 35.0 * (hoi_planned_delta_v_ms / 280.0)
+	if Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_PROPULSION:
+		return base * 0.95
+	return base
 
 func _start_hoi_burn_execution() -> void:
 	hoi_fuel_required_kg = _required_hoi_propellant_kg()

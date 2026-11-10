@@ -69,6 +69,37 @@ const ROLE_METADATA: Dictionary = {
 	}
 }
 
+const TEAM_PERK_METADATA: Dictionary = {
+	ROLE_PROPULSION: {
+		"id": ROLE_PROPULSION,
+		"title": "Propulsion Lead — Nozzle Overdrive",
+		"short_badge": "PERK: PROPULSION (+120 m/s Probe Isp)",
+		"summary": "+120 m/s probe Delta-V margin & -5% deep-space/HOI propellant burn.",
+		"color": Color(0.98, 0.55, 0.15)
+	},
+	ROLE_STRUCTURAL: {
+		"id": ROLE_STRUCTURAL,
+		"title": "Structures Lead — Composite Shielding",
+		"short_badge": "PERK: STRUCTURES (+0.15 Cal Margin / -12% Wear)",
+		"summary": "+0.15 calibers static margin & -12% CME hardware degradation in Crisis.",
+		"color": Color(0.35, 0.85, 0.55)
+	},
+	ROLE_ASTROGATOR: {
+		"id": ROLE_ASTROGATOR,
+		"title": "Astrogator Lead — Precision Ephemeris",
+		"short_badge": "PERK: ASTROGATOR (-15 m/s Trim / Tight Drift)",
+		"summary": "-15 m/s probe ΔV threshold & -5 m/s MCC trim cost in Deep Space.",
+		"color": Color(0.25, 0.75, 1.0)
+	},
+	ROLE_SYSTEMS: {
+		"id": ROLE_SYSTEMS,
+		"title": "Systems Lead — Rad-Hardened Bus",
+		"short_badge": "PERK: SYSTEMS (+35 W Bus / -15% CME Drain)",
+		"summary": "+35 W power margin, -15% Crisis battery drain & +2% sensor floor.",
+		"color": Color(0.85, 0.45, 0.95)
+	}
+}
+
 # --- STAGE DESCRIPTIONS ---
 const STAGE_METADATA: Dictionary = {
 	Stage.PROLOGUE: {
@@ -139,6 +170,8 @@ static var team_player_names: Dictionary = {
 	ROLE_SYSTEMS: "Specialist 4"
 }
 static var active_role: String = ROLE_PROPULSION
+static var team_perk_id: String = "" # Activated when Team Assignment confirms lead role
+static var waived_gates: Array = []
 
 # Game Mode: Challenge (10 min timer) vs Practice (Untimed)
 static var is_timed_challenge: bool = true
@@ -443,6 +476,20 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	var transfer_days: int = 135 if traj_mode == "phased_wsb" else 110
 	var traj_mode_name: String = "Phased WSB" if traj_mode == "phased_wsb" else "Direct Injection"
 
+	# Active Team Lead Engineering Perk Bonus (only when confirmed in Team Assignment)
+	if is_team_perk_active():
+		match team_perk_id:
+			ROLE_PROPULSION:
+				delta_v_probe += 120.0
+				total_mission_delta_v += 120.0
+			ROLE_STRUCTURAL:
+				static_margin_calibers += 0.15
+			ROLE_ASTROGATOR:
+				req_probe_dv = maxf(req_probe_dv - 15.0, 300.0)
+			ROLE_SYSTEMS:
+				power_generation_w += 35.0
+				power_margin_w += 35.0
+
 	# --- ENGINEERING GATE CHECKS (7 Authoritative Mission Criteria) ---
 	var gate_checks: Array = []
 	
@@ -601,9 +648,30 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"transfer_days": transfer_days,
 		"req_launch_dv": req_launch_dv,
 		"req_probe_dv": req_probe_dv,
+		"team_perk": get_active_team_perk(),
 		"gate_checks": gate_checks,
 		"all_gate_checks_passed": all_passed
 	}
+
+static func is_team_perk_active() -> bool:
+	return not team_perk_id.is_empty() and TEAM_PERK_METADATA.has(team_perk_id)
+
+static func set_team_lead_perk(role_id: String) -> void:
+	if not ROLE_METADATA.has(role_id):
+		role_id = ROLE_PROPULSION
+	active_role = role_id
+	team_perk_id = role_id
+	if SpacecraftState.active_instance != null:
+		SpacecraftState.active_instance.team_perk_id = role_id
+
+static func get_active_team_perk() -> Dictionary:
+	var eff_id: String = team_perk_id if is_team_perk_active() else active_role
+	if not TEAM_PERK_METADATA.has(eff_id):
+		eff_id = ROLE_PROPULSION
+	var meta: Dictionary = TEAM_PERK_METADATA[eff_id].duplicate()
+	meta["active"] = is_team_perk_active()
+	meta["badge_text"] = meta["short_badge"] if is_team_perk_active() else ("LEAD ROLE: %s" % ROLE_METADATA[eff_id]["callsign"])
+	return meta
 
 # --- AUTHORITATIVE DEBRIEF SCORING FUNCTION ---
 
@@ -671,6 +739,9 @@ static func save_campaign_state() -> bool:
 		"highest_unlocked_stage": int(highest_unlocked_stage),
 		"player_count": player_count,
 		"team_player_names": team_player_names,
+		"active_role": active_role,
+		"team_perk_id": team_perk_id,
+		"waived_gates": waived_gates,
 		"team_decision_log": team_decision_log,
 		"vehicle_config": vehicle_config,
 		"probe_config": probe_config,
@@ -722,6 +793,11 @@ static func load_campaign_state() -> bool:
 	player_count = data.get("player_count", 1)
 	if data.has("team_player_names"):
 		team_player_names = data["team_player_names"]
+	active_role = data.get("active_role", ROLE_PROPULSION)
+	team_perk_id = data.get("team_perk_id", "")
+	waived_gates = data.get("waived_gates", [])
+	if SpacecraftState.active_instance != null:
+		SpacecraftState.active_instance.team_perk_id = team_perk_id
 	if data.has("team_decision_log"):
 		team_decision_log = data["team_decision_log"]
 	if data.has("vehicle_config"):
@@ -748,6 +824,7 @@ static func set_launch_authorized(authorized: bool) -> void:
 	is_launch_authorized = authorized
 	if not authorized:
 		launch_readiness_override = false
+		waived_gates = []
 	save_campaign_state()
 
 static func is_spacecraft_ready_for_flight() -> bool:
@@ -769,6 +846,10 @@ static func reset_campaign() -> void:
 	}
 	team_decision_log = []
 	active_role = ROLE_PROPULSION
+	team_perk_id = ""
+	waived_gates = []
+	if SpacecraftState.active_instance != null:
+		SpacecraftState.active_instance.team_perk_id = ""
 	vehicle_config = get_default_vehicle_config()
 	probe_config = get_default_probe_config()
 	is_launch_authorized = false

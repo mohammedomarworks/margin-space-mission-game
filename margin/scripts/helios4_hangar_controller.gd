@@ -61,8 +61,11 @@ func _ready() -> void:
 	_setup_inventory_grid()
 	_connect_ui_signals()
 	_switch_role(active_role)
+	_setup_team_perk_badge()
 	_update_camera_transform()
 	_recalculate_and_refresh_ui()
+	if hangar_ui:
+		MarginTheme.apply_interactive_polish(hangar_ui)
 
 	# Print UI coordinates for automated QA and CDP browser verification
 	get_tree().process_frame.connect(func():
@@ -331,6 +334,10 @@ func _apply_educational_baseline() -> void:
 			control.set_block_signals(false)
 	if rocket_3d and rocket_3d.grid_fins_node:
 		rocket_3d.grid_fins_node.visible = true
+	_set_camera_focus(Vector3(0.0, 7.5, 0.0), 17.5)
+	if rocket_3d:
+		rocket_3d.animate_part_pulse("full_stack")
+		rocket_3d.highlight_subsystem("")
 	Helios4CampaignData.save_campaign_state()
 	_recalculate_and_refresh_ui()
 
@@ -371,6 +378,7 @@ func _setup_hardware_selector_signals() -> void:
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
+			_on_part_swapped("propulsion_engines", Vector3(0.0, 2.8, 0.0), 10.5)
 		)
 
 	# Propulsion: Propellant Loading
@@ -387,6 +395,7 @@ func _setup_hardware_selector_signals() -> void:
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
+			if rocket_3d: rocket_3d.highlight_subsystem("propulsion_engines")
 		)
 
 	# Structural: Grid Fins
@@ -406,6 +415,7 @@ func _setup_hardware_selector_signals() -> void:
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
+			_on_part_swapped("grid_fins", Vector3(0.0, 2.0, 0.0), 9.5)
 		)
 
 	# Structural: Hull Material
@@ -432,6 +442,7 @@ func _setup_hardware_selector_signals() -> void:
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
+			_on_part_swapped("probe_bus", Vector3(0.0, 11.8, 0.0), 8.2)
 		)
 
 	# Astrogator: Trajectory Mode
@@ -454,6 +465,7 @@ func _setup_hardware_selector_signals() -> void:
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
+			_on_part_swapped("interstage_vacuum", Vector3(0.0, 7.2, 0.0), 10.5)
 		)
 
 	# Systems: Solar Array Area Slider
@@ -470,6 +482,9 @@ func _setup_hardware_selector_signals() -> void:
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
+			if rocket_3d:
+				rocket_3d.highlight_subsystem("solar_wings")
+				rocket_3d.animate_part_pulse("solar_wings")
 		)
 
 	# Systems: Rad-Hard Avionics Selection
@@ -496,6 +511,7 @@ func _setup_hardware_selector_signals() -> void:
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
+			_on_part_swapped("probe_bus", Vector3(0.0, 11.8, 0.0), 8.2)
 		)
 
 func _switch_role(role_id: String) -> void:
@@ -593,9 +609,35 @@ func _update_label(node_name: String, text_val: String) -> void:
 func _set_camera_focus(target: Vector3, dist: float) -> void:
 	var tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(self, "_cam_target", target, 0.45)
-	tween.tween_property(self, "_cam_distance", dist, 0.45)
+	tween.tween_property(self, "_cam_target", target, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(self, "_cam_distance", dist, 0.42).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_method(func(_step: float): _update_camera_transform(), 0.0, 1.0, 0.42)
 	tween.finished.connect(_update_camera_transform)
+
+func _on_part_swapped(subsystem_id: String, focus_target: Vector3, focus_dist: float) -> void:
+	_set_camera_focus(focus_target, focus_dist)
+	if rocket_3d:
+		rocket_3d.highlight_subsystem(subsystem_id)
+		rocket_3d.animate_part_pulse(subsystem_id)
+
+func _setup_team_perk_badge() -> void:
+	var top_bar := find_child("TopBar", true, false) as HBoxContainer
+	if not top_bar:
+		return
+	if top_bar.has_node("TeamPerkBadgePanel"):
+		return
+	var perk := Helios4CampaignData.get_active_team_perk()
+	var panel := PanelContainer.new()
+	panel.name = "TeamPerkBadgePanel"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var col: Color = perk.get("color", Color(0.25, 0.78, 1.0))
+	panel.add_theme_stylebox_override("panel", MarginTheme.create_pill_style(col))
+	var lbl := MarginTheme.build_perk_badge_label(perk)
+	panel.add_child(lbl)
+	top_bar.add_child(panel)
+	var spacer := top_bar.get_node_or_null("Spacer")
+	if spacer:
+		top_bar.move_child(panel, spacer.get_index())
 
 func _update_camera_transform() -> void:
 	if not orbit_cam:

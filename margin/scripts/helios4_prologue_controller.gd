@@ -8,16 +8,24 @@ const DonkiService = preload("res://margin/data/donki_service.gd")
 @onready var donki_modal: PanelContainer = %DonkiModal
 
 var _flare_time: float = 0.0
+var _text_tween: Tween = null
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if donki_modal and donki_modal.visible:
 			donki_modal.visible = false
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_SPACE or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			if donki_modal and donki_modal.visible:
+				donki_modal.visible = false
+			else:
+				_skip_or_proceed()
 
 func _ready() -> void:
 	var prologue_ui := find_child("RootUI", true, false) as Control
 	if prologue_ui:
 		prologue_ui.theme = MarginTheme.get_theme()
+		MarginTheme.apply_interactive_polish(prologue_ui)
 	if donki_modal:
 		donki_modal.visible = false
 		
@@ -37,10 +45,32 @@ func _ready() -> void:
 	if close_donki_btn:
 		close_donki_btn.pressed.connect(func(): donki_modal.visible = false)
 
+	_start_briefing_intro()
+
 	get_tree().process_frame.connect(func():
 		if proceed_btn: print("[Prologue] ProceedBtn global_rect: ", proceed_btn.get_global_rect(), " center: ", proceed_btn.get_global_rect().get_center())
 		if donki_btn: print("[Prologue] DonkiBtn global_rect: ", donki_btn.get_global_rect(), " center: ", donki_btn.get_global_rect().get_center())
 	, CONNECT_ONE_SHOT)
+
+func _start_briefing_intro() -> void:
+	var briefing := find_child("BriefingText", true, false) as RichTextLabel
+	var card := find_child("EmergencyCard", true, false) as Control
+	if card:
+		card.modulate.a = 0.0
+		var card_tw := create_tween()
+		card_tw.tween_property(card, "modulate:a", 1.0, 0.35).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	if briefing:
+		briefing.visible_ratio = 0.0
+		_text_tween = create_tween()
+		_text_tween.tween_property(briefing, "visible_ratio", 1.0, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _skip_or_proceed() -> void:
+	var briefing := find_child("BriefingText", true, false) as RichTextLabel
+	if _text_tween and _text_tween.is_valid() and _text_tween.is_running() and briefing and briefing.visible_ratio < 0.99:
+		_text_tween.kill()
+		briefing.visible_ratio = 1.0
+		return
+	_on_proceed_pressed()
 
 func _process(delta: float) -> void:
 	_flare_time += delta

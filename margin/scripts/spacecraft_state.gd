@@ -9,6 +9,7 @@ signal telemetry_updated(telemetry: Dictionary)
 static var active_instance: SpacecraftState = null
 
 var current_components: Dictionary = {} # Category (enum) -> component_id (String)
+var team_perk_id: String = ""
 
 func _init() -> void:
 	active_instance = self
@@ -16,6 +17,7 @@ func _init() -> void:
 
 func reset_to_default() -> void:
 	current_components = ComponentDatabase.get_default_configuration().duplicate()
+	team_perk_id = ""
 	recalculate_and_emit()
 
 func set_component(category: ComponentDatabase.Category, component_id: String) -> void:

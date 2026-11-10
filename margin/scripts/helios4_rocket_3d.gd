@@ -1812,3 +1812,36 @@ func highlight_subsystem(subsystem_id: String) -> void:
 			var tween := create_tween()
 			tween.tween_property(bars, "scale", Vector3(1.2, 1.2, 1.2), 0.2)
 			tween.tween_property(bars, "scale", Vector3(1.0, 1.0, 1.0), 0.2)
+
+func animate_part_pulse(part_key: String) -> void:
+	if not is_inside_tree():
+		return
+	var candidates: Array = []
+	match part_key:
+		"propulsion", "propulsion_engines", "stage1_engine":
+			candidates = [engine_cluster_node, stage1_node]
+		"grid_fins":
+			candidates = [grid_fins_node]
+		"solar_wings":
+			candidates = [solar_wing_left, solar_wing_right]
+		"probe_bus", "avionics", "structural":
+			candidates = [probe_node, stage2_node]
+		"fairing":
+			candidates = [fairing_left, fairing_right]
+		_:
+			candidates = [stage1_node, stage2_node, probe_node]
+	for raw_node in candidates:
+		var node := raw_node as Node3D
+		if node == null or not is_instance_valid(node) or not node.visible:
+			continue
+		var base_scale: Vector3 = node.get_meta("_pulse_base_scale", node.scale)
+		node.set_meta("_pulse_base_scale", base_scale)
+		if node.has_meta("_pulse_tween"):
+			var old_tw = node.get_meta("_pulse_tween")
+			if old_tw is Tween and old_tw.is_valid():
+				old_tw.kill()
+		node.scale = base_scale * 0.90
+		var tw := create_tween()
+		tw.tween_property(node, "scale", base_scale * 1.045, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(node, "scale", base_scale, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		node.set_meta("_pulse_tween", tw)

@@ -47,6 +47,19 @@ const STORM_DURATION_HOURS: float = 6.0
 
 func _ready() -> void:
 	theme = MarginTheme.get_theme()
+	MarginTheme.apply_interactive_polish(self)
+	if not has_node("TeamPerkBadgePanel"):
+		var perk := Helios4CampaignData.get_active_team_perk()
+		var p_panel := PanelContainer.new()
+		p_panel.name = "TeamPerkBadgePanel"
+		p_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		p_panel.offset_left = -360.0
+		p_panel.offset_top = 12.0
+		p_panel.offset_right = -18.0
+		p_panel.add_theme_stylebox_override("panel", MarginTheme.create_pill_style(perk.get("color", Color(0.25, 0.78, 1.0))))
+		p_panel.add_child(MarginTheme.build_perk_badge_label(perk))
+		add_child(p_panel)
 	var probe_config: Dictionary = Helios4CampaignData.probe_config
 	battery_capacity_wh = probe_config.get("battery_capacity_wh", 1200.0)
 	battery_charge_wh = clamp(Helios4CampaignData.transfer_telemetry.get("battery_charge_wh", battery_capacity_wh), 0.0, battery_capacity_wh)

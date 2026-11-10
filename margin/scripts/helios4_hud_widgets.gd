@@ -314,19 +314,44 @@ class StatusPips extends Control:
 # ------------------------------------------------------------------------------
 class ReadinessBars extends Control:
 	var labels: Array = ["MASS", "POWER", "ΔV", "THERMAL", "BUDGET"]
+	var _display_values: Array = [0.90, 0.90, 0.90, 0.90, 0.90]
+	var _bars_tween: Tween = null
 	var values: Array = [0.90, 0.90, 0.90, 0.90, 0.90]:
 		set(value):
-			values = value
+			values = value.duplicate()
+			_animate_to_values(values)
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_display_values = values.duplicate()
+
+	func _animate_to_values(targets: Array) -> void:
+		if not is_inside_tree():
+			_display_values = targets.duplicate()
 			queue_redraw()
+			return
+		while _display_values.size() < targets.size():
+			_display_values.append(0.0)
+		var start_vals := _display_values.duplicate()
+		if _bars_tween and _bars_tween.is_valid():
+			_bars_tween.kill()
+		_bars_tween = create_tween()
+		_bars_tween.tween_method(func(alpha: float):
+			for i in range(targets.size()):
+				var s_val: float = float(start_vals[i]) if i < start_vals.size() else 0.0
+				var t_val: float = float(targets[i])
+				_display_values[i] = lerpf(s_val, t_val, alpha)
+			queue_redraw()
+		, 0.0, 1.0, 0.36).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 	func _draw() -> void:
 		var font = ThemeDB.fallback_font
 		var row_h = size.y / 5.0
 		var bar_h = 6.0
 
-		for i in range(min(values.size(), labels.size())):
+		for i in range(min(_display_values.size(), labels.size())):
 			var y_center = (i + 0.5) * row_h
-			var val = clamp(float(values[i]), 0.0, 1.0)
+			var val = clamp(float(_display_values[i]), 0.0, 1.0)
 			var col = Color(0.96, 0.28, 0.25) if val < 0.4 else (Color(1.0, 0.68, 0.18) if val < 0.7 else Color(0.25, 0.9, 0.58))
 			if font:
 				draw_string_outline(font, Vector2(0.0, y_center + 3.5), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 54.0, 9, 2, Color(0.005, 0.01, 0.025, 0.98))

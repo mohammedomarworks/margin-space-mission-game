@@ -146,6 +146,11 @@ var _user_manually_selected_cam: bool = false
 # Flight Pause State
 var is_flight_paused: bool = false
 var pause_banner_panel: PanelContainer = null
+var _callout_banner_panel: PanelContainer = null
+var _callout_banner_label: Label = null
+var _callout_tween: Tween = null
+var _max_q_banner_shown: bool = false
+var _orbit_banner_shown: bool = false
 
 # Persistent Flight Objective Panel UI references
 var obj_panel: PanelContainer = null
@@ -195,6 +200,9 @@ func _ready() -> void:
 	btn_abort_flight = find_child("BtnAbortFlight", true, false) as Button
 	val_throttle_display = find_child("ValThrottleDisplay", true, false) as Label
 	_build_pause_banner()
+	_build_callout_banner()
+	if launch_ui:
+		MarginTheme.apply_interactive_polish(launch_ui)
 
 	_init_flight_parameters()
 	_build_launch_environment()
@@ -1181,6 +1189,92 @@ func _build_pause_banner() -> void:
 
 	root_ui.add_child(pause_banner_panel)
 
+func _build_callout_banner() -> void:
+	var root_ui := find_child("RootUI", true, false) as Control
+	if not root_ui or _callout_banner_panel != null:
+		return
+	_callout_banner_panel = PanelContainer.new()
+	_callout_banner_panel.name = "FlightCalloutBanner"
+	_callout_banner_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_callout_banner_panel.visible = false
+	_callout_banner_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_callout_banner_panel.offset_left = -310.0
+	_callout_banner_panel.offset_top = 86.0
+	_callout_banner_panel.offset_right = 310.0
+	_callout_banner_panel.offset_bottom = 122.0
+	_callout_banner_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.03, 0.06, 0.12, 0.92)
+	style.border_color = Color(0.35, 0.90, 1.0, 0.95)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	_callout_banner_panel.add_theme_stylebox_override("panel", style)
+	_callout_banner_label = Label.new()
+	_callout_banner_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_callout_banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_callout_banner_label.add_theme_font_size_override("font_size", 12)
+	_callout_banner_label.add_theme_color_override("font_color", Color(0.95, 0.98, 1.0))
+	_callout_banner_panel.add_child(_callout_banner_label)
+	root_ui.add_child(_callout_banner_panel)
+
+func _show_callout_banner(text: String, accent_col: Color, duration_s: float = 3.2) -> void:
+	if not _callout_banner_panel or not _callout_banner_label:
+		return
+	var sb := _callout_banner_panel.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb:
+		sb.border_color = accent_col
+	_callout_banner_label.text = text
+	_callout_banner_label.add_theme_color_override("font_color", accent_col.lerp(Color.WHITE, 0.45))
+	if not is_inside_tree():
+		_callout_banner_panel.visible = true
+		return
+	if _callout_tween and _callout_tween.is_valid():
+		_callout_tween.kill()
+	_callout_banner_panel.visible = true
+	_callout_banner_panel.modulate.a = 0.0
+	_callout_tween = create_tween()
+	_callout_tween.tween_property(_callout_banner_panel, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_callout_tween.tween_interval(duration_s)
+	_callout_tween.tween_property(_callout_banner_panel, "modulate:a", 0.0, 0.35)
+	_callout_tween.finished.connect(func():
+		if is_instance_valid(_callout_banner_panel):
+			_callout_banner_panel.visible = false
+	)
+
+func _tween_plume_node(plume: Node3D, show_plume: bool, target_scale: Vector3, dur: float) -> void:
+	if not plume or not is_instance_valid(plume):
+		return
+	if plume.has_meta("_plume_tween"):
+		var prev = plume.get_meta("_plume_tween")
+		if prev is Tween and prev.is_valid():
+			prev.kill()
+	if not is_inside_tree() or dur <= 0.01:
+		plume.visible = show_plume
+		plume.scale = target_scale
+		return
+	if show_plume:
+		if not plume.visible:
+			plume.scale = Vector3(0.22, 0.15, 0.22)
+		plume.visible = true
+		var tw := create_tween()
+		tw.tween_property(plume, "scale", target_scale, dur).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		plume.set_meta("_plume_tween", tw)
+	else:
+		if not plume.visible:
+			return
+		var tw := create_tween()
+		tw.tween_property(plume, "scale", Vector3(0.15, 0.04, 0.15), dur).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.finished.connect(func():
+			if is_instance_valid(plume):
+				plume.visible = false
+				plume.scale = Vector3.ONE
+		)
+		plume.set_meta("_plume_tween", tw)
+
 func _toggle_flight_pause() -> void:
 	if current_phase == FlightPhase.COUNTDOWN:
 		_on_pause_countdown_pressed()
@@ -1567,7 +1661,10 @@ func _execute_ignition_liftoff() -> void:
 	# Pad FX
 	if pad_steam_emitter: pad_steam_emitter.emitting = true
 	if plume_smoke_emitter: plume_smoke_emitter.emitting = true
-	if main_plumes_node: main_plumes_node.visible = true
+	_max_q_banner_shown = false
+	_orbit_banner_shown = false
+	_tween_plume_node(main_plumes_node, true, Vector3.ONE, 0.35)
+	_show_callout_banner("LIFTOFF CONFIRMED — MAIN ENGINE IGNITION • TOWER CLEARANCE NOMINAL", Color(0.35, 0.95, 0.55), 3.0)
 
 	# Physical TWR check: Must be > 1.0 to clear pad!
 	if twr_liftoff <= 1.00:
@@ -1611,6 +1708,9 @@ func _update_flight_physics(delta: float) -> void:
 	# Check Max-Q Corridor (typically 10km to 15km altitude, ~30-36 kPa)
 	if dynamic_pressure_kpa > 27.5 and not stage1_separated:
 		current_phase = FlightPhase.MAX_Q_CORRIDOR
+		if not _max_q_banner_shown:
+			_max_q_banner_shown = true
+			_show_callout_banner("MAX-Q PEAK DYNAMIC PRESSURE — REDUCE THROTTLE TO 70% [S]", Color(0.98, 0.65, 0.15), 3.4)
 		if vapor_cone_node:
 			vapor_cone_node.visible = true
 			var cone_scale = clamp((dynamic_pressure_kpa - 25.0) / 10.0, 0.8, 1.25)
@@ -1622,7 +1722,8 @@ func _update_flight_physics(delta: float) -> void:
 
 		# Structural Stress accumulation: If throttle > 0.75 during peak dynamic pressure, stress accumulates
 		if dynamic_pressure_kpa > 28.0 and throttle > 0.75:
-			structural_stress_pct += delta * 14.0 * (throttle - 0.75) * (dynamic_pressure_kpa / 30.0)
+			var stress_perk_mult: float = 0.88 if (Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_STRUCTURAL) else 1.0
+			structural_stress_pct += delta * 14.0 * (throttle - 0.75) * (dynamic_pressure_kpa / 30.0) * stress_perk_mult
 			if structural_stress_pct >= 100.0:
 				_trigger_flight_abort("MAX-Q STRUCTURAL FAILURE: Dynamic pressure (%.1f kPa) exceeded vehicle design envelope. Throttle was not reduced through Max-Q." % dynamic_pressure_kpa)
 				return
@@ -1645,7 +1746,8 @@ func _update_flight_physics(delta: float) -> void:
 			throttle = 0.0
 			thrust_n = 0.0
 			if plume_smoke_emitter: plume_smoke_emitter.emitting = false
-			if main_plumes_node: main_plumes_node.visible = false
+			_tween_plume_node(main_plumes_node, false, Vector3.ONE, 0.35)
+			_show_callout_banner("MECO — STAGE 1 ENGINE CUTOFF • READY FOR SEPARATION [SPACE]", Color(0.98, 0.82, 0.22), 3.6)
 			if not _user_manually_selected_cam:
 				_set_camera_mode(CameraMode.SEPARATION)
 			print("[Launch] MECO: Main Engine Cut-Off. Stage 1 Burnout confirmed.")
@@ -1725,7 +1827,10 @@ func _check_phase_transitions() -> void:
 		orbit_achieved = true
 		current_phase = FlightPhase.ORBITAL_INJECTION
 		throttle = 0.0
-		if vacuum_plume_node: vacuum_plume_node.visible = false
+		_tween_plume_node(vacuum_plume_node, false, Vector3.ONE, 0.45)
+		if not _orbit_banner_shown:
+			_orbit_banner_shown = true
+			_show_callout_banner("ORBITAL INSERTION CONFIRMED — 185 KM PARKING ORBIT REACHED", Color(0.35, 0.95, 0.55), 4.0)
 		if not _user_manually_selected_cam:
 			_set_camera_mode(CameraMode.ORBITAL)
 		print("[Launch] Orbital Insertion Achieved! Orbit: %.0f km circular parking orbit, v = %.0f m/s." % [altitude_m / 1000.0, velocity_ms])
@@ -1765,9 +1870,10 @@ func _execute_stage_separation() -> void:
 		detached_booster.global_position = rocket.global_position
 		detached_booster.global_rotation = rocket.global_rotation
 
-	# Activate Stage 2 vacuum engine exhaust
-	if vacuum_plume_node:
-		vacuum_plume_node.visible = true
+	# Smoothly transition atmospheric -> Stage 2 vacuum engine exhaust
+	_tween_plume_node(main_plumes_node, false, Vector3.ONE, 0.25)
+	_tween_plume_node(vacuum_plume_node, true, Vector3(0.95, 0.88, 0.95), 0.45)
+	_show_callout_banner("STAGE 1 SEPARATED — STAGE 2 VACUUM ENGINE IGNITION", Color(0.35, 0.90, 1.0), 3.4)
 
 	print("[Launch] STAGE SEPARATION CONFIRMED! Stage 1 booster discarded. Stage 2 vacuum engine ignition.")
 
@@ -1794,6 +1900,11 @@ func _execute_fairing_jettison() -> void:
 		jettisoned_fairing_r.visible = true
 		jettisoned_fairing_l.global_position = rocket.global_position + Vector3(-1.8, 8.0, 0)
 		jettisoned_fairing_r.global_position = rocket.global_position + Vector3(1.8, 8.0, 0)
+
+	# Expand Stage 2 exhaust bell smoothly into exospheric vacuum
+	if stage1_separated and not orbit_achieved:
+		_tween_plume_node(vacuum_plume_node, true, Vector3(1.28, 1.18, 1.28), 0.55)
+	_show_callout_banner("FAIRING JETTISONED — HELIOS-4 EXPOSED TO EXOSPHERIC VACUUM", Color(0.35, 0.95, 0.65), 3.4)
 
 	print("[Launch] FAIRING JETTISON CONFIRMED! HELIOS-4 solar sentinel probe exposed to vacuum.")
 

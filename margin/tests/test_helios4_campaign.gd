@@ -38,6 +38,7 @@ func _init() -> void:
 	test_campaign_persistence()
 	test_donki_space_weather_service()
 	test_continuous_gameplay_integration()
+	test_v25_end_to_end_polish()
 	
 	print("\n--------------------------------------------------")
 	print("HELIOS-4 CAMPAIGN TESTS: %d PASSED, %d FAILED" % [_pass_count, _fail_count])
@@ -428,3 +429,61 @@ func test_continuous_gameplay_integration() -> void:
 	var abort_reason: String = "MAX-Q STRUCTURAL FAILURE: Dynamic pressure exceeded design envelope."
 	var restart_allowed: bool = (abort_reason.length() > 0)
 	_assert_true(restart_allowed, "14. Failed launch produces restartable mission outcome with detailed telemetry debrief")
+
+func test_v25_end_to_end_polish() -> void:
+	print("\n[TEST 12] v2.5 End-to-End Gameplay Polish & Safety Assertions")
+	Helios4CampaignData.reset_campaign()
+	var sc_state := SpacecraftState.new()
+	var base_tel := Helios4CampaignData.calculate_hangar_telemetry()
+	Helios4CampaignData.set_team_lead_perk(Helios4CampaignData.ROLE_SYSTEMS)
+	_assert_true(Helios4CampaignData.is_team_perk_active(), "Team Lead perk activates cleanly")
+	_assert_true(sc_state.team_perk_id == Helios4CampaignData.ROLE_SYSTEMS, "SpacecraftState stays synced with active Team Lead perk")
+	var sys_tel := Helios4CampaignData.calculate_hangar_telemetry()
+	_assert_approx(sys_tel["power_margin_w"] - base_tel["power_margin_w"], 35.0, 0.1, "Systems Lead perk grants +35W power bus margin in Hangar")
+	Helios4CampaignData.waived_gates = ["3. Structural Aerodynamic Stability (CoM / CoP)"]
+	Helios4CampaignData.save_campaign_state()
+	Helios4CampaignData.team_perk_id = ""
+	Helios4CampaignData.waived_gates = []
+	_assert_true(Helios4CampaignData.load_campaign_state(), "Campaign state with perk & waived gates loads cleanly")
+	_assert_true(Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_SYSTEMS, "Team Lead perk survives JSON save/load")
+	_assert_true(Helios4CampaignData.waived_gates.size() == 1, "Waived gates array survives JSON save/load")
+
+	# MarginTheme interactive polish audit
+	var ui_root := Control.new()
+	var lbl := Label.new()
+	lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+	var btn := Button.new()
+	var norm_sb := StyleBoxFlat.new()
+	btn.add_theme_stylebox_override("normal", norm_sb)
+	ui_root.add_child(lbl)
+	ui_root.add_child(btn)
+	MarginTheme.apply_interactive_polish(ui_root)
+	_assert_true(lbl.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Interactive polish enforces MOUSE_FILTER_IGNORE on labels")
+	_assert_true(btn.has_theme_stylebox_override("hover") and btn.has_theme_stylebox_override("pressed"), "Interactive polish synthesizes matched hover/pressed StyleBoxes")
+	ui_root.free()
+
+	# Deep Space auto-warp drop to 1x + attitude response
+	var ds_scene := preload("res://margin/scenes/helios4_deep_space.tscn").instantiate()
+	get_root().add_child(ds_scene)
+	ds_scene._set_time_warp(3)
+	_assert_true(ds_scene.current_warp_idx == 3, "Deep space warp can be raised to 1000x during cruise")
+	ds_scene._enter_solar_crisis()
+	_assert_true(ds_scene.current_warp_idx == 0 and ds_scene.warp_factor == 1.0, "Entering Solar Crisis auto-drops time-warp to 1x")
+	_assert_true(ds_scene._auto_warp_banner != null and ds_scene._auto_warp_label.text.contains("TIME WARP AUTO-DROPPED TO 1x"), "Auto-warp alert banner displays clear Solar CME safety message")
+	ds_scene._select_crisis_option(1, 3)
+	_assert_true(not ds_scene.thermal_shield_sunward and ds_scene._target_attitude_slew_deg.length() > 10.0, "Continue Science tilts spacecraft attitude off sunward shield")
+	ds_scene._select_crisis_option(1, 1)
+	_assert_true(ds_scene.is_in_safe_mode and ds_scene.thermal_shield_sunward and ds_scene._target_attitude_slew_deg == Vector3.ZERO, "Safe Mode aligns spacecraft attitude & thermal shield sunward")
+	ds_scene.free()
+
+	# L1 commissioning smooth camera focus per step
+	var l1_scene := preload("res://margin/scenes/helios4_l1_arrival.tscn").instantiate()
+	get_root().add_child(l1_scene)
+	l1_scene._load_subphase(l1_scene.SubPhase.STAGE_D_COMMISSION_MAG)
+	_assert_true(l1_scene.current_camera_mode == l1_scene.CameraMode.MAG_BOOM, "L1 Mag Boom stage focuses MAG_BOOM camera smoothly")
+	l1_scene._load_subphase(l1_scene.SubPhase.STAGE_D_COMMISSION_FARADAY)
+	_assert_true(l1_scene.current_camera_mode == l1_scene.CameraMode.FARADAY_CUP, "L1 Faraday Cup stage focuses FARADAY_CUP camera smoothly")
+	l1_scene._load_subphase(l1_scene.SubPhase.STAGE_F_EARTH_COMM_LOCK)
+	_assert_true(l1_scene.current_camera_mode == l1_scene.CameraMode.EARTH_DISH, "L1 Earth Link stage focuses EARTH_DISH camera smoothly")
+	l1_scene.free()
+	Helios4CampaignData.reset_campaign()
