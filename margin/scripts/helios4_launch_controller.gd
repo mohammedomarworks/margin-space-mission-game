@@ -1199,9 +1199,9 @@ func _build_callout_banner() -> void:
 	_callout_banner_panel.visible = false
 	_callout_banner_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_callout_banner_panel.offset_left = -310.0
-	_callout_banner_panel.offset_top = 86.0
+	_callout_banner_panel.offset_top = 168.0
 	_callout_banner_panel.offset_right = 310.0
-	_callout_banner_panel.offset_bottom = 122.0
+	_callout_banner_panel.offset_bottom = 202.0
 	_callout_banner_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.03, 0.06, 0.12, 0.92)

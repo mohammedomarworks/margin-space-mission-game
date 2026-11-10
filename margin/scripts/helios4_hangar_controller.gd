@@ -621,23 +621,25 @@ func _on_part_swapped(subsystem_id: String, focus_target: Vector3, focus_dist: f
 		rocket_3d.animate_part_pulse(subsystem_id)
 
 func _setup_team_perk_badge() -> void:
-	var top_bar := find_child("TopBar", true, false) as HBoxContainer
-	if not top_bar:
-		return
-	if top_bar.has_node("TeamPerkBadgePanel"):
+	var root_ui := find_child("RootUI", true, false) as Control
+	if not root_ui or root_ui.has_node("TeamPerkBadgePanel"):
 		return
 	var perk := Helios4CampaignData.get_active_team_perk()
 	var panel := PanelContainer.new()
 	panel.name = "TeamPerkBadgePanel"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	panel.offset_left = -195.0
+	panel.offset_top = 48.0
+	panel.offset_right = 195.0
+	panel.offset_bottom = 74.0
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	var col: Color = perk.get("color", Color(0.25, 0.78, 1.0))
 	panel.add_theme_stylebox_override("panel", MarginTheme.create_pill_style(col))
 	var lbl := MarginTheme.build_perk_badge_label(perk)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	panel.add_child(lbl)
-	top_bar.add_child(panel)
-	var spacer := top_bar.get_node_or_null("Spacer")
-	if spacer:
-		top_bar.move_child(panel, spacer.get_index())
+	root_ui.add_child(panel)
 
 func _update_camera_transform() -> void:
 	if not orbit_cam:
