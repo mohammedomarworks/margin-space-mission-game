@@ -224,11 +224,11 @@ size_flags_horizontal = 3
 
 [node name="OverrideAndProceedBtn" type="Button" parent="MainLayout/BottomBar"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 44)
+custom_minimum_size = Vector2(330, 44)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_OverrideBtn")
-theme_override_font_sizes/font_size = 12
-text = "WAIVE CHECKS + AUTO-GO →"
+theme_override_font_sizes/font_size = 11
+text = "SIGN OFF ALL / FLIGHT DIRECTOR WAIVER →"
 tooltip_text = "Auto-sign all four roles, waive failed hangar gates, and continue to Launch. Vehicle trade-offs remain active."
 
 [node name="ProceedToLaunchBtn" type="Button" parent="MainLayout/BottomBar"]
