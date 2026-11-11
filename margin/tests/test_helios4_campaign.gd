@@ -475,6 +475,10 @@ func test_v25_end_to_end_polish() -> void:
 	_assert_true(not ds_scene.thermal_shield_sunward and ds_scene._target_attitude_slew_deg.length() > 10.0, "Continue Science tilts spacecraft attitude off sunward shield")
 	ds_scene._select_crisis_option(1, 1)
 	_assert_true(ds_scene.is_in_safe_mode and ds_scene.thermal_shield_sunward and ds_scene._target_attitude_slew_deg == Vector3.ZERO, "Safe Mode aligns spacecraft attitude & thermal shield sunward")
+	ds_scene._on_commit_crisis_pressed()
+	var crisis_score_after_commit: float = ds_scene.science_bonus_pts
+	ds_scene._on_commit_crisis_pressed()
+	_assert_true(ds_scene.crisis_decisions_committed and ds_scene.science_bonus_pts == crisis_score_after_commit, "Crisis response commits once and ignores repeat commit input")
 	ds_scene.free()
 
 	# L1 commissioning smooth camera focus per step

@@ -1472,7 +1472,7 @@ func _build_objective_banner(root_ui: Control) -> void:
 	objective_banner = ObjectiveBanner.new()
 	objective_banner.name = "ObjectiveBanner"
 	objective_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	objective_banner.position = Vector2(-190, 112)
+	objective_banner.position = Vector2(-60, 112)
 	objective_banner.custom_minimum_size = Vector2(380, 0)
 	objective_banner.size = Vector2(380, 0)
 	objective_banner.action_pressed.connect(_on_primary_action_pressed)

@@ -184,11 +184,13 @@ func _test_9_instrument_shutdown_and_health(ctrl: Helios4DeepSpaceController) ->
 func _test_10_comms_and_power_decisions(ctrl: Helios4DeepSpaceController) -> void:
 	print("\n[TEST 10] Power and Communication Decisions Have Distinct Consequences")
 	# Low power carrier sets comms to 15W
+	ctrl.crisis_decisions_committed = false # Independent scenario fixture for this choice branch.
 	ctrl.crisis_choice_comms = 1
 	ctrl._on_commit_crisis_pressed()
 	_assert_approx(ctrl.comms_power_w, 15.0, 0.1, "Carrier beacon uses low 15W power")
 	
 	# High rate dish sets comms to 45W
+	ctrl.crisis_decisions_committed = false # Test the alternative as a fresh, independent commit.
 	ctrl.crisis_choice_comms = 2
 	ctrl._on_commit_crisis_pressed()
 	_assert_approx(ctrl.comms_power_w, 45.0, 0.1, "High-rate dish transmitter uses 45W power")

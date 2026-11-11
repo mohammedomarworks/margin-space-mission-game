@@ -1380,7 +1380,11 @@ func _highlight_choice_btns(btns: Array, active_idx: int) -> void:
 				btns[i].modulate = Color(0.65, 0.7, 0.8)
 
 func _on_commit_crisis_pressed() -> void:
+	if crisis_decisions_committed:
+		return
 	crisis_decisions_committed = true
+	if tactical_crisis_panel:
+		tactical_crisis_panel.visible = false
 
 	# Apply Team Lead Perk modifiers safely when active
 	var deg_mult: float = 0.88 if (Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_STRUCTURAL) else 1.0
@@ -1646,9 +1650,8 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = "ACTION: Select Safe Mode, Instrument, and Comms options, then click COMMIT"
 			lbl_next.text = "NEXT: Particle Storm Peak & Dynamic Survival Simulation"
 			lbl_controls.text = "CONTROLS: Click Tactical Choices · Click COMMIT TACTICS"
-			btn_primary_action.text = "COMMIT TACTICAL DECISIONS"
-			btn_primary_action.visible = true
-			btn_primary_action.disabled = false
+			btn_primary_action.visible = false
+			btn_primary_action.disabled = true
 			btn_secondary_action.visible = false
 
 		SubPhase.CRISIS_SIMULATION:
@@ -1672,7 +1675,7 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = act_txt
 			lbl_next.text = "NEXT: L1 Approach Region Preparation"
 			lbl_controls.text = "CONTROLS: Click Next Recovery Step"
-			btn_primary_action.text = "EXECUTE RECOVERY STEP (%d/3)" % (recovery_step + 1)
+			btn_primary_action.text = "EXECUTE RECOVERY STEP (%d/4)" % (recovery_step + 1)
 			btn_primary_action.visible = true
 			btn_primary_action.disabled = false
 			btn_secondary_action.visible = false
@@ -1825,9 +1828,13 @@ func _update_objective_banner() -> void:
 			objective_banner.set_objective(2, 4, "EXECUTE MID-COURSE CORRECTION",
 				"> EXECUTE MCC-1 BURN", "[SPACE] Trim trajectory (costs propellant)",
 				Color(0.35, 0.85, 1.0))
-		SubPhase.SOLAR_CRISIS_ALERT, SubPhase.CRISIS_SIMULATION:
+		SubPhase.SOLAR_CRISIS_ALERT:
 			objective_banner.set_objective(3, 4, "CME STORM — SURVIVE THE HAZARD",
-				"> ORIENT SHIELD + SAFE POWER", "Pick Safe Mode, then commit the crisis decisions",
+				"", "Choose Safe Mode, instruments, and comms below; commit once",
+				Color(1.0, 0.35, 0.25))
+		SubPhase.CRISIS_SIMULATION:
+			objective_banner.set_objective(3, 4, "CME STORM — PROPAGATION",
+				"", "Tactical response applied; monitoring heat, power, and radiation",
 				Color(1.0, 0.35, 0.25))
 		SubPhase.SPACECRAFT_RECOVERY:
 			objective_banner.set_objective(3, 4, "STORM CLEARED — RECOVER SYSTEMS",
