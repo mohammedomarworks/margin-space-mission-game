@@ -70,6 +70,7 @@ func _ready() -> void:
 	_recalculate_and_refresh_ui()
 	if hangar_ui:
 		MarginTheme.apply_interactive_polish(hangar_ui)
+		_build_camera_hint(hangar_ui)
 		Sfx.attach_hud_toggle(hangar_ui)
 
 	# Print UI coordinates for automated QA and CDP browser verification
@@ -730,3 +731,18 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_proceed_to_review_pressed() -> void:
 	print("[Hangar] Transitioning to Flight Readiness Review Gate")
 	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.ENGINEERING_REVIEW, get_tree())
+
+
+func _build_camera_hint(root_ui: Control) -> void:
+	if root_ui == null:
+		return
+	if root_ui.find_child("CameraHintLabel", true, false) != null:
+		return
+	var lbl := Label.new()
+	lbl.name = "CameraHintLabel"
+	lbl.text = "[Drag Mouse: Rotate 360° 3D View | Scroll: Zoom | Keys 1-7: Camera Presets]"
+	lbl.add_theme_font_size_override("font_size", 10)
+	lbl.add_theme_color_override("font_color", Color(0.55, 0.70, 0.85, 0.85))
+	lbl.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	lbl.position = Vector2(16, -26)
+	root_ui.add_child(lbl)

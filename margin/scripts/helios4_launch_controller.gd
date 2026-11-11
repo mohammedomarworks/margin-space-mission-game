@@ -141,6 +141,14 @@ var _cam_look_offset_dir: float = 1.5
 var _current_cam_offset: Vector3 = Vector3(-3.5, -2.5, 24.0)
 var _current_look_dir: float = 1.5
 var _cam_lerp_speed: float = 4.5
+
+# --- Free 360-degree mouse orbit (applied on top of the preset offset) ---
+var _free_yaw_deg: float = 0.0
+var _free_pitch_deg: float = 0.0
+var _free_zoom: float = 1.0
+var _free_dragging: bool = false
+var _free_drag_last: Vector2 = Vector2.ZERO
+var _cam_hint_label: Label = null
 var _cam_initialized: bool = false
 var _user_manually_selected_cam: bool = false
 
@@ -202,6 +210,8 @@ func _ready() -> void:
 	val_throttle_display = find_child("ValThrottleDisplay", true, false) as Label
 	_build_pause_banner()
 	_build_callout_banner()
+	if launch_ui:
+		_build_camera_hint(launch_ui)
 	if launch_ui:
 		MarginTheme.apply_interactive_polish(launch_ui)
 		Sfx.attach_hud_toggle(launch_ui)
@@ -2191,7 +2201,9 @@ func _update_camera_smooth(delta: float) -> void:
 		_current_cam_offset = _current_cam_offset.lerp(_cam_relative_offset, clamp(delta * _cam_lerp_speed, 0.0, 1.0))
 		_current_look_dir = lerp(_current_look_dir, _cam_look_offset_dir, clamp(delta * _cam_lerp_speed, 0.0, 1.0))
 
-		var target_pos = vehicle_center + _current_cam_offset
+		# Free 360 orbit: rotate the preset offset by the player's drag angles.
+		var orbit_offset: Vector3 = _apply_free_orbit(_current_cam_offset)
+		var target_pos = vehicle_center + orbit_offset
 		launch_cam.position = target_pos
 		var target_look = vehicle_center + vehicle_flight_dir * _current_look_dir
 		launch_cam.look_at(target_look, Vector3.UP)
@@ -2257,6 +2269,7 @@ func _connect_cam_btn(btn_name: String, mode: CameraMode) -> void:
 	if btn:
 		btn.pressed.connect(func():
 			_user_manually_selected_cam = true
+			_reset_free_orbit()
 			_set_camera_mode(mode)
 		)
 
@@ -2307,6 +2320,10 @@ func set_test_state_orbit() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var focus_owner = get_viewport().gui_get_focus_owner()
 	if focus_owner and (focus_owner is LineEdit or focus_owner is TextEdit):
+		return
+
+	# Free 360-degree orbit camera takes mouse drag / wheel first.
+	if _handle_free_camera_input(event):
 		return
 
 	if event.is_action_pressed("ui_up") or (event is InputEventKey and event.keycode == KEY_W and event.pressed):
@@ -2708,3 +2725,69 @@ func _on_proceed_to_transfer_pressed() -> void:
 	}
 	print("[Launch] Flight successful! Advancing to Stage 3: Deep Space Transfer")
 	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_3_TRANSFER, get_tree())
+
+
+# ==============================================================================
+# FREE 360-DEGREE MOUSE ORBIT CAMERA
+# Left/right drag rotates the camera freely around the vehicle (unclamped yaw,
+# pitch clamped to avoid gimbal flip). Wheel zooms. Applied on top of whichever
+# preset the player has selected, so presets and free look coexist.
+# ==============================================================================
+
+func _apply_free_orbit(base_offset: Vector3) -> Vector3:
+	var yaw: float = deg_to_rad(_free_yaw_deg)
+	var pitch: float = deg_to_rad(_free_pitch_deg)
+
+	# Yaw around the vehicle's vertical axis
+	var yawed := Vector3(
+		base_offset.x * cos(yaw) + base_offset.z * sin(yaw),
+		base_offset.y,
+		-base_offset.x * sin(yaw) + base_offset.z * cos(yaw)
+	)
+	# Pitch around the camera's right axis. yawed.cross(right) lifts the camera
+	# for positive pitch; the reverse order would sink it below the vehicle.
+	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
+	var pitched: Vector3 = yawed * cos(pitch) + yawed.cross(right) * sin(pitch)
+	return pitched * _free_zoom
+
+
+func _handle_free_camera_input(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT or mb.button_index == MOUSE_BUTTON_RIGHT:
+			_free_dragging = mb.pressed
+			_free_drag_last = mb.position
+			return true
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_free_zoom = clampf(_free_zoom - 0.08, 0.35, 3.5)
+			return true
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_free_zoom = clampf(_free_zoom + 0.08, 0.35, 3.5)
+			return true
+	elif event is InputEventMouseMotion and _free_dragging:
+		var mm := event as InputEventMouseMotion
+		var d: Vector2 = mm.position - _free_drag_last
+		_free_drag_last = mm.position
+		_free_yaw_deg = fmod(_free_yaw_deg - d.x * 0.35, 360.0)
+		_free_pitch_deg = clampf(_free_pitch_deg - d.y * 0.28, -75.0, 75.0)
+		return true
+	return false
+
+
+func _reset_free_orbit() -> void:
+	_free_yaw_deg = 0.0
+	_free_pitch_deg = 0.0
+	_free_zoom = 1.0
+
+
+func _build_camera_hint(root_ui: Control) -> void:
+	if root_ui == null or _cam_hint_label != null:
+		return
+	_cam_hint_label = Label.new()
+	_cam_hint_label.name = "CameraHintLabel"
+	_cam_hint_label.text = "[Drag Mouse: Rotate 360° 3D View | Scroll: Zoom | Keys 1-7: Camera Presets]"
+	_cam_hint_label.add_theme_font_size_override("font_size", 10)
+	_cam_hint_label.add_theme_color_override("font_color", Color(0.55, 0.70, 0.85, 0.85))
+	_cam_hint_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_cam_hint_label.position = Vector2(16, -26)
+	root_ui.add_child(_cam_hint_label)

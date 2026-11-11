@@ -342,6 +342,7 @@ func _ready() -> void:
 	_update_telemetry_ui()
 	if transfer_ui:
 		MarginTheme.apply_interactive_polish(transfer_ui)
+		_build_camera_hint(transfer_ui)
 		Sfx.attach_hud_toggle(transfer_ui)
 	Sfx.start_space_ambient()
 	if current_subphase == SubPhase.SOLAR_CRISIS_ALERT:
@@ -1664,3 +1665,18 @@ func _log_ui_coordinates() -> void:
 		if b and is_instance_valid(b):
 			var rect = b.get_global_rect()
 			print("[UI Coord Track] DeepSpace.%s -> (%d, %d)" % [name_str, int(rect.get_center().x), int(rect.get_center().y)])
+
+
+func _build_camera_hint(root_ui: Control) -> void:
+	if root_ui == null:
+		return
+	if root_ui.find_child("CameraHintLabel", true, false) != null:
+		return
+	var lbl := Label.new()
+	lbl.name = "CameraHintLabel"
+	lbl.text = "[Drag Mouse: Rotate 360° 3D View | Scroll: Zoom | Keys 1-7: Camera Presets]"
+	lbl.add_theme_font_size_override("font_size", 10)
+	lbl.add_theme_color_override("font_color", Color(0.55, 0.70, 0.85, 0.85))
+	lbl.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	lbl.position = Vector2(16, -26)
+	root_ui.add_child(lbl)
