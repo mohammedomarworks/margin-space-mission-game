@@ -1208,7 +1208,7 @@ func _trigger_auto_warp_drop(reason: String, accent_col: Color) -> void:
 		_setup_perk_and_autowarp_hud()
 	if not _auto_warp_banner or not _auto_warp_label:
 		return
-	_auto_warp_label.text = "TIME WARP AUTO-DROPPED TO 1x — %s" % reason
+	_auto_warp_label.text = "AUTO-WARP 1x — %s" % reason
 	_auto_warp_label.add_theme_color_override("font_color", accent_col.lerp(Color.WHITE, 0.40))
 	var sb := _auto_warp_banner.get_theme_stylebox("panel") as StyleBoxFlat
 	if sb:
