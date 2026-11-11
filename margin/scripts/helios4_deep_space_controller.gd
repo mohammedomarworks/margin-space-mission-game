@@ -361,7 +361,7 @@ func _ready() -> void:
 	Sfx.start_space_ambient()
 	if current_subphase == SubPhase.SOLAR_CRISIS_ALERT:
 		_sync_crisis_mode_attitude()
-		_trigger_auto_warp_drop("SOLAR CME DETECTED", Color(0.98, 0.35, 0.20))
+		_trigger_auto_warp_drop("CME ALERT", Color(0.98, 0.35, 0.20))
 
 	if sim_pause_banner:
 		sim_pause_banner.visible = false
@@ -968,7 +968,7 @@ func _process_power_and_systems(dt: float) -> void:
 
 func _enter_midcourse_correction() -> void:
 	current_subphase = SubPhase.MIDCOURSE_CORRECTION
-	_trigger_auto_warp_drop("MCC-1 BURN WINDOW ACTIVE", Color(0.35, 0.88, 1.0))
+	_trigger_auto_warp_drop("MCC-1 BURN", Color(0.35, 0.88, 1.0))
 	trajectory_accuracy_pct = 84.2 # Simulated trajectory drift off L1 saddle point
 	_show_advisory("▲ ASTROGATOR ALERT: Trajectory drift detected at 300,000 km. MCC-1 burn required.")
 	_update_flight_guidance()
@@ -989,7 +989,7 @@ func _process_mcc_burn(dt: float) -> void:
 func _enter_solar_crisis() -> void:
 	current_subphase = SubPhase.SOLAR_CRISIS_ALERT
 	Sfx.start_klaxon()
-	_trigger_auto_warp_drop("SOLAR CME DETECTED", Color(0.98, 0.35, 0.18))
+	_trigger_auto_warp_drop("CME ALERT", Color(0.98, 0.35, 0.18))
 	_set_camera_mode(CamMode.CRISIS_TACTICAL)
 	_sync_crisis_mode_attitude()
 
@@ -1252,7 +1252,7 @@ func _setup_perk_and_autowarp_hud() -> void:
 		_auto_warp_banner.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		_auto_warp_banner.offset_left = 18.0
 		_auto_warp_banner.offset_top = 52.0
-		_auto_warp_banner.offset_right = 400.0
+		_auto_warp_banner.offset_right = 340.0
 		_auto_warp_banner.offset_bottom = 100.0
 		_auto_warp_banner.grow_horizontal = Control.GROW_DIRECTION_END
 		var st := StyleBoxFlat.new()
@@ -1269,6 +1269,7 @@ func _setup_perk_and_autowarp_hud() -> void:
 		_auto_warp_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_auto_warp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_auto_warp_label.add_theme_font_size_override("font_size", 11)
+		_auto_warp_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_auto_warp_banner.add_child(_auto_warp_label)
 		root_ui.add_child(_auto_warp_banner)
 
@@ -1466,7 +1467,7 @@ func _on_primary_action_pressed() -> void:
 	match current_subphase:
 		SubPhase.PARKING_ORBIT:
 			# Authorize Trans-L1 Injection Burn — auto-drop time warp to 1x
-			_trigger_auto_warp_drop("TLI ESCAPE BURN ACTIVE", Color(0.98, 0.65, 0.20))
+			_trigger_auto_warp_drop("TLI BURN", Color(0.98, 0.65, 0.20))
 			current_subphase = SubPhase.INJECTION_BURN
 			burn_timer_s = 0.0
 			burn_duration_s = 4.0

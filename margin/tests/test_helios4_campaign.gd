@@ -470,7 +470,7 @@ func test_v25_end_to_end_polish() -> void:
 	_assert_true(ds_scene.current_warp_idx == 3, "Deep space warp can be raised to 1000x during cruise")
 	ds_scene._enter_solar_crisis()
 	_assert_true(ds_scene.current_warp_idx == 0 and ds_scene.warp_factor == 1.0, "Entering Solar Crisis auto-drops time-warp to 1x")
-	_assert_true(ds_scene._auto_warp_banner != null and ds_scene._auto_warp_label.text.contains("AUTO-WARP 1x — SOLAR CME DETECTED"), "Auto-warp alert banner displays clear Solar CME safety message")
+	_assert_true(ds_scene._auto_warp_banner != null and ds_scene._auto_warp_label.text.contains("AUTO-WARP 1x — CME ALERT"), "Auto-warp alert banner displays clear Solar CME safety message")
 	ds_scene._select_crisis_option(1, 3)
 	_assert_true(not ds_scene.thermal_shield_sunward and ds_scene._target_attitude_slew_deg.length() > 10.0, "Continue Science tilts spacecraft attitude off sunward shield")
 	ds_scene._select_crisis_option(1, 1)
