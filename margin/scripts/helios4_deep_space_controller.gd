@@ -80,6 +80,7 @@ var _cam_look_target: Vector3 = Vector3(0.0, 0.4, 0.0)
 var _cam_orbit_yaw: float = 0.0
 var _cam_orbit_pitch: float = 0.0
 var _cam_zoom_mult: float = 1.0
+var objective_banner: ObjectiveBanner = null
 var _is_mouse_dragging: bool = false
 var _last_mouse_pos: Vector2 = Vector2.ZERO
 var _attitude_slew_deg: Vector3 = Vector3.ZERO
@@ -343,6 +344,7 @@ func _ready() -> void:
 	if transfer_ui:
 		MarginTheme.apply_interactive_polish(transfer_ui)
 		_build_camera_hint(transfer_ui)
+		_build_objective_banner(transfer_ui)
 		Sfx.attach_hud_toggle(transfer_ui)
 	Sfx.start_space_ambient()
 	if current_subphase == SubPhase.SOLAR_CRISIS_ALERT:
@@ -1477,6 +1479,7 @@ func _on_proceed_to_l1_arrival() -> void:
 # --- HUD & FLIGHT GUIDANCE UPDATES ---
 
 func _update_flight_guidance() -> void:
+	_update_objective_banner()
 	if not lbl_phase:
 		return
 
@@ -1680,3 +1683,57 @@ func _build_camera_hint(root_ui: Control) -> void:
 	lbl.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	lbl.position = Vector2(16, -26)
 	root_ui.add_child(lbl)
+
+
+# ==============================================================================
+# ACTIVE OBJECTIVE HUD BANNER (DEEP SPACE)
+# Walks the player through the transfer: ignite the burn, survive the CME with
+# heat-shield + safe-power, then hand off to L1 arrival. The action button is
+# wired to the same _on_primary_action_pressed path the UI buttons use.
+# ==============================================================================
+
+func _build_objective_banner(root_ui: Control) -> void:
+	if root_ui == null or objective_banner != null:
+		return
+	objective_banner = ObjectiveBanner.new()
+	objective_banner.name = "ObjectiveBanner"
+	objective_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	objective_banner.position = Vector2(-190, 12)
+	objective_banner.custom_minimum_size = Vector2(380, 0)
+	objective_banner.size = Vector2(380, 0)
+	objective_banner.action_pressed.connect(_on_primary_action_pressed)
+	root_ui.add_child(objective_banner)
+
+
+func _update_objective_banner() -> void:
+	if objective_banner == null:
+		return
+	match current_subphase:
+		SubPhase.PARKING_ORBIT:
+			objective_banner.set_objective(1, 4, "IGNITE THE TRANSFER BURN",
+				"▶ IGNITE TRANSFER ENGINE", "[SPACE] Ignite the engine",
+				Color(1.0, 0.72, 0.25))
+		SubPhase.INJECTION_BURN:
+			objective_banner.set_objective(1, 4, "TRANSFER BURN IN PROGRESS",
+				"", "Hold attitude. The engine burns until the Delta-V bar fills.",
+				Color(1.0, 0.82, 0.30))
+		SubPhase.CRUISE_EARLY, SubPhase.CRUISE_MID:
+			objective_banner.set_objective(2, 4, "CRUISE TO SUN-EARTH L1",
+				"", "Time-warp is available. Watch for the solar weather alert.",
+				Color(0.35, 0.85, 1.0))
+		SubPhase.MIDCOURSE_CORRECTION:
+			objective_banner.set_objective(2, 4, "EXECUTE MID-COURSE CORRECTION",
+				"▶ EXECUTE MCC-1 BURN", "[SPACE] Trim trajectory (costs propellant)",
+				Color(0.35, 0.85, 1.0))
+		SubPhase.SOLAR_CRISIS_ALERT, SubPhase.CRISIS_SIMULATION:
+			objective_banner.set_objective(3, 4, "CME STORM — SURVIVE THE HAZARD",
+				"▶ ORIENT SHIELD + SAFE POWER", "Pick Safe Mode, then commit the crisis decisions",
+				Color(1.0, 0.35, 0.25))
+		SubPhase.SPACECRAFT_RECOVERY:
+			objective_banner.set_objective(3, 4, "STORM CLEARED — RECOVER SYSTEMS",
+				"▶ ADVANCE RECOVERY", "[SPACE] Restore spacecraft to nominal",
+				Color(0.35, 0.95, 0.55))
+		SubPhase.L1_APPROACH_READY:
+			objective_banner.set_objective(4, 4, "L1 APPROACH — BEGIN ARRIVAL",
+				"▶ PROCEED TO L1 ARRIVAL", "[SPACE] Hand off to orbit insertion",
+				Color(0.35, 0.95, 0.55))

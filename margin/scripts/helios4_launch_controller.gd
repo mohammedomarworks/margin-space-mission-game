@@ -149,6 +149,9 @@ var _free_zoom: float = 1.0
 var _free_dragging: bool = false
 var _free_drag_last: Vector2 = Vector2.ZERO
 var _cam_hint_label: Label = null
+var objective_banner: ObjectiveBanner = null
+var _auto_assist_timer: float = 0.0
+var _auto_assist_armed: bool = false
 var _cam_initialized: bool = false
 var _user_manually_selected_cam: bool = false
 
@@ -212,12 +215,14 @@ func _ready() -> void:
 	_build_callout_banner()
 	if launch_ui:
 		_build_camera_hint(launch_ui)
+		_build_objective_banner(launch_ui)
 	if launch_ui:
 		MarginTheme.apply_interactive_polish(launch_ui)
 		Sfx.attach_hud_toggle(launch_ui)
 
 	_init_flight_parameters()
 	_build_launch_environment()
+	_build_space_environment()
 	if launch_cam:
 		launch_cam.far = 60000.0
 	_setup_procedural_hud_widgets()
@@ -1654,6 +1659,8 @@ func _physics_process(delta: float) -> void:
 		return
 
 	flight_time_s += delta
+	_process_space_environment(delta)
+	_tick_auto_assist(delta)
 	_update_flight_physics(delta)
 	if current_phase == FlightPhase.ASCENT_STAGE1 or current_phase == FlightPhase.MAX_Q_CORRIDOR or current_phase == FlightPhase.ASCENT_STAGE2:
 		var roar_density: float = clampf(exp(-altitude_m / SCALE_HEIGHT_M), 0.0, 1.0) if altitude_m < 85000.0 else 0.0
@@ -2419,6 +2426,7 @@ func _execute_fast_forward_orbit() -> void:
 	print("[Launch] Fast-forward to Parking Orbit Injection.")
 
 func _update_ui() -> void:
+	_update_objective_banner()
 	# Update Procedural Widgets
 	if navball_widget:
 		navball_widget.pitch_deg = pitch_deg
@@ -2791,3 +2799,342 @@ func _build_camera_hint(root_ui: Control) -> void:
 	_cam_hint_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_cam_hint_label.position = Vector2(16, -26)
 	root_ui.add_child(_cam_hint_label)
+
+
+# ==============================================================================
+# RICH 3D SPACE ENVIRONMENT
+# Multi-layer parallax starfield, a glowing Sun with corona halo, and the
+# selected destination body (L1 halo ring / cratered Moon / red Mars globe).
+# All procedural, all WebGL-safe, all parented to the camera so they read as
+# infinitely distant sky rather than nearby props.
+# ==============================================================================
+
+var _sky_root: Node3D = null
+var _dest_body: MeshInstance3D = null
+var _sun_corona: MeshInstance3D = null
+
+
+func _build_space_environment() -> void:
+	if _sky_root != null:
+		return
+	_sky_root = Node3D.new()
+	_sky_root.name = "SpaceEnvironment"
+	add_child(_sky_root)
+
+	_build_star_shell(320.0, 260, 0.55, 0.9)
+	_build_star_shell(520.0, 200, 0.40, 0.7)
+	_build_star_shell(820.0, 140, 0.30, 0.55)
+	_build_sun_with_corona()
+	_build_destination_body()
+
+
+func _build_star_shell(radius: float, count: int, brightness: float, size_scale: float) -> void:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(1.0, 1.0, 1.0, brightness)
+	mat.emission_enabled = true
+	mat.emission = Color(0.88, 0.94, 1.0)
+	mat.emission_energy_multiplier = 2.0 + brightness * 2.0
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	var im := ImmediateMesh.new()
+	im.clear_surfaces()
+	im.surface_begin(Mesh.PRIMITIVE_POINTS, mat)
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(radius) + count
+	for i in count:
+		var theta: float = rng.randf_range(0.0, TAU)
+		var phi: float = rng.randf_range(-PI * 0.48, PI * 0.48)
+		im.surface_add_vertex(Vector3(
+			radius * cos(phi) * cos(theta),
+			radius * sin(phi),
+			radius * cos(phi) * sin(theta)
+		))
+	im.surface_end()
+
+	var mi := MeshInstance3D.new()
+	mi.name = "StarShell%d" % int(radius)
+	mi.mesh = im
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_sky_root.add_child(mi)
+
+
+func _build_sun_with_corona() -> void:
+	# Sun disc
+	var sun := MeshInstance3D.new()
+	sun.name = "SkySun"
+	var sph := SphereMesh.new()
+	sph.radius = 26.0
+	sph.height = 52.0
+	sph.radial_segments = 32
+	sph.rings = 16
+	sun.mesh = sph
+	var sun_mat := StandardMaterial3D.new()
+	sun_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sun_mat.albedo_color = Color(1.0, 0.94, 0.72)
+	sun_mat.emission_enabled = true
+	sun_mat.emission = Color(1.0, 0.86, 0.45)
+	sun_mat.emission_energy_multiplier = 6.0
+	sun.material_override = sun_mat
+	sun.position = Vector3(-620.0, 300.0, -900.0)
+	sun.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_sky_root.add_child(sun)
+
+	# Corona halo: nested translucent shells that read as a glow falloff
+	for i in 3:
+		var halo := MeshInstance3D.new()
+		halo.name = "SunCorona%d" % i
+		var hs := SphereMesh.new()
+		var r: float = 30.0 + i * 14.0
+		hs.radius = r
+		hs.height = r * 2.0
+		hs.radial_segments = 24
+		hs.rings = 12
+		halo.mesh = hs
+		var hm := StandardMaterial3D.new()
+		hm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		hm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		hm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		hm.albedo_color = Color(1.0, 0.78, 0.35, 0.16 - i * 0.045)
+		hm.emission_enabled = true
+		hm.emission = Color(1.0, 0.72, 0.30)
+		hm.emission_energy_multiplier = 2.2
+		hm.cull_mode = BaseMaterial3D.CULL_DISABLED
+		halo.material_override = hm
+		halo.position = sun.position
+		halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_sky_root.add_child(halo)
+		if i == 0:
+			_sun_corona = halo
+
+
+func _build_destination_body() -> void:
+	var dest: String = Helios4CampaignData.get_destination()
+	var meta: Dictionary = DestinationData.get_metadata(dest)
+
+	var body := MeshInstance3D.new()
+	body.name = "DestinationBody"
+	var sph := SphereMesh.new()
+	sph.radius = 46.0
+	sph.height = 92.0
+	sph.radial_segments = 48
+	sph.rings = 24
+	body.mesh = sph
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = meta["body_color"]
+	mat.roughness = 0.92
+	mat.emission_enabled = true
+	mat.emission = meta["accent"]
+	mat.emission_energy_multiplier = 0.16
+	body.material_override = mat
+	body.position = Vector3(700.0, 180.0, -820.0)
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_sky_root.add_child(body)
+	_dest_body = body
+
+	# Destination-specific marker: L1 halo ring, lunar craters, Mars polar cap
+	match dest:
+		"sun_earth_l1":
+			var ring := MeshInstance3D.new()
+			ring.name = "L1HaloRing"
+			var tm := TorusMesh.new()
+			tm.inner_radius = 62.0
+			tm.outer_radius = 65.0
+			tm.rings = 48
+			tm.ring_segments = 12
+			ring.mesh = tm
+			var rm := StandardMaterial3D.new()
+			rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			rm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+			rm.albedo_color = Color(0.45, 0.85, 1.0, 0.55)
+			rm.emission_enabled = true
+			rm.emission = Color(0.35, 0.80, 1.0)
+			rm.emission_energy_multiplier = 2.0
+			ring.material_override = rm
+			ring.position = body.position
+			ring.rotation_degrees = Vector3(72.0, 0.0, 18.0)
+			_sky_root.add_child(ring)
+		"lunar_south_pole":
+			# Crater dimples: small dark spheres pressed into the surface
+			var rng := RandomNumberGenerator.new()
+			rng.seed = 771
+			for i in 14:
+				var crater := MeshInstance3D.new()
+				var cs := SphereMesh.new()
+				var cr: float = rng.randf_range(3.0, 8.0)
+				cs.radius = cr
+				cs.height = cr * 2.0
+				cs.radial_segments = 10
+				cs.rings = 6
+				crater.mesh = cs
+				var cm := StandardMaterial3D.new()
+				cm.albedo_color = Color(0.42, 0.42, 0.46)
+				crater.material_override = cm
+				var theta: float = rng.randf_range(0.0, TAU)
+				var phi: float = rng.randf_range(-PI * 0.4, PI * 0.4)
+				crater.position = body.position + Vector3(
+					46.0 * cos(phi) * cos(theta),
+					46.0 * sin(phi),
+					46.0 * cos(phi) * sin(theta)
+				) * 0.97
+				crater.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				_sky_root.add_child(crater)
+		_:
+			# Mars polar cap
+			var cap := MeshInstance3D.new()
+			var cps := SphereMesh.new()
+			cps.radius = 16.0
+			cps.height = 12.0
+			cps.radial_segments = 24
+			cps.rings = 12
+			cap.mesh = cps
+			var cpm := StandardMaterial3D.new()
+			cpm.albedo_color = Color(0.95, 0.93, 0.90)
+			cap.material_override = cpm
+			cap.position = body.position + Vector3(0.0, 42.0, 0.0)
+			cap.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			_sky_root.add_child(cap)
+
+
+func _process_space_environment(delta: float) -> void:
+	if _sky_root == null:
+		return
+	# Keep the sky centred on the camera so it reads as infinite distance,
+	# then counter-rotate slowly for a sense of drift.
+	if launch_cam:
+		_sky_root.global_position = launch_cam.global_position
+	_sky_root.rotation.y += delta * 0.004
+	if _dest_body:
+		_dest_body.rotation.y += delta * 0.05
+	if _sun_corona:
+		var pulse: float = 1.0 + sin(Time.get_ticks_msec() * 0.0012) * 0.03
+		_sun_corona.scale = Vector3.ONE * pulse
+
+
+# ==============================================================================
+# ACTIVE OBJECTIVE HUD BANNER
+# Top-centre "STEP n / 4" banner with a glowing action button and [SPACE] hint.
+# Auto-assist: if the player does not press the prompted action within 4 seconds
+# the game performs it for them, so nobody gets stuck at MECO or fairing eject.
+# ==============================================================================
+
+func _build_objective_banner(root_ui: Control) -> void:
+	if root_ui == null or objective_banner != null:
+		return
+	objective_banner = ObjectiveBanner.new()
+	objective_banner.name = "ObjectiveBanner"
+	objective_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	objective_banner.position = Vector2(-190, 12)
+	objective_banner.custom_minimum_size = Vector2(380, 0)
+	objective_banner.size = Vector2(380, 0)
+	objective_banner.action_pressed.connect(_on_objective_action_pressed)
+	root_ui.add_child(objective_banner)
+
+
+func _on_objective_action_pressed() -> void:
+	match current_phase:
+		FlightPhase.PRE_LAUNCH_PREPARATION:
+			_on_start_countdown_pressed()
+		FlightPhase.STAGE1_BURNOUT:
+			_execute_stage_separation()
+		FlightPhase.ASCENT_STAGE2:
+			if altitude_m >= 68000.0 and not fairing_separated:
+				_execute_fairing_jettison()
+		FlightPhase.ORBITAL_INJECTION:
+			_execute_systems_activation()
+		FlightPhase.SYSTEMS_ACTIVATION:
+			_on_proceed_to_transfer_pressed()
+
+
+func _update_objective_banner() -> void:
+	if objective_banner == null:
+		return
+
+	match current_phase:
+		FlightPhase.PRE_LAUNCH_PREPARATION:
+			objective_banner.set_objective(1, 4, "RUN PRE-LAUNCH CHECKS",
+				"▶ START COUNTDOWN", "[SPACE] Start countdown • [V] Auto-verify",
+				Color(0.35, 0.85, 1.0))
+			_auto_assist_armed = false
+		FlightPhase.COUNTDOWN:
+			objective_banner.set_objective(1, 4, "COUNTDOWN RUNNING — T-%.0f s" % maxf(countdown_s, 0.0),
+				"", "Hold the vehicle steady. Liftoff is automatic at T-0.",
+				Color(1.0, 0.82, 0.30))
+			_auto_assist_armed = false
+		FlightPhase.ASCENT_STAGE1:
+			objective_banner.set_objective(2, 4, "STEER THE GRAVITY TURN",
+				"", "[A/D] Pitch • [W/S] Throttle • Watch for Max-Q",
+				Color(0.35, 0.85, 1.0))
+			_auto_assist_armed = false
+		FlightPhase.MAX_Q_CORRIDOR:
+			objective_banner.set_objective(2, 4, "MAX-Q — THROTTLE DOWN TO 70%",
+				"▼ THROTTLE 70%", "Press [S] to reduce throttle through peak pressure",
+				Color(0.98, 0.65, 0.15))
+			_auto_assist_armed = false
+		FlightPhase.STAGE1_BURNOUT:
+			objective_banner.set_objective(3, 4, "MECO — SEPARATE THE BOOSTER",
+				"▶ STAGE SEPARATION", "[SPACE] Separate now • auto-assist in 4 s",
+				Color(1.0, 0.72, 0.25))
+			_arm_auto_assist()
+		FlightPhase.STAGE_SEPARATION:
+			objective_banner.set_objective(3, 4, "UPPER STAGE IGNITION",
+				"", "Throttle up to 100% [W] and hold pitch",
+				Color(0.35, 0.90, 1.0))
+			_auto_assist_armed = false
+		FlightPhase.ASCENT_STAGE2:
+			if altitude_m >= 68000.0 and not fairing_separated:
+				objective_banner.set_objective(3, 4, "JETTISON THE FAIRING (>68 km)",
+					"▶ JETTISON FAIRING", "[J] Jettison • auto-assist in 4 s",
+					Color(0.35, 0.95, 0.65))
+				_arm_auto_assist()
+			else:
+				objective_banner.set_objective(3, 4, "ACCELERATE TO ORBIT (%.0f / 7,780 m/s)" % velocity_ms,
+					"", "Flatten pitch toward 0° as velocity builds",
+					Color(0.35, 0.85, 1.0))
+				_auto_assist_armed = false
+		FlightPhase.ORBITAL_INJECTION:
+			objective_banner.set_objective(4, 4, "ORBIT ACHIEVED — WAKE THE BUS",
+				"▶ ACTIVATE SYSTEMS", "[E] Activate spacecraft systems",
+				Color(0.35, 0.95, 0.55))
+			_auto_assist_armed = false
+		FlightPhase.SYSTEMS_ACTIVATION:
+			objective_banner.set_objective(4, 4, "LAUNCH COMPLETE — BEGIN TRANSFER",
+				"▶ PROCEED TO DEEP SPACE", "[ENTER] Proceed to transfer",
+				Color(0.35, 0.95, 0.55))
+			_auto_assist_armed = false
+		FlightPhase.FLIGHT_ABORTED:
+			objective_banner.set_objective(0, 4, "MISSION ABORTED",
+				"", "Review the failure reason and retry",
+				Color(1.0, 0.35, 0.35))
+			_auto_assist_armed = false
+		_:
+			_auto_assist_armed = false
+
+
+func _arm_auto_assist() -> void:
+	if not _auto_assist_armed:
+		_auto_assist_armed = true
+		_auto_assist_timer = 0.0
+
+
+func _tick_auto_assist(delta: float) -> void:
+	if not _auto_assist_armed:
+		return
+	_auto_assist_timer += delta
+	if _auto_assist_timer < 4.0:
+		return
+	_auto_assist_armed = false
+	_auto_assist_timer = 0.0
+	# Auto-assist: perform the prompted action so the player is never stuck.
+	match current_phase:
+		FlightPhase.STAGE1_BURNOUT:
+			print("[Launch] AUTO-ASSIST: performing stage separation.")
+			_execute_stage_separation()
+		FlightPhase.ASCENT_STAGE2:
+			if altitude_m >= 68000.0 and not fairing_separated:
+				print("[Launch] AUTO-ASSIST: jettisoning fairing.")
+				_execute_fairing_jettison()

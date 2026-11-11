@@ -198,6 +198,7 @@ var _last_mouse_pos: Vector2 = Vector2.ZERO
 @onready var val_dsn: Label = %ValDSN
 
 @onready var action_btn: Button = %CommissionActionBtn
+var objective_banner: ObjectiveBanner = null
 @onready var secondary_btn: Button = %SecondaryActionBtn
 @onready var proceed_debrief_btn: Button = %ProceedToDebriefBtn
 @onready var pause_btn: Button = %BtnPauseSim
@@ -243,6 +244,7 @@ func _ready() -> void:
 	if arrival_ui:
 		MarginTheme.apply_interactive_polish(arrival_ui)
 		_build_camera_hint(arrival_ui)
+		_build_objective_banner(arrival_ui)
 		Sfx.attach_hud_toggle(arrival_ui)
 	Sfx.start_space_ambient()
 	
@@ -875,6 +877,7 @@ func _toggle_simulation_pause() -> void:
 func _load_subphase(phase: SubPhase) -> void:
 	current_phase = phase
 	Sfx.radar_ping()
+	_update_objective_banner()
 	
 	match phase:
 		SubPhase.STAGE_A_APPROACH_NAVIGATION:
@@ -1451,3 +1454,72 @@ func _build_camera_hint(root_ui: Control) -> void:
 	lbl.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	lbl.position = Vector2(16, -26)
 	root_ui.add_child(lbl)
+
+
+# ==============================================================================
+# ACTIVE OBJECTIVE HUD BANNER (L1 ARRIVAL & SCIENCE DEPLOYMENT)
+# Six-step commissioning walk: approach trim -> HOI burn -> stationkeeping ->
+# deploy Magnetometer -> deploy Faraday Cup -> lock Earth antenna & transmit.
+# ==============================================================================
+
+func _build_objective_banner(root_ui: Control) -> void:
+	if root_ui == null or objective_banner != null:
+		return
+	objective_banner = ObjectiveBanner.new()
+	objective_banner.name = "ObjectiveBanner"
+	objective_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	objective_banner.position = Vector2(-190, 12)
+	objective_banner.custom_minimum_size = Vector2(380, 0)
+	objective_banner.size = Vector2(380, 0)
+	objective_banner.action_pressed.connect(_on_primary_action_pressed)
+	root_ui.add_child(objective_banner)
+
+
+func _update_objective_banner() -> void:
+	if objective_banner == null:
+		return
+	match current_phase:
+		SubPhase.STAGE_A_APPROACH_NAVIGATION:
+			objective_banner.set_objective(1, 6, "APPROACH TRIM BURN",
+				"▶ EXECUTE APPROACH TRIM", "[SPACE] Kill the approach dispersion",
+				Color(0.35, 0.85, 1.0))
+		SubPhase.STAGE_B_HOI_PLANNING:
+			objective_banner.set_objective(2, 6, "PLAN THE HALO ORBIT INSERTION",
+				"▶ AUTHORIZE HOI BURN", "[SPACE] Commit the braking burn",
+				Color(1.0, 0.72, 0.25))
+		SubPhase.STAGE_B_HOI_EXECUTION:
+			objective_banner.set_objective(2, 6, "HOI BURN IN PROGRESS",
+				"", "Hold. The engine is braking into the halo corridor.",
+				Color(1.0, 0.82, 0.30))
+		SubPhase.STAGE_C_STATIONKEEPING:
+			objective_banner.set_objective(3, 6, "STATIONKEEPING TRIM",
+				"▶ TRIM THE ORBIT", "[SPACE] Stabilise the halo orbit",
+				Color(0.35, 0.85, 1.0))
+		SubPhase.STAGE_D_COMMISSION_MAG:
+			objective_banner.set_objective(4, 6, "DEPLOY THE MAGNETOMETER BOOM",
+				"▶ DEPLOY MAGNETOMETER", "[SPACE] Extend the 3.8 m boom",
+				Color(0.35, 0.95, 0.65))
+		SubPhase.STAGE_D_COMMISSION_FARADAY:
+			objective_banner.set_objective(5, 6, "DEPLOY THE FARADAY CUP",
+				"▶ DEPLOY FARADAY CUP", "[SPACE] Open the aperture door",
+				Color(0.35, 0.95, 0.65))
+		SubPhase.STAGE_D_SYSTEMS_VERIFY:
+			objective_banner.set_objective(5, 6, "VERIFY BUS SYSTEMS",
+				"▶ VERIFY SYSTEMS", "[SPACE] Confirm power, thermal and avionics",
+				Color(0.35, 0.95, 0.65))
+		SubPhase.STAGE_E_SCIENTIFIC_OBSERVATION:
+			objective_banner.set_objective(5, 6, "CALIBRATE THE SENSORS",
+				"▶ CALIBRATE SENSOR", "[SPACE] Run the calibration sweep",
+				Color(0.35, 0.95, 0.65))
+		SubPhase.STAGE_F_EARTH_COMM_LOCK:
+			objective_banner.set_objective(6, 6, "LOCK THE EARTH ANTENNA",
+				"▶ LOCK EARTH ANTENNA", "[SPACE] Slew to Earth and acquire DSN",
+				Color(0.35, 0.85, 1.0))
+		SubPhase.STAGE_F_TRANSMIT_WARNING:
+			objective_banner.set_objective(6, 6, "TRANSMIT THE WARNING PACKET",
+				"▶ TRANSMIT TO EARTH", "[SPACE] Beam the early-warning data",
+				Color(1.0, 0.85, 0.30))
+		SubPhase.MISSION_SUCCESS_DEBRIEF:
+			objective_banner.set_objective(6, 6, "MISSION ACCOMPLISHED — HELIOS-4 ONLINE",
+				"▶ VIEW DEBRIEF", "[ENTER] Open the mission debrief",
+				Color(0.35, 0.95, 0.55))
