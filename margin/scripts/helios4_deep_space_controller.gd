@@ -1249,12 +1249,12 @@ func _setup_perk_and_autowarp_hud() -> void:
 		_auto_warp_banner.name = "AutoWarpAlertBanner"
 		_auto_warp_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_auto_warp_banner.visible = false
-		_auto_warp_banner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_auto_warp_banner.offset_left = -410.0
+		_auto_warp_banner.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		_auto_warp_banner.offset_left = 18.0
 		_auto_warp_banner.offset_top = 52.0
-		_auto_warp_banner.offset_right = -18.0
-		_auto_warp_banner.offset_bottom = 92.0
-		_auto_warp_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		_auto_warp_banner.offset_right = 400.0
+		_auto_warp_banner.offset_bottom = 100.0
+		_auto_warp_banner.grow_horizontal = Control.GROW_DIRECTION_END
 		var st := StyleBoxFlat.new()
 		st.bg_color = Color(0.14, 0.04, 0.03, 0.94)
 		st.border_color = Color(0.98, 0.40, 0.18, 0.95)
