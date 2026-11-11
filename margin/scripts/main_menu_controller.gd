@@ -9,6 +9,9 @@ const ComponentDatabase = preload("res://margin/data/component_data.gd")
 @onready var how_to_play_modal: PanelContainer = %HowToPlayModal
 
 var continue_btn: Button = null
+var play_btn: Button = null
+var selector_overlay: Control = null
+var destination_selector: DestinationSelector = null
 
 func _ready() -> void:
 	var menu_ui := find_child("RootUI", true, false) as Control
@@ -49,6 +52,9 @@ func _ready() -> void:
 	var settings_btn = find_child("SettingsHowToPlayBtn", true, false)
 	if settings_btn and not settings_btn.pressed.is_connected(_on_how_to_play_pressed):
 		settings_btn.pressed.connect(_on_how_to_play_pressed)
+
+	_build_play_button(menu_ui)
+	_build_selector_overlay(menu_ui)
 
 func _update_continue_button_state() -> void:
 	if not continue_btn:
@@ -92,3 +98,77 @@ func _on_how_to_play_pressed() -> void:
 func _on_close_modal_pressed() -> void:
 	if how_to_play_modal:
 		how_to_play_modal.visible = false
+
+
+# --- ARCADE PLAY FLOW ---
+
+func _build_play_button(root_ui: Control) -> void:
+	if root_ui == null:
+		return
+	play_btn = Button.new()
+	play_btn.name = "PlayMissionBtn"
+	play_btn.text = "▶  PLAY MISSION"
+	play_btn.custom_minimum_size = Vector2(420, 72)
+	play_btn.add_theme_font_size_override("font_size", 28)
+	play_btn.focus_mode = Control.FOCUS_NONE
+	play_btn.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	play_btn.position = Vector2(-210, -170)
+	play_btn.pressed.connect(_on_play_pressed)
+	root_ui.add_child(play_btn)
+
+	# Pulsing arcade glow
+	var tw := create_tween()
+	tw.set_loops()
+	tw.tween_property(play_btn, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.75)
+	tw.tween_property(play_btn, "modulate", Color(0.82, 0.92, 1.0, 0.88), 0.75)
+
+
+func _build_selector_overlay(root_ui: Control) -> void:
+	if root_ui == null:
+		return
+	selector_overlay = Control.new()
+	selector_overlay.name = "DestinationSelectorOverlay"
+	selector_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	selector_overlay.visible = false
+	root_ui.add_child(selector_overlay)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.04, 0.07, 0.88)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	selector_overlay.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	selector_overlay.add_child(center)
+
+	destination_selector = DestinationSelector.new()
+	destination_selector.name = "DestinationSelector"
+	destination_selector.custom_minimum_size = Vector2(900, 0)
+	destination_selector.destination_selected.connect(_on_destination_confirmed)
+	center.add_child(destination_selector)
+
+	var close_btn := Button.new()
+	close_btn.name = "CloseSelectorBtn"
+	close_btn.text = "✕ BACK"
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	close_btn.position = Vector2(-110, 20)
+	close_btn.custom_minimum_size = Vector2(90, 34)
+	close_btn.pressed.connect(func() -> void:
+		Sfx.ui_back()
+		selector_overlay.visible = false
+	)
+	selector_overlay.add_child(close_btn)
+
+
+func _on_play_pressed() -> void:
+	Sfx.ui_click()
+	if selector_overlay:
+		selector_overlay.visible = true
+
+
+func _on_destination_confirmed(dest_id: String) -> void:
+	print("[MainMenu] Destination confirmed: ", dest_id)
+	Helios4CampaignData.reset_campaign()
+	Helios4CampaignData.set_destination(dest_id)
+	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PROLOGUE, get_tree())

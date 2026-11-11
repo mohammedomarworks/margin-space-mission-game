@@ -170,6 +170,8 @@ static var team_player_names: Dictionary = {
 	ROLE_SYSTEMS: "Specialist 4"
 }
 static var active_role: String = ROLE_PROPULSION
+# Selected planetary destination (see DestinationData). Defaults to Sun-Earth L1.
+static var selected_destination: String = "sun_earth_l1"
 static var team_perk_id: String = "" # Activated when Team Assignment confirms lead role
 static var waived_gates: Array = []
 
@@ -740,6 +742,7 @@ static func save_campaign_state() -> bool:
 		"player_count": player_count,
 		"team_player_names": team_player_names,
 		"active_role": active_role,
+		"selected_destination": selected_destination,
 		"team_perk_id": team_perk_id,
 		"waived_gates": waived_gates,
 		"team_decision_log": team_decision_log,
@@ -794,6 +797,9 @@ static func load_campaign_state() -> bool:
 	if data.has("team_player_names"):
 		team_player_names = data["team_player_names"]
 	active_role = data.get("active_role", ROLE_PROPULSION)
+	selected_destination = data.get("selected_destination", "sun_earth_l1")
+	if SpacecraftState.active_instance != null:
+		SpacecraftState.active_instance.destination_id = selected_destination
 	team_perk_id = data.get("team_perk_id", "")
 	waived_gates = data.get("waived_gates", [])
 	if SpacecraftState.active_instance != null:
@@ -846,6 +852,7 @@ static func reset_campaign() -> void:
 	}
 	team_decision_log = []
 	active_role = ROLE_PROPULSION
+	selected_destination = "sun_earth_l1"
 	team_perk_id = ""
 	waived_gates = []
 	if SpacecraftState.active_instance != null:
@@ -894,3 +901,19 @@ static func load_stage(stage: Stage, tree: SceneTree) -> void:
 	var scene_path = get_scene_path_for_stage(stage)
 	print("[Helios4CampaignData] Transitioning to stage: ", STAGE_METADATA[stage]["title"], " -> ", scene_path)
 	tree.change_scene_to_file(scene_path)
+
+
+# --- DESTINATION SELECTION ---
+
+static func set_destination(dest_id: String) -> void:
+	var valid: Array = ["sun_earth_l1", "lunar_south_pole", "mars_orbiter"]
+	selected_destination = dest_id if valid.has(dest_id) else "sun_earth_l1"
+	if SpacecraftState.active_instance != null:
+		SpacecraftState.active_instance.destination_id = selected_destination
+	save_campaign_state()
+
+static func get_destination() -> String:
+	return selected_destination
+
+static func get_destination_metadata() -> Dictionary:
+	return DestinationData.get_metadata(selected_destination)

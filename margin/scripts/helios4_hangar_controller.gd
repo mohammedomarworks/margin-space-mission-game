@@ -44,6 +44,8 @@ var radar_widget: Helios4HUDWidgets.RadarScope = null
 var sparkline_aero: Helios4HUDWidgets.SparklineWave = null
 var sparkline_power: Helios4HUDWidgets.SparklineWave = null
 var readiness_bars: Helios4HUDWidgets.ReadinessBars = null
+var destination_checklist: DestinationChecklist = null
+var scratch_builder: ScratchBuilder = null
 
 func _ready() -> void:
 	var hangar_ui := find_child("RootUI", true, false) as Control
@@ -58,6 +60,8 @@ func _ready() -> void:
 	active_role = Helios4CampaignData.active_role
 
 	_setup_procedural_widgets()
+	_setup_destination_checklist()
+	_setup_scratch_builder()
 	_setup_inventory_grid()
 	_connect_ui_signals()
 	_switch_role(active_role)
@@ -549,8 +553,48 @@ func _switch_role(role_id: String) -> void:
 		active_role_lbl.text = "%s [%s]" % [meta["title"].to_upper(), player_name.to_upper()]
 		active_role_lbl.add_theme_color_override("font_color", meta["color"])
 
+func _setup_scratch_builder() -> void:
+	var root_ui := find_child("RootUI", true, false) as Control
+	if root_ui == null:
+		return
+	scratch_builder = ScratchBuilder.new()
+	scratch_builder.name = "ScratchBuilder"
+	scratch_builder.custom_minimum_size = Vector2(300, 0)
+	scratch_builder.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	scratch_builder.position = Vector2(16, 120)
+	scratch_builder.size = Vector2(300, 0)
+	scratch_builder.build_changed.connect(_on_scratch_build_changed)
+	root_ui.add_child(scratch_builder)
+
+func _on_scratch_build_changed() -> void:
+	# Rebuild the 3D vehicle and refresh every readout against the new config.
+	if rocket_3d and rocket_3d.has_method("rebuild_vehicle"):
+		rocket_3d.rebuild_vehicle()
+		# Snap animation: the new part pops into place.
+		if rocket_3d.probe_node:
+			var tw := create_tween()
+			tw.tween_property(rocket_3d.probe_node, "scale", Vector3.ONE * 0.86, 0.08)
+			tw.tween_property(rocket_3d.probe_node, "scale", Vector3.ONE, 0.16)
+	_recalculate_and_refresh_ui()
+	if destination_checklist != null:
+		destination_checklist.refresh()
+
+func _setup_destination_checklist() -> void:
+	var root_ui := find_child("RootUI", true, false) as Control
+	if root_ui == null:
+		return
+	destination_checklist = DestinationChecklist.new()
+	destination_checklist.name = "DestinationChecklist"
+	destination_checklist.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	destination_checklist.position = Vector2(-300, 120)
+	destination_checklist.custom_minimum_size = Vector2(280, 0)
+	destination_checklist.size = Vector2(280, 0)
+	root_ui.add_child(destination_checklist)
+
 func _recalculate_and_refresh_ui() -> void:
 	current_telemetry = Helios4CampaignData.calculate_hangar_telemetry()
+	if destination_checklist != null:
+		destination_checklist.refresh()
 
 	# Update HUD Labels
 	_update_label("ValWetMass", "%.0f kg" % current_telemetry["liftoff_wet_mass_kg"])

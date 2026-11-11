@@ -10,6 +10,9 @@ static var active_instance: SpacecraftState = null
 
 var current_components: Dictionary = {} # Category (enum) -> component_id (String)
 var team_perk_id: String = ""
+# Selected mission destination (see DestinationData). Mirrors campaign data so
+# the hangar checklist and 3D preview can read it without a campaign lookup.
+var destination_id: String = "sun_earth_l1"
 
 func _init() -> void:
 	active_instance = self
