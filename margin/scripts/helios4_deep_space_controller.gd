@@ -342,6 +342,8 @@ func _ready() -> void:
 	_update_telemetry_ui()
 	if transfer_ui:
 		MarginTheme.apply_interactive_polish(transfer_ui)
+		Sfx.attach_hud_toggle(transfer_ui)
+	Sfx.start_space_ambient()
 	if current_subphase == SubPhase.SOLAR_CRISIS_ALERT:
 		_sync_crisis_mode_attitude()
 		_trigger_auto_warp_drop("SOLAR CME DETECTED", Color(0.98, 0.35, 0.20))
@@ -960,6 +962,7 @@ func _process_mcc_burn(dt: float) -> void:
 
 func _enter_solar_crisis() -> void:
 	current_subphase = SubPhase.SOLAR_CRISIS_ALERT
+	Sfx.start_klaxon()
 	_trigger_auto_warp_drop("SOLAR CME DETECTED", Color(0.98, 0.35, 0.18))
 	_set_camera_mode(CamMode.CRISIS_TACTICAL)
 	_sync_crisis_mode_attitude()
@@ -995,6 +998,8 @@ func _process_crisis_simulation(dt: float) -> void:
 		equipment_degradation_pct += thermal_overtemp_damage_pct
 		if tactical_crisis_panel:
 			tactical_crisis_panel.visible = false
+		Sfx.stop_klaxon()
+		Sfx.success_chime()
 		_show_advisory("★ SOLAR STORM SUBSIDED: Proton flux below hazard limit. Begin spacecraft recovery.")
 		_update_flight_guidance()
 
@@ -1275,6 +1280,7 @@ func _select_crisis_option(card_idx: int, option_idx: int) -> void:
 			crisis_choice_comms = option_idx
 			_highlight_choice_btns([btn_comm_opt1, btn_comm_opt2, btn_comm_opt3], option_idx)
 			_sync_crisis_mode_attitude()
+	Sfx.ui_click()
 	_update_telemetry_ui()
 
 func _highlight_choice_btns(btns: Array, active_idx: int) -> void:

@@ -15,6 +15,7 @@ func _ready() -> void:
 	if menu_ui:
 		menu_ui.theme = MarginTheme.get_theme()
 		MarginTheme.apply_interactive_polish(menu_ui)
+		Sfx.attach_hud_toggle(menu_ui)
 	# Configure default 3D spacecraft for title display
 	var default_cfg = ComponentDatabase.get_default_configuration()
 	# Equip DSCOVR plasma boom if available for title display
@@ -62,6 +63,7 @@ func _update_continue_button_state() -> void:
 		continue_btn.tooltip_text = "Start a New Campaign to begin."
 
 func _on_new_campaign_pressed() -> void:
+	Sfx.ui_click()
 	print("[MainMenu] Launching New HELIOS-4 Campaign!")
 	Helios4CampaignData.reset_campaign()
 	Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PROLOGUE, get_tree())

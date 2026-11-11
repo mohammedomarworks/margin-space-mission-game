@@ -66,6 +66,7 @@ func _ready() -> void:
 	_recalculate_and_refresh_ui()
 	if hangar_ui:
 		MarginTheme.apply_interactive_polish(hangar_ui)
+		Sfx.attach_hud_toggle(hangar_ui)
 
 	# Print UI coordinates for automated QA and CDP browser verification
 	get_tree().process_frame.connect(func():
@@ -200,6 +201,7 @@ func _setup_inventory_grid() -> void:
 
 func _select_component(comp_id: String) -> void:
 	active_component_id = comp_id
+	Sfx.part_attach()
 	print("[Hangar] Selected component: ", comp_id)
 
 	# Update visual highlights on inventory buttons

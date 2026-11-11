@@ -27,6 +27,10 @@ func _ready() -> void:
 	theme = MarginTheme.get_theme()
 	_calculate_debrief_score()
 	_populate_ui()
+	if is_success:
+		Sfx.victory_fanfare()
+	else:
+		Sfx.failure_powerdown()
 	
 	save_btn.pressed.connect(_on_save_and_complete_pressed)
 	replay_btn.pressed.connect(_on_replay_pressed)

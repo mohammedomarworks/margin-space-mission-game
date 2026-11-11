@@ -242,6 +242,8 @@ func _ready() -> void:
 	_load_subphase(current_phase)
 	if arrival_ui:
 		MarginTheme.apply_interactive_polish(arrival_ui)
+		Sfx.attach_hud_toggle(arrival_ui)
+	Sfx.start_space_ambient()
 	
 	get_tree().process_frame.connect(func():
 		if action_btn: print("[L1Arrival] CommissionActionBtn center: ", action_btn.get_global_rect().get_center())
@@ -871,6 +873,7 @@ func _toggle_simulation_pause() -> void:
 
 func _load_subphase(phase: SubPhase) -> void:
 	current_phase = phase
+	Sfx.radar_ping()
 	
 	match phase:
 		SubPhase.STAGE_A_APPROACH_NAVIGATION:

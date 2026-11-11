@@ -115,6 +115,7 @@ var throttle: float = 1.0 # 0.0 to 1.0
 var pitch_deg: float = 90.0 # 90 = vertical, 0 = horizontal
 var flight_time_s: float = 0.0
 var countdown_s: float = 10.0
+var _last_countdown_sec: int = -1
 var downrange_m: float = 0.0
 
 var s1_fuel_kg: float = 24000.0
@@ -203,6 +204,7 @@ func _ready() -> void:
 	_build_callout_banner()
 	if launch_ui:
 		MarginTheme.apply_interactive_polish(launch_ui)
+		Sfx.attach_hud_toggle(launch_ui)
 
 	_init_flight_parameters()
 	_build_launch_environment()
@@ -1628,6 +1630,10 @@ func _physics_process(delta: float) -> void:
 	if current_phase == FlightPhase.COUNTDOWN:
 		if not countdown_paused:
 			countdown_s -= delta
+			var cd_sec: int = int(ceil(countdown_s))
+			if cd_sec != _last_countdown_sec and cd_sec >= 0:
+				_last_countdown_sec = cd_sec
+				Sfx.countdown_beep(cd_sec <= 3)
 			if countdown_s <= 3.0 and pad_steam_emitter and not pad_steam_emitter.emitting:
 				pad_steam_emitter.emitting = true
 			if countdown_s <= 0.0:
@@ -1639,6 +1645,9 @@ func _physics_process(delta: float) -> void:
 
 	flight_time_s += delta
 	_update_flight_physics(delta)
+	if current_phase == FlightPhase.ASCENT_STAGE1 or current_phase == FlightPhase.MAX_Q_CORRIDOR or current_phase == FlightPhase.ASCENT_STAGE2:
+		var roar_density: float = clampf(exp(-altitude_m / SCALE_HEIGHT_M), 0.0, 1.0) if altitude_m < 85000.0 else 0.0
+		Sfx.set_engine_level(throttle, roar_density)
 	_update_3d_visuals(delta)
 	_update_ui()
 	_check_phase_transitions()
@@ -1673,6 +1682,8 @@ func _execute_ignition_liftoff() -> void:
 		return
 
 	current_phase = FlightPhase.ASCENT_STAGE1
+	Sfx.thump(1.2)
+	Sfx.start_engine_roar()
 	print("[Launch] LIFTOFF OF HELIOS-4! Clamps released. Tower clearance nominal.")
 
 	# Release mechanical hold-down clamps
@@ -1747,6 +1758,7 @@ func _update_flight_physics(delta: float) -> void:
 			thrust_n = 0.0
 			if plume_smoke_emitter: plume_smoke_emitter.emitting = false
 			_tween_plume_node(main_plumes_node, false, Vector3.ONE, 0.35)
+			Sfx.meco()
 			_show_callout_banner("MECO — STAGE 1 ENGINE CUTOFF • READY FOR SEPARATION [SPACE]", Color(0.98, 0.82, 0.22), 3.6)
 			if not _user_manually_selected_cam:
 				_set_camera_mode(CameraMode.SEPARATION)
@@ -1830,6 +1842,8 @@ func _check_phase_transitions() -> void:
 		_tween_plume_node(vacuum_plume_node, false, Vector3.ONE, 0.45)
 		if not _orbit_banner_shown:
 			_orbit_banner_shown = true
+			Sfx.stop_engine_roar()
+			Sfx.success_chime()
 			_show_callout_banner("ORBITAL INSERTION CONFIRMED — 185 KM PARKING ORBIT REACHED", Color(0.35, 0.95, 0.55), 4.0)
 		if not _user_manually_selected_cam:
 			_set_camera_mode(CameraMode.ORBITAL)
@@ -1873,6 +1887,7 @@ func _execute_stage_separation() -> void:
 	# Smoothly transition atmospheric -> Stage 2 vacuum engine exhaust
 	_tween_plume_node(main_plumes_node, false, Vector3.ONE, 0.25)
 	_tween_plume_node(vacuum_plume_node, true, Vector3(0.95, 0.88, 0.95), 0.45)
+	Sfx.thump(1.1)
 	_show_callout_banner("STAGE 1 SEPARATED — STAGE 2 VACUUM ENGINE IGNITION", Color(0.35, 0.90, 1.0), 3.4)
 
 	print("[Launch] STAGE SEPARATION CONFIRMED! Stage 1 booster discarded. Stage 2 vacuum engine ignition.")
@@ -1904,6 +1919,7 @@ func _execute_fairing_jettison() -> void:
 	# Expand Stage 2 exhaust bell smoothly into exospheric vacuum
 	if stage1_separated and not orbit_achieved:
 		_tween_plume_node(vacuum_plume_node, true, Vector3(1.28, 1.18, 1.28), 0.55)
+	Sfx.thump(0.75)
 	_show_callout_banner("FAIRING JETTISONED — HELIOS-4 EXPOSED TO EXOSPHERIC VACUUM", Color(0.35, 0.95, 0.65), 3.4)
 
 	print("[Launch] FAIRING JETTISON CONFIRMED! HELIOS-4 solar sentinel probe exposed to vacuum.")
@@ -1927,6 +1943,8 @@ func _trigger_flight_abort(reason: String) -> void:
 	if main_plumes_node: main_plumes_node.visible = false
 	if vacuum_plume_node: vacuum_plume_node.visible = false
 	if vapor_cone_node: vapor_cone_node.visible = false
+	Sfx.stop_engine_roar()
+	Sfx.failure_powerdown()
 	print("[Launch] *** MISSION ABORT / LAUNCH FAILURE: %s ***" % reason)
 	_show_abort_modal(reason)
 
