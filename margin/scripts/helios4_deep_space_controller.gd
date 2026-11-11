@@ -228,6 +228,8 @@ var solar_array_area_m2: float = 6.5
 var solar_efficiency: float = 0.31
 var battery_capacity_wh: float = 1200.0
 var battery_charge_wh: float = 1200.0
+var is_mission_failed: bool = false
+var failure_reason: String = ""
 var base_avionics_power_w: float = 65.0
 var adcs_power_w: float = 35.0
 var thermal_power_w: float = 25.0
@@ -943,6 +945,14 @@ func _process_power_and_systems(dt: float) -> void:
 	var dt_hours = dt / 3600.0
 	battery_charge_wh = clamp(battery_charge_wh + (net_w * dt_hours), 0.0, battery_capacity_wh)
 
+	# GAME OVER: battery depleted during the storm
+	if battery_charge_wh <= 0.001 and not is_mission_failed:
+		_trigger_mission_failure(
+			"Battery Depleted During CME Storm",
+			"The spacecraft bus lost all electrical power while riding out the solar proton event. Without battery reserve the avionics, thermal control and transmitter all went dark.",
+			"Equip a higher-capacity battery or enter Safe Mode earlier to cut the load."
+		)
+
 func _enter_midcourse_correction() -> void:
 	current_subphase = SubPhase.MIDCOURSE_CORRECTION
 	_trigger_auto_warp_drop("MCC-1 BURN WINDOW ACTIVE", Color(0.35, 0.88, 1.0))
@@ -1017,6 +1027,14 @@ func _process_crisis_thermal(dt: float) -> void:
 	thermal_bus_temp_c = clamp(thermal_bus_temp_c + (absorbed_solar_w - rejected_heat_w) * dt / heat_capacity_j_per_k, 15.0, 120.0)
 	if thermal_bus_temp_c > 65.0:
 		thermal_overtemp_damage_pct += (thermal_bus_temp_c - 65.0) * dt / 3600.0 * 0.05
+
+	# GAME OVER: thermal runaway past the design limit
+	if thermal_bus_temp_c >= 100.0 and not is_mission_failed:
+		_trigger_mission_failure(
+			"Thermal Limit Exceeded During Solar Crisis",
+			"Bus temperature reached 100 C. The heat shield was not oriented sunward and the radiators could not reject the absorbed solar flux.",
+			"Click ORIENT HEAT SHIELD and ENABLE SAFE POWER MODE before the temperature climbs."
+		)
 
 func _format_cme_reference() -> String:
 	var event: Dictionary = DonkiService.OFFLINE_EVENT_CATALOG[0]
@@ -1737,3 +1755,113 @@ func _update_objective_banner() -> void:
 			objective_banner.set_objective(4, 4, "L1 APPROACH — BEGIN ARRIVAL",
 				"▶ PROCEED TO L1 ARRIVAL", "[SPACE] Hand off to orbit insertion",
 				Color(0.35, 0.95, 0.55))
+
+
+# ==============================================================================
+# MISSION FAILED OVERLAY (DEEP SPACE)
+# Dramatic game-over state with the exact engineering reason, plus RETRY STAGE
+# and REBUILD IN HANGAR so the player is never stuck on a dead screen.
+# ==============================================================================
+
+func _trigger_mission_failure(title: String, detail: String, fix: String) -> void:
+	if is_mission_failed:
+		return
+	is_mission_failed = true
+	failure_reason = title
+	Sfx.stop_klaxon()
+	Sfx.failure_powerdown()
+	if objective_banner:
+		objective_banner.set_objective(0, 4, "MISSION FAILED — " + title.to_upper(),
+			"", "Review the cause and retry", Color(1.0, 0.35, 0.35))
+	_show_failure_overlay(title, detail, fix)
+
+
+func _show_failure_overlay(title: String, detail: String, fix: String) -> void:
+	var root_ui := find_child("RootUI", true, false) as Control
+	if root_ui == null:
+		return
+	if root_ui.find_child("MissionFailedOverlay", true, false) != null:
+		return
+
+	var overlay := Control.new()
+	overlay.name = "MissionFailedOverlay"
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root_ui.add_child(overlay)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.10, 0.01, 0.01, 0.82)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(620, 0)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.12, 0.03, 0.03, 0.97)
+	sb.set_corner_radius_all(8)
+	sb.set_border_width_all(2)
+	sb.border_color = Color(0.95, 0.25, 0.25)
+	sb.set_content_margin_all(22)
+	panel.add_theme_stylebox_override("panel", sb)
+	center.add_child(panel)
+
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 12)
+	panel.add_child(vb)
+
+	var head := Label.new()
+	head.text = "▲ MISSION FAILED"
+	head.add_theme_font_size_override("font_size", 26)
+	head.add_theme_color_override("font_color", Color(1.0, 0.35, 0.32))
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(head)
+
+	var cause := Label.new()
+	cause.text = title
+	cause.add_theme_font_size_override("font_size", 15)
+	cause.add_theme_color_override("font_color", Color(1.0, 0.72, 0.60))
+	cause.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cause.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vb.add_child(cause)
+
+	var body := Label.new()
+	body.text = detail
+	body.add_theme_font_size_override("font_size", 12)
+	body.add_theme_color_override("font_color", Color(0.85, 0.82, 0.82))
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vb.add_child(body)
+
+	var fix_lbl := Label.new()
+	fix_lbl.text = "FIX: " + fix
+	fix_lbl.add_theme_font_size_override("font_size", 12)
+	fix_lbl.add_theme_color_override("font_color", Color(0.55, 0.92, 0.70))
+	fix_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vb.add_child(fix_lbl)
+
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vb.add_child(row)
+
+	var retry := Button.new()
+	retry.name = "BtnRetryStage"
+	retry.text = "↺ RETRY STAGE"
+	retry.custom_minimum_size = Vector2(180, 40)
+	retry.pressed.connect(func() -> void:
+		Sfx.ui_click()
+		Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_3_TRANSFER, get_tree())
+	)
+	row.add_child(retry)
+
+	var rebuild := Button.new()
+	rebuild.name = "BtnRebuildHangar"
+	rebuild.text = "← REBUILD IN HANGAR"
+	rebuild.custom_minimum_size = Vector2(180, 40)
+	rebuild.pressed.connect(func() -> void:
+		Sfx.ui_click()
+		Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_1_HANGAR, get_tree())
+	)
+	row.add_child(rebuild)

@@ -1995,7 +1995,7 @@ func _show_abort_modal(reason: String) -> void:
 	vbox.add_theme_constant_override("separation", 10)
 
 	var title := Label.new()
-	title.text = "▲ MISSION ABORT / LAUNCH FLIGHT FAILURE"
+	title.text = "▲ MISSION FAILED — LAUNCH FLIGHT FAILURE"
 	title.add_theme_font_size_override("font_size", 14)
 	title.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
 	vbox.add_child(title)
@@ -2021,7 +2021,7 @@ func _show_abort_modal(reason: String) -> void:
 
 	var btn_retry := Button.new()
 	btn_retry.name = "BtnRetryLaunch"
-	btn_retry.text = "↺ RETRY LAUNCH FROM PAD"
+	btn_retry.text = "↺ RETRY STAGE"
 	btn_retry.add_theme_font_size_override("font_size", 11)
 	var retry_style := StyleBoxFlat.new()
 	retry_style.bg_color = Color(0.15, 0.45, 0.75, 0.95)
@@ -2038,7 +2038,7 @@ func _show_abort_modal(reason: String) -> void:
 
 	var btn_hangar := Button.new()
 	btn_hangar.name = "BtnReturnToHangar"
-	btn_hangar.text = "← RETURN TO 3D HANGAR (RE-ENGINEER)"
+	btn_hangar.text = "← REBUILD IN HANGAR"
 	btn_hangar.add_theme_font_size_override("font_size", 11)
 	var h_style := StyleBoxFlat.new()
 	h_style.bg_color = Color(0.12, 0.16, 0.22, 0.9)

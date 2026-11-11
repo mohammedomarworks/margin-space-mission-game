@@ -18,6 +18,9 @@ const Helios4CampaignData = preload("res://margin/data/helios4_campaign_data.gd"
 @onready var save_btn: Button = %SaveAndCompleteBtn
 @onready var replay_btn: Button = %ReplayMissionBtn
 @onready var menu_btn: Button = %MainMenuBtn
+var next_planet_btn: Button = null
+var star_label: Label = null
+var science_label: Label = null
 
 var total_score: float = 0.0
 var letter_grade: String = "A"
@@ -55,14 +58,46 @@ func _calculate_debrief_score() -> void:
 
 func _populate_ui() -> void:
 	if is_success:
-		outcome_lbl.text = "MISSION SUCCESSFUL — HELIOS-4 FULLY COMMISSIONED"
+		outcome_lbl.text = "★ MISSION ACCOMPLISHED — %s FULLY COMMISSIONED" % DestinationData.get_display_name(Helios4CampaignData.get_destination())
 		outcome_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 	else:
-		outcome_lbl.text = "MISSION DEGRADED — LOSS OF MINIMUM OBJECTIVES"
+		outcome_lbl.text = "▲ MISSION FAILED — LOSS OF MINIMUM OBJECTIVES"
 		outcome_lbl.add_theme_color_override("font_color", Color(0.95, 0.35, 0.35))
 		
 	grade_lbl.text = "GRADE: " + letter_grade
 	score_lbl.text = "%.1f / 100 PTS" % total_score
+
+	# --- Star rating (S-rank arcade presentation) ---
+	var stars: int = _compute_stars(total_score)
+	star_label = Label.new()
+	star_label.name = "StarRatingLabel"
+	star_label.text = "★".repeat(stars) + "☆".repeat(3 - stars)
+	star_label.add_theme_font_size_override("font_size", 30)
+	star_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.30))
+	star_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(star_label)
+	star_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	star_label.position = Vector2(-160, 96)
+	star_label.size = Vector2(320, 40)
+
+	# --- Science score + margin efficiency ---
+	var l1_tel_sci: Dictionary = Helios4CampaignData.l1_telemetry
+	var sci_total: float = float(l1_tel_sci.get("science_score", 0.0))
+	var margin_eff: float = clampf(total_score, 0.0, 100.0)
+	science_label = Label.new()
+	science_label.name = "ScienceScoreLabel"
+	science_label.text = "SCIENCE SCORE: %.1f pts   •   MARGIN EFFICIENCY: %.1f%%   •   TARGET: %s" % [
+		sci_total, margin_eff, DestinationData.get_display_name(Helios4CampaignData.get_destination())
+	]
+	science_label.add_theme_font_size_override("font_size", 13)
+	science_label.add_theme_color_override("font_color", Color(0.55, 0.90, 0.75))
+	science_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(science_label)
+	science_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	science_label.position = Vector2(-320, 138)
+	science_label.size = Vector2(640, 26)
+
+	_build_next_planet_button()
 	
 	var c_res = Helios4CampaignData.crisis_results
 	var l1_tel = Helios4CampaignData.l1_telemetry
@@ -199,3 +234,35 @@ func _on_replay_pressed() -> void:
 
 func _on_menu_pressed() -> void:
 	get_tree().change_scene_to_file("res://margin/scenes/main_menu.tscn")
+
+
+# --- ARCADE ENDINGS ---
+
+func _compute_stars(score: float) -> int:
+	if score >= 90.0:
+		return 3
+	if score >= 75.0:
+		return 2
+	if score >= 55.0:
+		return 1
+	return 0
+
+
+func _build_next_planet_button() -> void:
+	var next_id: String = DestinationData.get_next_destination(Helios4CampaignData.get_destination())
+	if next_id == "":
+		return
+	var bar := find_child("BottomBar", true, false) as HBoxContainer
+	if bar == null:
+		return
+	next_planet_btn = Button.new()
+	next_planet_btn.name = "PlayNextPlanetBtn"
+	next_planet_btn.text = "▶ PLAY NEXT PLANET MISSION: %s" % DestinationData.get_display_name(next_id)
+	next_planet_btn.add_theme_font_size_override("font_size", 12)
+	next_planet_btn.pressed.connect(func() -> void:
+		Sfx.ui_click()
+		Helios4CampaignData.reset_campaign()
+		Helios4CampaignData.set_destination(next_id)
+		Helios4CampaignData.load_stage(Helios4CampaignData.Stage.PHASE_1_HANGAR, get_tree())
+	)
+	bar.add_child(next_planet_btn)
