@@ -33,7 +33,7 @@ const ROLE_SYSTEMS: String = "systems"
 const ROLE_METADATA: Dictionary = {
 	ROLE_PROPULSION: {
 		"id": ROLE_PROPULSION,
-		"title": "Propulsion Engineer",
+		"title": "Propulsion Lead",
 		"callsign": "PROPULSION",
 		"color": Color(0.98, 0.55, 0.15), # Aerospace Orange
 		"icon": "🚀",
@@ -42,17 +42,17 @@ const ROLE_METADATA: Dictionary = {
 	},
 	ROLE_STRUCTURAL: {
 		"id": ROLE_STRUCTURAL,
-		"title": "Structural Architect",
-		"callsign": "STRUCTURES",
+		"title": "Power & Thermal Lead",
+		"callsign": "POWER / THERMAL",
 		"color": Color(0.35, 0.85, 0.55), # Emerald Green
 		"icon": "🏗",
-		"hangar_focus": "Structural framework, dry mass, fairing envelope, Center of Mass (CoM) vs Center of Pressure (CoP), and static margins.",
-		"flight_focus": "Dynamic pressure monitoring, Max-Q structural corridor, G-force tolerance, and interstage clearance."
+		"hangar_focus": "Solar generation, battery reserve, heat rejection, shield flux tolerance, and the bus power balance.",
+		"flight_focus": "Battery reserve, thermal limits, radiation safe mode, and Max-Q structural dampening."
 	},
 	ROLE_ASTROGATOR: {
 		"id": ROLE_ASTROGATOR,
-		"title": "Astrogator",
-		"callsign": "TRAJECTORY",
+		"title": "GNC / Trajectory Lead",
+		"callsign": "GNC / TRAJECTORY",
 		"color": Color(0.25, 0.75, 1.0), # Deep Cyan
 		"icon": "🧭",
 		"hangar_focus": "Launch azimuth, Earth-to-L1 transfer trajectory, injection Delta-V budgets, and Sun-Earth L1 halo-orbit insertion planning.",
@@ -60,42 +60,46 @@ const ROLE_METADATA: Dictionary = {
 	},
 	ROLE_SYSTEMS: {
 		"id": ROLE_SYSTEMS,
-		"title": "Systems Officer",
-		"callsign": "SYSTEMS",
+		"title": "Science Payload Lead",
+		"callsign": "SCIENCE PAYLOAD",
 		"color": Color(0.85, 0.45, 0.95), # Royal Magenta
 		"icon": "⚡",
-		"hangar_focus": "Solar power generation vs electrical load, battery reserves, rad-hardened avionics, magnetometer, Faraday cup, and deep-space comms.",
-		"flight_focus": "Electrical balance, sensor deployment, DSN communication tracking, safe-mode mitigation, and early-warning telemetry transmission."
+		"hangar_focus": "Instrument selection, payload science yield, sensor power demand, data rates, and radiation hardening.",
+		"flight_focus": "Sensor health, science collection, safe-mode recovery, and early-warning telemetry quality."
 	}
 }
 
 const TEAM_PERK_METADATA: Dictionary = {
 	ROLE_PROPULSION: {
 		"id": ROLE_PROPULSION,
-		"title": "Propulsion Lead — Nozzle Overdrive",
+		"title": "Propulsion Lead — Burn Optimization",
 		"short_badge": "PERK: PROPULSION (+120 m/s Probe Isp)",
 		"summary": "+120 m/s probe Delta-V margin & -5% deep-space/HOI propellant burn.",
+		"advisor_action": "RESERVE TRIM: +5% probe propellant efficiency on the next burn",
 		"color": Color(0.98, 0.55, 0.15)
 	},
 	ROLE_STRUCTURAL: {
 		"id": ROLE_STRUCTURAL,
-		"title": "Structures Lead — Composite Shielding",
-		"short_badge": "PERK: STRUCTURES (+0.15 Cal Margin / -12% Wear)",
-		"summary": "+0.15 calibers static margin & -12% CME hardware degradation in Crisis.",
+		"title": "Power & Thermal Lead — Protected Reserve",
+		"short_badge": "PERK: POWER / THERMAL (+15% Shield Margin / -12% Wear)",
+		"summary": "+15% thermal flux limit & 12% less equipment wear during the CME.",
+		"advisor_action": "EMERGENCY BATTERY OVERCLOCK: unlock +15% reserve capacity for this storm",
 		"color": Color(0.35, 0.85, 0.55)
 	},
 	ROLE_ASTROGATOR: {
 		"id": ROLE_ASTROGATOR,
-		"title": "Astrogator Lead — Precision Ephemeris",
-		"short_badge": "PERK: ASTROGATOR (-15 m/s Trim / Tight Drift)",
+		"title": "GNC / Trajectory Lead — Precision Ephemeris",
+		"short_badge": "PERK: GNC (-15 m/s Trim / Tight Drift)",
 		"summary": "-15 m/s probe ΔV threshold & -5 m/s MCC trim cost in Deep Space.",
+		"advisor_action": "PRECISION BURN AUTO-ALIGN: improve trajectory accuracy by 0.4 percentage points",
 		"color": Color(0.25, 0.75, 1.0)
 	},
 	ROLE_SYSTEMS: {
 		"id": ROLE_SYSTEMS,
-		"title": "Systems Lead — Rad-Hardened Bus",
-		"short_badge": "PERK: SYSTEMS (+35 W Bus / -15% CME Drain)",
-		"summary": "+35 W power margin, -15% Crisis battery drain & +2% sensor floor.",
+		"title": "Science Payload Lead — Rad-Hardened Instrument Bus",
+		"short_badge": "PERK: SCIENCE (+35 W Payload Bus / +2% Sensor Floor)",
+		"summary": "+35 W payload bus headroom, -15% Crisis battery drain & +2% sensor floor.",
+		"advisor_action": "INSTRUMENT REBOOT: restore one sensor to 100% health and gain 10 science points",
 		"color": Color(0.85, 0.45, 0.95)
 	}
 }
@@ -109,8 +113,8 @@ const STAGE_METADATA: Dictionary = {
 	},
 	Stage.TEAM_ASSIGNMENT: {
 		"title": "TEAM ASSIGNMENT",
-		"subtitle": "Pass-and-Play Cooperative Crew Allocation",
-		"desc": "Allocate 1 to 4 local specialists to command roles: Propulsion Engineer, Structural Architect, Astrogator, and Systems Officer."
+		"subtitle": "Mission Control: four engineering workstations",
+		"desc": "Assign 1 to 4 specialists across Propulsion, Power & Thermal, GNC / Trajectory, and Science Payload. The Mission Director receives a measurable campaign bonus and one in-flight Advisor Action."
 	},
 	Stage.PHASE_1_HANGAR: {
 		"title": "PHASE 1: THE HANGAR",
@@ -165,9 +169,9 @@ static var highest_unlocked_stage: Stage = Stage.PROLOGUE
 static var player_count: int = 1
 static var team_player_names: Dictionary = {
 	ROLE_PROPULSION: "Specialist 1",
-	ROLE_STRUCTURAL: "Specialist 2",
-	ROLE_ASTROGATOR: "Specialist 3",
-	ROLE_SYSTEMS: "Specialist 4"
+	ROLE_STRUCTURAL: "Power & Thermal Lead",
+	ROLE_ASTROGATOR: "GNC / Trajectory Lead",
+	ROLE_SYSTEMS: "Science Payload Lead"
 }
 static var active_role: String = ROLE_PROPULSION
 # Selected planetary destination (see DestinationData). Defaults to Sun-Earth L1.
@@ -227,9 +231,9 @@ static func get_default_vehicle_config() -> Dictionary:
 		
 		# Stage 2: Upper Stage
 		"stage2_engine": "vac_hydrolox_single",
-		"stage2_thrust_kn": 65.0,
+		"stage2_thrust_kn": 140.0,
 		"stage2_isp_s": 450.0,
-		"stage2_fuel_mass_kg": 5400.0,
+		"stage2_fuel_mass_kg": 9000.0,
 		"stage2_dry_mass_kg": 750.0,
 		"interstage_mass_kg": 320.0,
 		
@@ -288,6 +292,10 @@ static func get_default_probe_config() -> Dictionary:
 		"thermal_type": "thermal_active_louvers_mli",
 		"thermal_power_w": 25.0,
 		"thermal_mass_kg": 18.0,
+		"thermal_emissivity": 0.82,
+		"thermal_absorptivity": 0.23,
+		"thermal_radiator_area_m2": 1.8,
+		"thermal_max_temp_k": 360.0,
 		"thermal_cost_m": 4.5,
 		
 		# Scientific Payloads (DSCOVR-inspired)
@@ -371,7 +379,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	
 	# Stage 2 Mass Breakdown
 	var stage2_dry_mass: float = v_cfg.get("stage2_dry_mass_kg", 750.0) + v_cfg.get("interstage_mass_kg", 320.0)
-	var stage2_fuel_mass: float = v_cfg.get("stage2_fuel_mass_kg", 5400.0)
+	var stage2_fuel_mass: float = v_cfg.get("stage2_fuel_mass_kg", 9000.0)
 	var stage2_wet_mass: float = stage2_dry_mass + stage2_fuel_mass
 	
 	# Stage 1 Mass Breakdown
@@ -438,14 +446,22 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	# Positive static margin (> 1.2 calibers) means CoM is ahead of CoP, ensuring passive restoring torque.
 	var static_margin_calibers: float = (x_com_m - x_cop_m) / v_cfg.get("fairing_diameter_m", 2.4)
 	
-	# --- ELECTRICAL POWER BALANCE AT SUN-EARTH L1 ---
-	# Solar Constant at 1 AU ~ 1361 W/m²
-	# Sun-Earth L1 is ~1.496e8 - 1.5e6 km = ~0.99 AU (approx 1.02x solar flux ~ 1388 W/m²)
-	var solar_flux: float = 1388.0
+	# --- DESTINATION-DEPENDENT SOLAR POWER BALANCE ---
+	# Solar irradiance follows the inverse-square law relative to 1 AU.
+	const SOLAR_CONSTANT_W_M2: float = 1361.0
+	var destination_meta: Dictionary = DestinationData.get_metadata(get_destination())
+	var target_solar_distance_au: float = destination_meta.get("solar_distance_au", 1.0)
+	var solar_flux: float = SOLAR_CONSTANT_W_M2 / pow(target_solar_distance_au, 2.0)
 	var solar_area: float = p_cfg.get("solar_array_area_m2", 6.5)
 	var solar_eff: float = p_cfg.get("solar_efficiency", 0.31)
 	# Nominal sun-tracking cosine efficiency ~ 0.96
 	var power_generation_w: float = solar_area * solar_eff * solar_flux * 0.96
+	var thermal_emissivity: float = p_cfg.get("thermal_emissivity", 0.82)
+	var thermal_absorptivity: float = maxf(p_cfg.get("thermal_absorptivity", 0.23), 0.01)
+	var thermal_radiator_area_m2: float = p_cfg.get("thermal_radiator_area_m2", 1.8)
+	var thermal_max_temp_k: float = p_cfg.get("thermal_max_temp_k", 360.0)
+	const STEFAN_BOLTZMANN_W_M2_K4: float = 5.670374419e-8
+	var thermal_flux_tolerance_w_m2: float = thermal_emissivity * STEFAN_BOLTZMANN_W_M2_K4 * pow(thermal_max_temp_k, 4.0) * thermal_radiator_area_m2 / (thermal_absorptivity * maxf(thermal_radiator_area_m2, 0.1))
 	
 	var total_power_load_w: float = (
 		p_cfg.get("avionics_power_w", 65.0) +
@@ -485,7 +501,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 				delta_v_probe += 120.0
 				total_mission_delta_v += 120.0
 			ROLE_STRUCTURAL:
-				static_margin_calibers += 0.15
+				thermal_flux_tolerance_w_m2 *= 1.15
 			ROLE_ASTROGATOR:
 				req_probe_dv = maxf(req_probe_dv - 15.0, 300.0)
 			ROLE_SYSTEMS:
@@ -548,7 +564,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"role": ROLE_SYSTEMS,
 		"subsystem": "systems",
 		"advice": "Positive electrical balance across avionics, instruments, and transmitters." if power_valid else "Power deficit or insufficient margin (<100 W). Probe will suffer battery depletion at L1.",
-		"correction": "Increase solar array area (>= 6.0 m²) or optimize avionics in Systems workstation."
+		"correction": "Increase solar array area (>= 6.0 m^2) or optimize avionics in Systems workstation."
 	})
 	
 	# Criterion 5: Payload and Fairing Readiness
@@ -557,7 +573,7 @@ static func calculate_hangar_telemetry() -> Dictionary:
 	gate_checks.append({
 		"id": "payload_fairing_check",
 		"name": "5. Payload Envelope & Fairing Readiness",
-		"value_str": "Probe: %.0f kg • Envelope: %.1fm ⌀" % [probe_wet_mass, fairing_diam],
+		"value_str": "Probe: %.0f kg • Fairing: %.1f m dia" % [probe_wet_mass, fairing_diam],
 		"target_str": "Probe <= 1,250 kg • Fairing >= 2.4m",
 		"status": "PASS" if payload_fairing_valid else "FAIL",
 		"role": ROLE_STRUCTURAL,
@@ -643,6 +659,10 @@ static func calculate_hangar_telemetry() -> Dictionary:
 		"power_generation_w": power_generation_w,
 		"total_power_load_w": total_power_load_w,
 		"power_margin_w": power_margin_w,
+		"solar_flux_w_m2": solar_flux,
+		"target_solar_distance_au": target_solar_distance_au,
+		"thermal_flux_tolerance_w_m2": thermal_flux_tolerance_w_m2,
+		"thermal_max_temp_k": thermal_max_temp_k,
 		"science_score": science_score,
 		"total_cost_m": total_project_cost_m,
 		"budget_cap_m": BUDGET_CAP_M,
@@ -846,9 +866,9 @@ static func reset_campaign() -> void:
 	player_count = 1
 	team_player_names = {
 		ROLE_PROPULSION: "Specialist 1",
-		ROLE_STRUCTURAL: "Specialist 2",
-		ROLE_ASTROGATOR: "Specialist 3",
-		ROLE_SYSTEMS: "Specialist 4"
+		ROLE_STRUCTURAL: "Power & Thermal Lead",
+		ROLE_ASTROGATOR: "GNC / Trajectory Lead",
+		ROLE_SYSTEMS: "Science Payload Lead"
 	}
 	team_decision_log = []
 	active_role = ROLE_PROPULSION

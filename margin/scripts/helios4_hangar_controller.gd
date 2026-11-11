@@ -51,6 +51,9 @@ func _ready() -> void:
 	var hangar_ui := find_child("RootUI", true, false) as Control
 	if hangar_ui:
 		hangar_ui.theme = MarginTheme.get_theme()
+	var legacy_manual_panel := find_child("RightTelemetryHUD", true, false) as Control
+	if legacy_manual_panel:
+		legacy_manual_panel.visible = false
 	if Helios4CampaignData.vehicle_config.is_empty():
 		Helios4CampaignData.vehicle_config = Helios4CampaignData.get_default_vehicle_config()
 	if Helios4CampaignData.probe_config.is_empty():
@@ -322,11 +325,27 @@ func _connect_ui_signals() -> void:
 func _apply_educational_baseline() -> void:
 	Helios4CampaignData.vehicle_config = Helios4CampaignData.get_default_vehicle_config().duplicate(true)
 	Helios4CampaignData.probe_config = Helios4CampaignData.get_default_probe_config().duplicate(true)
+	match Helios4CampaignData.get_destination():
+		"mars_orbiter":
+			Helios4CampaignData.probe_config["solar_array_area_m2"] = 10.0
+			Helios4CampaignData.probe_config["battery_capacity_wh"] = 1600.0
+			Helios4CampaignData.probe_config["propellant_mass_kg"] = 380.0
+			Helios4CampaignData.probe_config["probe_isp_s"] = 420.0
+			Helios4CampaignData.probe_config["antenna_diameter_m"] = 2.0
+			_apply_heavy_thermal_baseline()
+		"lunar_south_pole":
+			Helios4CampaignData.probe_config["solar_array_area_m2"] = 6.5
+			Helios4CampaignData.probe_config["battery_capacity_wh"] = 1600.0
+			Helios4CampaignData.probe_config["instruments"] = {
+				"radar": {"id": "inst_sar_radar", "name": "Synthetic Aperture Radar", "heritage": "NASA LRO Mini-RF", "mass_kg": 16.0, "power_w": 22.0, "science_score": 20.0, "cost_m": 11.0, "data_rate_kbps": 10.0},
+				"spectrometer": {"id": "inst_neutron_spectrometer", "name": "Neutron Spectrometer", "heritage": "NASA Lunar Prospector LP-NS", "mass_kg": 11.0, "power_w": 14.0, "science_score": 17.0, "cost_m": 8.0, "data_rate_kbps": 5.0}
+			}
 	Helios4CampaignData.is_launch_authorized = false
 	Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_ASTROGATOR, "Educational Baseline Preset", "Loaded the game’s NASA-inspired reference configuration; this is not an official NASA design.")
 	var controls := [
 		["OptStage1Engine", 0], ["SldPropellantLoad", 1.0], ["ChkGridFins", true],
-		["OptHullMaterial", 0], ["OptTrajectoryMode", 0], ["SldSolarArea", 6.5], ["OptAvionics", 0]
+		["OptHullMaterial", 0], ["OptTrajectoryMode", 0],
+		["SldSolarArea", Helios4CampaignData.probe_config.get("solar_array_area_m2", 6.5)], ["OptAvionics", 0]
 	]
 	for entry in controls:
 		var control := find_child(entry[0], true, false) as Control
@@ -343,10 +362,23 @@ func _apply_educational_baseline() -> void:
 		rocket_3d.grid_fins_node.visible = true
 	_set_camera_focus(Vector3(0.0, 7.5, 0.0), 17.5)
 	if rocket_3d:
+		rocket_3d.rebuild_vehicle()
 		rocket_3d.animate_part_pulse("full_stack")
 		rocket_3d.highlight_subsystem("")
+	if scratch_builder:
+		scratch_builder.refresh_from_config()
 	Helios4CampaignData.save_campaign_state()
 	_recalculate_and_refresh_ui()
+
+func _apply_heavy_thermal_baseline() -> void:
+	Helios4CampaignData.probe_config["thermal_type"] = "thermal_heavy_shield"
+	Helios4CampaignData.probe_config["thermal_power_w"] = 40.0
+	Helios4CampaignData.probe_config["thermal_mass_kg"] = 42.0
+	Helios4CampaignData.probe_config["thermal_emissivity"] = 0.78
+	Helios4CampaignData.probe_config["thermal_absorptivity"] = 0.15
+	Helios4CampaignData.probe_config["thermal_radiator_area_m2"] = 2.2
+	Helios4CampaignData.probe_config["thermal_max_temp_k"] = 415.0
+	Helios4CampaignData.probe_config["thermal_cost_m"] = 9.0
 
 func _setup_hardware_selector_signals() -> void:
 	# Propulsion: Booster Engine
@@ -485,7 +517,7 @@ func _setup_hardware_selector_signals() -> void:
 			Helios4CampaignData.record_team_decision(
 				Helios4CampaignData.ROLE_SYSTEMS,
 				"Solar Array Sizing",
-				"Configured solar array area to %.1f m²" % val
+				"Configured solar array area to %.1f m^2" % val
 			)
 			Helios4CampaignData.save_campaign_state()
 			_recalculate_and_refresh_ui()
@@ -558,12 +590,15 @@ func _setup_scratch_builder() -> void:
 	var root_ui := find_child("RootUI", true, false) as Control
 	if root_ui == null:
 		return
+	var old_inventory := find_child("LeftInventoryPanel", true, false) as Control
+	if old_inventory:
+		old_inventory.visible = false
 	scratch_builder = ScratchBuilder.new()
 	scratch_builder.name = "ScratchBuilder"
-	scratch_builder.custom_minimum_size = Vector2(300, 0)
+	scratch_builder.custom_minimum_size = Vector2(362, 470)
 	scratch_builder.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	scratch_builder.position = Vector2(16, 120)
-	scratch_builder.size = Vector2(300, 0)
+	scratch_builder.position = Vector2(16, 58)
+	scratch_builder.size = Vector2(362, 470)
 	scratch_builder.build_changed.connect(_on_scratch_build_changed)
 	root_ui.add_child(scratch_builder)
 
@@ -571,11 +606,28 @@ func _on_scratch_build_changed() -> void:
 	# Rebuild the 3D vehicle and refresh every readout against the new config.
 	if rocket_3d and rocket_3d.has_method("rebuild_vehicle"):
 		rocket_3d.rebuild_vehicle()
-		# Snap animation: the new part pops into place.
-		if rocket_3d.probe_node:
-			var tw := create_tween()
-			tw.tween_property(rocket_3d.probe_node, "scale", Vector3.ONE * 0.86, 0.08)
-			tw.tween_property(rocket_3d.probe_node, "scale", Vector3.ONE, 0.16)
+		var slot_id: String = scratch_builder.last_changed_slot_id if scratch_builder else "science"
+		var focus_target := Vector3(0.0, 7.5, 0.0)
+		var focus_distance := 16.0
+		var visual_key := "probe_bus"
+		match slot_id:
+			"propulsion":
+				focus_target = Vector3(0.0, 3.5, 0.0)
+				focus_distance = 11.5
+				visual_key = "propulsion"
+			"power":
+				focus_target = Vector3(0.0, 11.8, 0.0)
+				focus_distance = 8.0
+				visual_key = "solar_wings"
+			"thermal":
+				focus_target = Vector3(0.0, 11.8, 0.0)
+				focus_distance = 8.0
+			"science":
+				focus_target = Vector3(0.0, 11.8, 0.0)
+				focus_distance = 7.5
+		_set_camera_focus(focus_target, focus_distance)
+		rocket_3d.highlight_subsystem(visual_key)
+		rocket_3d.animate_attachment(visual_key)
 	_recalculate_and_refresh_ui()
 	if destination_checklist != null:
 		destination_checklist.refresh()
@@ -611,6 +663,19 @@ func _recalculate_and_refresh_ui() -> void:
 	_update_label("ValStaticMargin", "+%.2f calibers" % current_telemetry["static_margin_calibers"])
 	_update_label("ValPowerMargin", "%+.0f W" % current_telemetry["power_margin_w"])
 	_update_label("ValBudget", "$%.1fM / $%.1fM" % [current_telemetry["total_cost_m"], current_telemetry["budget_cap_m"]])
+	var prop_sub := find_child("TabPropulsion", true, false).get_node_or_null("HBox/VBox/Sub") as Label if find_child("TabPropulsion", true, false) else null
+	if prop_sub:
+		prop_sub.text = "PROPULSION LEAD\nTWR %.2f | Δv %.0f m/s" % [current_telemetry["liftoff_twr"], current_telemetry["total_launch_delta_v"]]
+	var thermal_sub := find_child("TabStructural", true, false).get_node_or_null("HBox/VBox/Sub") as Label if find_child("TabStructural", true, false) else null
+	if thermal_sub:
+		thermal_sub.text = "POWER & THERMAL\nNet %+.0f W | %.0f W/m2" % [current_telemetry["power_margin_w"], current_telemetry["thermal_flux_tolerance_w_m2"]]
+	var trajectory_sub := find_child("TabAstrogator", true, false).get_node_or_null("HBox/VBox/Sub") as Label if find_child("TabAstrogator", true, false) else null
+	if trajectory_sub:
+		trajectory_sub.text = "GNC / TRAJECTORY\n%s transfer | %.0f m/s req" % ["Phased" if current_telemetry["trajectory_mode"] == "phased_wsb" else "Direct", current_telemetry["req_probe_dv"]]
+	var science_sub := find_child("TabSystems", true, false).get_node_or_null("HBox/VBox/Sub") as Label if find_child("TabSystems", true, false) else null
+	if science_sub:
+		var instrument_count: int = Helios4CampaignData.probe_config.get("instruments", {}).size()
+		science_sub.text = "SCIENCE PAYLOAD\nScore %.0f pts | %d instruments" % [current_telemetry["science_score"], instrument_count]
 
 	# Update Circular Dial Gauge (Delta-V target ~ 11,000 m/s)
 	if dial_gauge:

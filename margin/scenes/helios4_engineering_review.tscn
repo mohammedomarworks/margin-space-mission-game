@@ -124,7 +124,7 @@ custom_minimum_size = Vector2(160, 34)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn")
 theme_override_font_sizes/font_size = 12
-text = "← RETURN TO HANGAR"
+text = "< RETURN TO HANGAR"
 
 [node name="Spacer" type="Control" parent="MainLayout/TopBar"]
 layout_mode = 2
@@ -153,7 +153,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
 theme_override_font_sizes/font_size = 13
-text = "● REVIEW IN PROGRESS"
+text = "- REVIEW IN PROGRESS"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MainLayout"]
 layout_mode = 2
@@ -228,7 +228,7 @@ custom_minimum_size = Vector2(330, 44)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_OverrideBtn")
 theme_override_font_sizes/font_size = 11
-text = "SIGN OFF ALL / FLIGHT DIRECTOR WAIVER →"
+text = "SIGN OFF ALL / FLIGHT DIRECTOR WAIVER >"
 tooltip_text = "Auto-sign all four roles, waive failed hangar gates, and continue to Launch. Vehicle trade-offs remain active."
 
 [node name="ProceedToLaunchBtn" type="Button" parent="MainLayout/BottomBar"]
@@ -238,4 +238,4 @@ layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryBtn")
 theme_override_font_sizes/font_size = 13
 disabled = true
-text = "PROCEED TO EARTH LAUNCH (PHASE 2) →"
+text = "PROCEED TO EARTH LAUNCH (PHASE 2) >"

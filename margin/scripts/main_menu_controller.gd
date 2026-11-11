@@ -14,6 +14,7 @@ var selector_overlay: Control = null
 var destination_selector: DestinationSelector = null
 
 func _ready() -> void:
+	_build_menu_starfield()
 	var menu_ui := find_child("RootUI", true, false) as Control
 	if menu_ui:
 		menu_ui.theme = MarginTheme.get_theme()
@@ -33,15 +34,6 @@ func _ready() -> void:
 	
 	if how_to_play_modal:
 		how_to_play_modal.visible = false
-
-	# Connect Campaign Primary Buttons
-	var new_camp_btn = find_child("NewCampaignBtn", true, false)
-	if new_camp_btn:
-		if not new_camp_btn.pressed.is_connected(_on_new_campaign_pressed):
-			new_camp_btn.pressed.connect(_on_new_campaign_pressed)
-		get_tree().process_frame.connect(func():
-			print("[MainMenu] NewCampaignBtn global_rect: ", new_camp_btn.get_global_rect(), " center: ", new_camp_btn.get_global_rect().get_center())
-		, CONNECT_ONE_SHOT)
 
 	continue_btn = find_child("ContinueCampaignBtn", true, false) as Button
 	if continue_btn:
@@ -100,6 +92,37 @@ func _on_close_modal_pressed() -> void:
 		how_to_play_modal.visible = false
 
 
+func _build_menu_starfield() -> void:
+	if has_node("MenuStarfield"):
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2038
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color(0.72, 0.84, 1.0)
+	material.emission_enabled = true
+	material.emission = Color(0.5, 0.7, 1.0)
+	material.emission_energy_multiplier = 1.8
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	var mesh := ImmediateMesh.new()
+	mesh.surface_begin(Mesh.PRIMITIVE_POINTS, material)
+	for _i in 520:
+		var azimuth := rng.randf_range(0.0, TAU)
+		var elevation := rng.randf_range(-1.35, 1.35)
+		var radius := rng.randf_range(42.0, 105.0)
+		mesh.surface_add_vertex(Vector3(
+			radius * cos(elevation) * cos(azimuth),
+		radius * sin(elevation),
+		radius * cos(elevation) * sin(azimuth)
+		))
+	mesh.surface_end()
+	var stars := MeshInstance3D.new()
+	stars.name = "MenuStarfield"
+	stars.mesh = mesh
+	stars.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(stars)
+
+
 # --- ARCADE PLAY FLOW ---
 
 func _build_play_button(root_ui: Control) -> void:
@@ -107,12 +130,15 @@ func _build_play_button(root_ui: Control) -> void:
 		return
 	play_btn = Button.new()
 	play_btn.name = "PlayMissionBtn"
-	play_btn.text = "▶  PLAY MISSION"
+	play_btn.text = "SELECT MISSION DESTINATION"
 	play_btn.custom_minimum_size = Vector2(420, 72)
-	play_btn.add_theme_font_size_override("font_size", 28)
+	play_btn.add_theme_font_size_override("font_size", 19)
 	play_btn.focus_mode = Control.FOCUS_NONE
-	play_btn.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	play_btn.position = Vector2(-210, -170)
+	play_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	play_btn.offset_left = -452.0
+	play_btn.offset_top = -122.0
+	play_btn.offset_right = -32.0
+	play_btn.offset_bottom = -50.0
 	play_btn.pressed.connect(_on_play_pressed)
 	root_ui.add_child(play_btn)
 
@@ -149,7 +175,7 @@ func _build_selector_overlay(root_ui: Control) -> void:
 
 	var close_btn := Button.new()
 	close_btn.name = "CloseSelectorBtn"
-	close_btn.text = "✕ BACK"
+	close_btn.text = "BACK"
 	close_btn.focus_mode = Control.FOCUS_NONE
 	close_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	close_btn.position = Vector2(-110, 20)

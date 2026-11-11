@@ -170,7 +170,7 @@ custom_minimum_size = Vector2(130, 34)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn")
 theme_override_font_sizes/font_size = 12
-text = "← PROLOGUE"
+text = "PROLOGUE"
 
 [node name="Spacer" type="Control" parent="MainLayout/TopBar"]
 layout_mode = 2
@@ -184,14 +184,14 @@ theme_override_constants/separation = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 1)
 theme_override_font_sizes/font_size = 18
-text = "HELIOS-4: CREW ROSTER & ROLE ASSIGNMENT"
+text = "MISSION CONTROL CREW"
 horizontal_alignment = 2
 
 [node name="Subtitle" type="Label" parent="MainLayout/TopBar/TitleBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 1)
 theme_override_font_sizes/font_size = 11
-text = "Local Pass-and-Play Cooperative Engineering Roster (1–4 Participants)"
+text = "Choose a Mission Director for a campaign bonus and one in-flight assist."
 horizontal_alignment = 2
 
 [node name="SetupPanel" type="PanelContainer" parent="MainLayout"]
@@ -297,20 +297,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
 theme_override_font_sizes/font_size = 14
-text = "🚀 ROLE 1: PROPULSION ENGINEER"
+text = "STATION 1: PROPULSION LEAD"
 
 [node name="NamePropulsion" type="LineEdit" parent="MainLayout/RolesGrid/RolePropulsion/VBox/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(160, 28)
+custom_minimum_size = Vector2(130, 28)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
-placeholder_text = "Callsign / Name"
+placeholder_text = "Lead callsign"
 
 [node name="Focus" type="Label" parent="MainLayout/RolesGrid/RolePropulsion/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 11
-text = "• Hangar: Engine thrust, specific impulse (Isp), fuel tank sizing, and stage-by-stage Delta-V.\n• Launch: Engine ignition, throttle management, and stage separation timing."
+text = "Own thrust, Isp, stage fuel, and launch Delta-V.\nFlight bonus: +120 m/s probe Delta-V."
 
 [node name="RoleStructural" type="PanelContainer" parent="MainLayout/RolesGrid"]
 layout_mode = 2
@@ -330,20 +330,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.35, 0.85, 0.55, 1)
 theme_override_font_sizes/font_size = 14
-text = "🏗 ROLE 2: STRUCTURAL ARCHITECT"
+text = "STATION 2: POWER & THERMAL LEAD"
 
 [node name="NameStructural" type="LineEdit" parent="MainLayout/RolesGrid/RoleStructural/VBox/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(160, 28)
+custom_minimum_size = Vector2(130, 28)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
-placeholder_text = "Callsign / Name"
+placeholder_text = "Lead callsign"
 
 [node name="Focus" type="Label" parent="MainLayout/RolesGrid/RoleStructural/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 11
-text = "• Hangar: Dry mass, hull material, Center of Mass (CoM) vs Center of Pressure (CoP), and static margin.\n• Launch: Dynamic pressure monitoring, Max-Q structural safety limits, and G-force load warning."
+text = "Own array output, battery, heat rejection, and shield limits.\nBonus: +15% thermal flux tolerance; 12% less CME wear."
 
 [node name="RoleAstrogator" type="PanelContainer" parent="MainLayout/RolesGrid"]
 layout_mode = 2
@@ -363,20 +363,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.25, 0.75, 1.0, 1)
 theme_override_font_sizes/font_size = 14
-text = "🧭 ROLE 3: ASTROGATOR"
+text = "STATION 3: GNC / TRAJECTORY LEAD"
 
 [node name="NameAstrogator" type="LineEdit" parent="MainLayout/RolesGrid/RoleAstrogator/VBox/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(160, 28)
+custom_minimum_size = Vector2(130, 28)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
-placeholder_text = "Callsign / Name"
+placeholder_text = "Lead callsign"
 
 [node name="Focus" type="Label" parent="MainLayout/RolesGrid/RoleAstrogator/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 11
-text = "• Hangar: Earth-to-L1 transfer trajectory, launch azimuth, and halo-orbit injection planning.\n• Launch: Gravity-turn pitch schedule, corridor monitoring, mid-course corrections, and halo insertion."
+text = "Own gravity turn, transfer geometry, and halo insertion.\nBonus: 15 m/s lower probe Delta-V gate."
 
 [node name="RoleSystems" type="PanelContainer" parent="MainLayout/RolesGrid"]
 layout_mode = 2
@@ -396,20 +396,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.85, 0.45, 0.95, 1)
 theme_override_font_sizes/font_size = 14
-text = "⚡ ROLE 4: SYSTEMS OFFICER"
+text = "STATION 4: SCIENCE PAYLOAD LEAD"
 
 [node name="NameSystems" type="LineEdit" parent="MainLayout/RolesGrid/RoleSystems/VBox/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(160, 28)
+custom_minimum_size = Vector2(130, 28)
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
-placeholder_text = "Callsign / Name"
+placeholder_text = "Lead callsign"
 
 [node name="Focus" type="Label" parent="MainLayout/RolesGrid/RoleSystems/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 11
-text = "• Hangar: Solar arrays, battery storage, rad-hardened computer, Faraday cup, and magnetometer.\n• Flight: Telemetry monitoring, sensor deployment, Deep Space Network link, and early-warning packet."
+text = "Own instrument selection, sensor health, and science yield.\nBonus: +35 W payload bus; 2% sensor health floor."
 
 [node name="BottomBar" type="HBoxContainer" parent="MainLayout"]
 layout_mode = 2
@@ -432,4 +432,4 @@ custom_minimum_size = Vector2(280, 44)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryBtn")
 theme_override_font_sizes/font_size = 13
-text = "CONFIRM ROSTER & ENTER 3D HANGAR →"
+text = "CONFIRM CREW & ENTER HANGAR"

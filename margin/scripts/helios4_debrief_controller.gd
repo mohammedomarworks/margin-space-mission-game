@@ -58,7 +58,7 @@ func _calculate_debrief_score() -> void:
 
 func _populate_ui() -> void:
 	if is_success:
-		outcome_lbl.text = "★ MISSION ACCOMPLISHED — %s FULLY COMMISSIONED" % DestinationData.get_display_name(Helios4CampaignData.get_destination())
+		outcome_lbl.text = "* MISSION ACCOMPLISHED — %s FULLY COMMISSIONED" % DestinationData.get_display_name(Helios4CampaignData.get_destination())
 		outcome_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 	else:
 		outcome_lbl.text = "▲ MISSION FAILED — LOSS OF MINIMUM OBJECTIVES"
@@ -71,7 +71,7 @@ func _populate_ui() -> void:
 	var stars: int = _compute_stars(total_score)
 	star_label = Label.new()
 	star_label.name = "StarRatingLabel"
-	star_label.text = "★".repeat(stars) + "☆".repeat(3 - stars)
+	star_label.text = "*".repeat(stars) + "o".repeat(3 - stars)
 	star_label.add_theme_font_size_override("font_size", 30)
 	star_label.add_theme_color_override("font_color", Color(1.0, 0.84, 0.30))
 	star_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -135,11 +135,11 @@ func _populate_ui() -> void:
 	var crisis_temp := float(t_tel.get("thermal_bus_temp_c", 22.0))
 	var packet_status := "DELIVERED TO EARTH DSN" if l1_tel.get("warning_packet_sent", false) else "NOT DELIVERED"
 	
-	summary_text.text = """[b]END-TO-END CAUSE & EFFECT CHAIN (HANGAR → L1):[/b]
-• [color=#38bdf8]1. Hangar Build:[/color] Engine [b]%s[/b] • Bus [b]%s[/b] • Solar [b]%.1f m²[/b] • Trajectory [b]%s[/b]
+	summary_text.text = """[b]END-TO-END CAUSE & EFFECT CHAIN (HANGAR > L1):[/b]
+• [color=#38bdf8]1. Hangar Build:[/color] Engine [b]%s[/b] • Bus [b]%s[/b] • Solar [b]%.1f m^2[/b] • Trajectory [b]%s[/b]
 • [color=#facc15]2. Team Lead Perk:[/color] [b]%s[/b] — %s
 • [color=#fb923c]3. Engineering Gate & Launch:[/color] [b]%s[/b] (Max-Q Stress: %.1f%% • Ascent Error: %.1f%%)
-• [color=#f87171]4. Deep-Space Solar CME Crisis:[/color] [b]%s[/b] → Degradation: %.1f%% • Bus Temp: %.1f°C • Battery: %.0f Wh
+• [color=#f87171]4. Deep-Space Solar CME Crisis:[/color] [b]%s[/b] > Degradation: %.1f%% • Bus Temp: %.1f°C • Battery: %.0f Wh
 • [color=#4ade80]5. L1 Science & Early Warning:[/color] Halo Stability %.1f%% • Packet [b]%s[/b] • Notice: [b]%.2f min[/b]
 
 [b]SCIENTIFIC & OPERATIONAL AUDIT:[/b]
@@ -218,7 +218,7 @@ func _populate_ui() -> void:
 
 func _on_save_and_complete_pressed() -> void:
 	if Helios4CampaignData.advance_to_stage(Helios4CampaignData.Stage.CAMPAIGN_COMPLETED):
-		save_btn.text = "★ CAMPAIGN PROGRESS SAVED!"
+		save_btn.text = "* CAMPAIGN PROGRESS SAVED!"
 		save_btn.disabled = true
 		print("[Debrief] HELIOS-4 campaign completed and persisted to user://helios4_campaign.json")
 	else:
@@ -257,7 +257,7 @@ func _build_next_planet_button() -> void:
 		return
 	next_planet_btn = Button.new()
 	next_planet_btn.name = "PlayNextPlanetBtn"
-	next_planet_btn.text = "▶ PLAY NEXT PLANET MISSION: %s" % DestinationData.get_display_name(next_id)
+	next_planet_btn.text = "> PLAY NEXT PLANET MISSION: %s" % DestinationData.get_display_name(next_id)
 	next_planet_btn.add_theme_font_size_override("font_size", 12)
 	next_planet_btn.pressed.connect(func() -> void:
 		Sfx.ui_click()

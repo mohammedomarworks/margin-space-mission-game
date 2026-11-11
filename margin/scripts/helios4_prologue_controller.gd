@@ -122,7 +122,7 @@ func _populate_donki_modal() -> void:
 		
 		var detail_lbl := Label.new()
 		var l1_warning_min := Helios4CampaignData.calculate_warning_lead_time_minutes(ev["cme_speed_kms"])
-		detail_lbl.text = "CME Speed: %.0f km/s • Risk: %s • Idealized L1→Earth warning: ~%.1f min\nCatalog transit: %.1f h (separate estimate)\nSource: %s\n%s" % [
+		detail_lbl.text = "CME Speed: %.0f km/s • Risk: %s • Idealized L1>Earth warning: ~%.1f min\nCatalog transit: %.1f h (separate estimate)\nSource: %s\n%s" % [
 			ev["cme_speed_kms"], ev["educational_risk_level"], l1_warning_min, ev["transit_time_hours"], ev["source"], ev["impact_description"]
 		]
 		detail_lbl.add_theme_color_override("font_color", Color(0.75, 0.8, 0.88))

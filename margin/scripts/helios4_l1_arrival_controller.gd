@@ -245,6 +245,7 @@ func _ready() -> void:
 		MarginTheme.apply_interactive_polish(arrival_ui)
 		_build_camera_hint(arrival_ui)
 		_build_objective_banner(arrival_ui)
+		_update_objective_banner()
 		Sfx.attach_hud_toggle(arrival_ui)
 	Sfx.start_space_ambient()
 	
@@ -267,7 +268,7 @@ func _load_inherited_campaign_state() -> void:
 
 	dry_mass_kg = probe_config.get("dry_mass_kg", 372.4)
 	probe_isp_s = probe_config.get("probe_isp_s", 315.0)
-	battery_capacity_wh = probe_config.get("battery_capacity_wh", 1200.0)
+	battery_capacity_wh = Helios4CampaignData.transfer_telemetry.get("battery_capacity_wh", probe_config.get("battery_capacity_wh", 1200.0))
 	battery_charge_wh = clamp(Helios4CampaignData.transfer_telemetry.get("battery_charge_wh", battery_capacity_wh), 0.0, battery_capacity_wh)
 	var instrument_config: Dictionary = probe_config.get("instruments", {})
 	var instrument_load_w := 0.0
@@ -278,6 +279,9 @@ func _load_inherited_campaign_state() -> void:
 	spacecraft_power_load_w = probe_config.get("avionics_power_w", 65.0) + probe_config.get("adcs_power_w", 35.0) + probe_config.get("thermal_power_w", 25.0) + probe_config.get("comms_power_w", 45.0) + instrument_load_w
 	
 	# Inherit Instrument health & radiation
+	var inherited_accuracy: float = Helios4CampaignData.transfer_telemetry.get("trajectory_accuracy_pct", -1.0)
+	if inherited_accuracy >= 0.0:
+		trajectory_accuracy_pct = inherited_accuracy
 	var inherited_inst = Helios4CampaignData.transfer_telemetry.get("instruments_health", {})
 	if not inherited_inst.is_empty():
 		mag_health_pct = inherited_inst.get("magnetometer", 100.0)
@@ -870,7 +874,7 @@ func _toggle_simulation_pause() -> void:
 	if sim_pause_banner:
 		sim_pause_banner.visible = is_simulation_paused
 	if pause_btn:
-		pause_btn.text = "▶ RESUME" if is_simulation_paused else "⏸ PAUSE"
+		pause_btn.text = "> RESUME" if is_simulation_paused else "PAUSE"
 
 # --- GAMEPLAY STAGE LOGIC & ADVANCEMENT ---
 
@@ -891,7 +895,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "🧭 EXECUTE APPROACH TRIM BURN (-2.4 kg) →"
+				action_btn.text = "EXECUTE APPROACH TRIM BURN (-2.4 kg) >"
 			if secondary_btn:
 				secondary_btn.visible = true
 				secondary_btn.text = "FINE-TUNE APPROACH TRAJECTORY"
@@ -909,7 +913,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			if progress_bar: progress_bar.value = 92.0
 			
 			if advisory_lbl:
-				advisory_lbl.text = "● APPROACHING L1 REGION: Prepare for insertion corridor alignment."
+				advisory_lbl.text = "- APPROACHING L1 REGION: Prepare for insertion corridor alignment."
 				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 0.95))
 				
 		SubPhase.STAGE_B_HOI_PLANNING:
@@ -923,7 +927,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "🚀 EXECUTE HOI INSERTION BURN (-%.1f kg) →" % _required_hoi_propellant_kg()
+				action_btn.text = "EXECUTE HOI INSERTION BURN (-%.1f kg) >" % _required_hoi_propellant_kg()
 			if secondary_btn:
 				secondary_btn.visible = true
 				if secondary_btn: secondary_btn.text = "TUNE BURN MAGNITUDE (%.0f m/s)" % hoi_planned_delta_v_ms
@@ -940,7 +944,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			if progress_bar: progress_bar.value = 50.0
 			
 			if advisory_lbl:
-				advisory_lbl.text = "★ PROPULSION READY: Main engine pressurized (2.4 MPa). Ready for HOI burn."
+				advisory_lbl.text = "* PROPULSION READY: Main engine pressurized (2.4 MPa). Ready for HOI burn."
 				advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.75, 0.2))
 				
 		SubPhase.STAGE_B_HOI_EXECUTION:
@@ -958,7 +962,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "⚡ EXECUTE STATIONKEEPING TRIM BURN (-8.5 kg) →"
+				action_btn.text = "EXECUTE STATIONKEEPING TRIM BURN (-8.5 kg) >"
 			if secondary_btn:
 				secondary_btn.visible = false
 				
@@ -973,7 +977,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			if progress_bar: progress_bar.value = 99.4
 			
 			if advisory_lbl:
-				advisory_lbl.text = "● HALO CAPTURE CONFIRMED: Stationkeeping reserve threshold %s." % ("satisfied" if sk_ok else "not met; mission continues with reduced reserve")
+				advisory_lbl.text = "- HALO CAPTURE CONFIRMED: Stationkeeping reserve threshold %s." % ("satisfied" if sk_ok else "not met; mission continues with reduced reserve")
 				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55) if sk_ok else Color(1.0, 0.62, 0.28))
 				
 		SubPhase.STAGE_D_COMMISSION_MAG:
@@ -987,7 +991,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "🛰 DEPLOY 3.8m MAGNETOMETER BOOM & CALIBRATE →"
+				action_btn.text = "DEPLOY 3.8m MAGNETOMETER BOOM & CALIBRATE >"
 			if secondary_btn:
 				secondary_btn.visible = true
 				secondary_btn.text = "VIEW SENSOR CLOSE-UP [Key 4]"
@@ -1015,7 +1019,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "⚡ ACTIVATE FARADAY CUP PLASMA ANALYZER →"
+				action_btn.text = "ACTIVATE FARADAY CUP PLASMA ANALYZER >"
 			if secondary_btn:
 				secondary_btn.visible = true
 				secondary_btn.text = "VIEW FARADAY CLOSE-UP [Key 5]"
@@ -1027,7 +1031,7 @@ func _load_subphase(phase: SubPhase) -> void:
 				detail_body_lbl.text = "Commissioning solar wind ion / electron spectrometer facing sunward:\n" + \
 					"• Modulator Grid: High-voltage sweep 0V to +3,000V verified\n" + \
 					"• Sensor Condition: %s\n" % inherited_note + \
-					"• Ambient Solar Wind: Bulk speed %.0f km/s, Proton density %.1f p/cm³\n" % [solar_wind_bulk_velocity_kms, solar_wind_proton_density_cm3] + \
+					"• Ambient Solar Wind: Bulk speed %.0f km/s, Proton density %.1f p/cm^3\n" % [solar_wind_bulk_velocity_kms, solar_wind_proton_density_cm3] + \
 					"• Thermal Plasma Temp: 1.2e5 K (Simulated educational measurement)."
 			if detail_metric_lbl: detail_metric_lbl.text = "HV Grid: +3000V • Collector Bias: -150V Nominal"
 			if progress_bar: progress_bar.value = 85.0
@@ -1043,7 +1047,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "✓ VERIFY ALL SUPPORT SYSTEMS & START OBSERVATION →"
+				action_btn.text = "[OK] VERIFY ALL SUPPORT SYSTEMS & START OBSERVATION >"
 			if secondary_btn:
 				secondary_btn.visible = false
 				
@@ -1070,7 +1074,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "⚡ DETECT CME SHOCK & COMPILE EARLY-WARNING PACKET →"
+				action_btn.text = "DETECT CME SHOCK & COMPILE EARLY-WARNING PACKET >"
 			if secondary_btn:
 				secondary_btn.visible = true
 				secondary_btn.text = "WIDE SUN-EARTH VIEW [Key 2]"
@@ -1080,14 +1084,14 @@ func _load_subphase(phase: SubPhase) -> void:
 			if detail_body_lbl:
 				detail_body_lbl.text = "HELIOS-4 instruments are capturing live interplanetary plasma streams:\n" + \
 					"• Interplanetary Magnetic Field: Bx=%.1f nT, By=%.1f nT, Bz=%.1f nT\n" % [mag_imf_reading.x, mag_imf_reading.y, mag_imf_reading.z] + \
-					"• Solar Wind Speed: %.0f km/s • Proton Density: %.1f p/cm³\n" % [solar_wind_bulk_velocity_kms, solar_wind_proton_density_cm3] + \
+					"• Solar Wind Speed: %.0f km/s • Proton Density: %.1f p/cm^3\n" % [solar_wind_bulk_velocity_kms, solar_wind_proton_density_cm3] + \
 					"• Dynamic Pressure: %.2f nPa • Data Quality Index: 100%%\n" % _calculate_dynamic_pressure_npa() + \
 					"• Scientific Model: Simulated educational measurements validating DSCOVR architecture."
-			if detail_metric_lbl: detail_metric_lbl.text = "v_sw: %.0f km/s • n_p: %.1f p/cm³ • Bz: %.1f nT" % [solar_wind_bulk_velocity_kms, solar_wind_proton_density_cm3, mag_imf_reading.z]
+			if detail_metric_lbl: detail_metric_lbl.text = "v_sw: %.0f km/s • n_p: %.1f p/cm^3 • Bz: %.1f nT" % [solar_wind_bulk_velocity_kms, solar_wind_proton_density_cm3, mag_imf_reading.z]
 			if progress_bar: progress_bar.value = 60.0
 			
 			if advisory_lbl:
-				advisory_lbl.text = "★ SCIENCE ACTIVE: Capturing pristine solar wind stream at Sun-Earth L1."
+				advisory_lbl.text = "* SCIENCE ACTIVE: Capturing pristine solar wind stream at Sun-Earth L1."
 				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 				
 		SubPhase.STAGE_F_EARTH_COMM_LOCK:
@@ -1101,7 +1105,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "📡 LOCK HIGH-GAIN DISH ON EARTH DSN →"
+				action_btn.text = "LOCK HIGH-GAIN DISH ON EARTH DSN >"
 			if secondary_btn:
 				secondary_btn.visible = true
 				secondary_btn.text = "VIEW EARTH DISH BORESIGHT [Key 6]"
@@ -1118,7 +1122,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			if progress_bar: progress_bar.value = 90.0
 			
 			if advisory_lbl:
-				advisory_lbl.text = "★ READY FOR TRANSMISSION: Communication line of sight to Earth verified."
+				advisory_lbl.text = "* READY FOR TRANSMISSION: Communication line of sight to Earth verified."
 				advisory_lbl.add_theme_color_override("font_color", Color(0.2, 0.75, 1.0))
 				
 		SubPhase.STAGE_F_TRANSMIT_WARNING:
@@ -1131,7 +1135,7 @@ func _load_subphase(phase: SubPhase) -> void:
 			
 			if action_btn:
 				action_btn.visible = true
-				action_btn.text = "★ TRANSMIT EARLY-WARNING TELEMETRY PACKET →"
+				action_btn.text = "* TRANSMIT EARLY-WARNING TELEMETRY PACKET >"
 			if secondary_btn:
 				secondary_btn.visible = false
 				
@@ -1142,7 +1146,7 @@ func _load_subphase(phase: SubPhase) -> void:
 					"• Measured CME Shock Velocity: %.0f km/s (Severe shock)\n" % shock_velocity_km_s + \
 					"• L1-to-Earth Distance: %.1f Million km (1,500,000 km)\n" % (L1_DISTANCE_KM / 1000000.0) + \
 					"• Interplanetary Magnetic Field Bz: %.1f nT (Extreme southward reconnection)\n" % mag_imf_reading.z + \
-					"• Proton Density: %.1f p/cm³\n" % solar_wind_proton_density_cm3 + \
+					"• Proton Density: %.1f p/cm^3\n" % solar_wind_proton_density_cm3 + \
 					"• Calculated Warning Lead Time: %.2f Minutes (t = d / v / 60)\n" % lead_time_minutes + \
 					"• Scientific Reality: HELIOS-4 does NOT deflect solar storms; its mission is early observation and warning."
 			if detail_metric_lbl: detail_metric_lbl.text = "Advance Notice: %.2f min • Packet Size: 1.2 MB • Checksum: OK" % lead_time_minutes
@@ -1163,7 +1167,7 @@ func _on_primary_action_pressed() -> void:
 			relative_velocity_kms = 1.05
 			trajectory_accuracy_pct = 99.8
 			_fire_rcs_burst(0.6)
-			print("[L1Arrival] 🧭 Approach trim burn executed (-2.4 kg). Trajectory accuracy locked to 99.8%.")
+			print("[L1Arrival] Approach trim burn executed (-2.4 kg). Trajectory accuracy locked to 99.8%.")
 			_load_subphase(SubPhase.STAGE_B_HOI_PLANNING)
 			
 		SubPhase.STAGE_B_HOI_PLANNING:
@@ -1180,7 +1184,7 @@ func _on_primary_action_pressed() -> void:
 			halo_stability_pct = 99.6 if sk_fuel_spent >= 8.5 else 72.0
 			halo_capture_error_pct = 0.22 if sk_fuel_spent >= 8.5 else 2.8
 			_fire_rcs_burst(0.8)
-			print("[L1Arrival] ⚡ Stationkeeping trim used %.1f kg; modeled stability %.1f%%." % [sk_fuel_spent, halo_stability_pct])
+			print("[L1Arrival] Stationkeeping trim used %.1f kg; modeled stability %.1f%%." % [sk_fuel_spent, halo_stability_pct])
 			_load_subphase(SubPhase.STAGE_D_COMMISSION_MAG)
 			
 		SubPhase.STAGE_D_COMMISSION_MAG:
@@ -1192,7 +1196,7 @@ func _on_primary_action_pressed() -> void:
 			_set_camera_mode(CameraMode.MAG_BOOM)
 			if mag_boom_deployed:
 				_animate_mag_boom_deployment()
-				print("[L1Arrival] 🛰 Magnetometer boom deployed; health %.1f%%." % mag_health_pct)
+				print("[L1Arrival] Magnetometer boom deployed; health %.1f%%." % mag_health_pct)
 			else:
 				if advisory_lbl: advisory_lbl.text = "▲ MAGNETOMETER NOT INSTALLED: continue commissioning; science return will be reduced."
 			_load_subphase(SubPhase.STAGE_D_COMMISSION_FARADAY)
@@ -1205,14 +1209,14 @@ func _on_primary_action_pressed() -> void:
 			faraday_cup_active = faraday_calibrated
 			if faraday_cup_active:
 				_animate_faraday_cover_release()
-				print("[L1Arrival] ⚡ Faraday Cup activated; health %.1f%%." % faraday_health_pct)
+				print("[L1Arrival] Faraday Cup activated; health %.1f%%." % faraday_health_pct)
 			else:
 				if advisory_lbl: advisory_lbl.text = "▲ FARADAY CUP UNAVAILABLE: continue commissioning; science return will be reduced."
 			_load_subphase(SubPhase.STAGE_D_SYSTEMS_VERIFY)
 			
 		SubPhase.STAGE_D_SYSTEMS_VERIFY:
 			# Complete systems verification
-			print("[L1Arrival] ✓ Spacecraft support systems verified nominal.")
+			print("[L1Arrival] [OK] Spacecraft support systems verified nominal.")
 			_load_subphase(SubPhase.STAGE_E_SCIENTIFIC_OBSERVATION)
 			
 		SubPhase.STAGE_E_SCIENTIFIC_OBSERVATION:
@@ -1222,7 +1226,7 @@ func _on_primary_action_pressed() -> void:
 			solar_wind_proton_density_cm3 = 46.2
 			mag_imf_reading.z = -31.5 # Severe southward reconnection
 			early_warning_data_compiled = true
-			print("[L1Arrival] ★ CME SHOCK DETECTED! Speed: 2420 km/s, Bz: -31.5 nT. Early warning packet compiled.")
+			print("[L1Arrival] * CME SHOCK DETECTED! Speed: 2420 km/s, Bz: -31.5 nT. Early warning packet compiled.")
 			_load_subphase(SubPhase.STAGE_F_EARTH_COMM_LOCK)
 			
 		SubPhase.STAGE_F_EARTH_COMM_LOCK:
@@ -1230,14 +1234,14 @@ func _on_primary_action_pressed() -> void:
 			earth_comm_linked = true
 			antenna_slew_angle_deg = 0.0
 			_animate_dish_earth_lock()
-			print("[L1Arrival] 📡 Earth DSN carrier locked (8.4 GHz, +4.2 dB). Ready for transmission.")
+			print("[L1Arrival] Earth DSN carrier locked (8.4 GHz, +4.2 dB). Ready for transmission.")
 			_load_subphase(SubPhase.STAGE_F_TRANSMIT_WARNING)
 			
 		SubPhase.STAGE_F_TRANSMIT_WARNING:
 			# Authorize and start transmission
 			transmission_authorized = true
 			_set_camera_mode(CameraMode.WIDE)
-			print("[L1Arrival] ★ Early warning transmission authorized! Beaming to Earth...")
+			print("[L1Arrival] * Early warning transmission authorized! Beaming to Earth...")
 
 func _on_secondary_action_pressed() -> void:
 	match current_phase:
@@ -1265,7 +1269,7 @@ func _on_secondary_action_pressed() -> void:
 
 func _required_hoi_propellant_kg() -> float:
 	var base := 35.0 * (hoi_planned_delta_v_ms / 280.0)
-	if Helios4CampaignData.is_team_perk_active() and Helios4CampaignData.team_perk_id == Helios4CampaignData.ROLE_PROPULSION:
+	if Helios4CampaignData.transfer_telemetry.get("director_propulsion_trim", false):
 		return base * 0.95
 	return base
 
@@ -1284,7 +1288,7 @@ func _start_hoi_burn_execution() -> void:
 	if action_btn: action_btn.visible = false
 	if secondary_btn: secondary_btn.visible = false
 	if advisory_lbl:
-		advisory_lbl.text = "🚀 MAIN ENGINE ACTIVE: %.1f / %.1f kg propellant available for %.0f m/s planned capture." % [hoi_fuel_burn_kg, hoi_fuel_required_kg, hoi_planned_delta_v_ms]
+		advisory_lbl.text = "MAIN ENGINE ACTIVE: %.1f / %.1f kg propellant available for %.0f m/s planned capture." % [hoi_fuel_burn_kg, hoi_fuel_required_kg, hoi_planned_delta_v_ms]
 		advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.55, 0.15))
 	if hoi_fuel_burn_kg < hoi_fuel_required_kg and advisory_lbl:
 		advisory_lbl.text = "▲ INSERTION FUEL SHORTFALL: %.1f kg of %.1f kg required. Executing partial degraded capture; proceed and final grade will reflect the miss." % [hoi_fuel_burn_kg, hoi_fuel_required_kg]
@@ -1310,7 +1314,7 @@ func _process_hoi_burn(delta: float) -> void:
 		var capture_fraction: float = hoi_actual_delta_v_ms / max(hoi_planned_delta_v_ms, 0.001)
 		halo_stability_pct = lerp(72.0, 99.4, capture_fraction)
 		halo_capture_error_pct = lerp(2.8, 0.35, capture_fraction)
-		print("[L1Arrival] 🚀 HOI BURN COMPLETE: %.1f%% of planned delta-v achieved; modeled stability %.1f%%." % [capture_fraction * 100.0, halo_stability_pct])
+		print("[L1Arrival] HOI BURN COMPLETE: %.1f%% of planned delta-v achieved; modeled stability %.1f%%." % [capture_fraction * 100.0, halo_stability_pct])
 		_load_subphase(SubPhase.STAGE_C_STATIONKEEPING)
 
 func _process_scientific_observation(delta: float) -> void:
@@ -1338,19 +1342,19 @@ func _process_transmission(delta: float) -> void:
 
 func _handle_mission_commissioned_success() -> void:
 	if lbl_phase: lbl_phase.text = "HELIOS-4 SUCCESSFULLY COMMISSIONED AT SUN-EARTH L1"
-	if lbl_status: lbl_status.text = "★ ALL OBJECTIVES ACCOMPLISHED: OPERATIONAL SOLAR SENTINEL"
+	if lbl_status: lbl_status.text = "* ALL OBJECTIVES ACCOMPLISHED: OPERATIONAL SOLAR SENTINEL"
 	if lbl_primary: lbl_primary.text = "Early-warning packet acknowledged by Earth DSN! Proceed to full mission debrief."
-	if lbl_action: lbl_action.text = "Mission Lead: Click PROCEED TO FINAL MISSION DEBRIEF →"
+	if lbl_action: lbl_action.text = "Mission Lead: Click PROCEED TO FINAL MISSION DEBRIEF >"
 	if lbl_next: lbl_next.text = "Next: Final Mission Debrief & Scientific Evaluation Scorecard."
 	
 	if action_btn: action_btn.visible = false
 	if secondary_btn: secondary_btn.visible = false
 	if proceed_debrief_btn:
 		proceed_debrief_btn.visible = true
-		proceed_debrief_btn.text = "COMMISSIONING COMPLETE: PROCEED TO DEBRIEF →"
+		proceed_debrief_btn.text = "COMMISSIONING COMPLETE: PROCEED TO DEBRIEF >"
 		
 	if detail_deck: detail_deck.visible = true
-	if detail_title_lbl: detail_title_lbl.text = "★ MISSION SUCCESS: EARTH ACKNOWLEDGEMENT RECEIVED"
+	if detail_title_lbl: detail_title_lbl.text = "* MISSION SUCCESS: EARTH ACKNOWLEDGEMENT RECEIVED"
 	if detail_body_lbl:
 		detail_body_lbl.text = "Deep Space Network complexes at Goldstone and Madrid have verified early-warning telemetry:\n" + \
 			"• Coronal Mass Ejection Shock Velocity: %.0f km/s\n" % shock_velocity_km_s + \
@@ -1363,12 +1367,12 @@ func _handle_mission_commissioned_success() -> void:
 	if progress_bar: progress_bar.value = 100.0
 	
 	if advisory_lbl:
-		advisory_lbl.text = "★ EARLY-WARNING DELIVERED: %.2f MINUTES ADVANCE NOTICE TO EARTH!" % lead_time_minutes
+		advisory_lbl.text = "* EARLY-WARNING DELIVERED: %.2f MINUTES ADVANCE NOTICE TO EARTH!" % lead_time_minutes
 		advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 	if warning_time_lbl:
 		warning_time_lbl.text = "Advance Lead Time Delivered: %.2f min (d: 1.5M km | v: %.0f km/s)" % [lead_time_minutes, shock_velocity_km_s]
 		
-	print("[L1Arrival] ★ HELIOS-4 SUCCESSFULLY COMMISSIONED! Advance Lead Time: %.2f minutes." % lead_time_minutes)
+	print("[L1Arrival] * HELIOS-4 SUCCESSFULLY COMMISSIONED! Advance Lead Time: %.2f minutes." % lead_time_minutes)
 
 func _on_proceed_to_debrief_pressed() -> void:
 	# Persist full L1 telemetry
@@ -1468,7 +1472,7 @@ func _build_objective_banner(root_ui: Control) -> void:
 	objective_banner = ObjectiveBanner.new()
 	objective_banner.name = "ObjectiveBanner"
 	objective_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	objective_banner.position = Vector2(-190, 12)
+	objective_banner.position = Vector2(-190, 112)
 	objective_banner.custom_minimum_size = Vector2(380, 0)
 	objective_banner.size = Vector2(380, 0)
 	objective_banner.action_pressed.connect(_on_primary_action_pressed)
@@ -1481,11 +1485,11 @@ func _update_objective_banner() -> void:
 	match current_phase:
 		SubPhase.STAGE_A_APPROACH_NAVIGATION:
 			objective_banner.set_objective(1, 6, "APPROACH TRIM BURN",
-				"▶ EXECUTE APPROACH TRIM", "[SPACE] Kill the approach dispersion",
+				"> EXECUTE APPROACH TRIM", "[SPACE] Kill the approach dispersion",
 				Color(0.35, 0.85, 1.0))
 		SubPhase.STAGE_B_HOI_PLANNING:
 			objective_banner.set_objective(2, 6, "PLAN THE HALO ORBIT INSERTION",
-				"▶ AUTHORIZE HOI BURN", "[SPACE] Commit the braking burn",
+				"> AUTHORIZE HOI BURN", "[SPACE] Commit the braking burn",
 				Color(1.0, 0.72, 0.25))
 		SubPhase.STAGE_B_HOI_EXECUTION:
 			objective_banner.set_objective(2, 6, "HOI BURN IN PROGRESS",
@@ -1493,33 +1497,33 @@ func _update_objective_banner() -> void:
 				Color(1.0, 0.82, 0.30))
 		SubPhase.STAGE_C_STATIONKEEPING:
 			objective_banner.set_objective(3, 6, "STATIONKEEPING TRIM",
-				"▶ TRIM THE ORBIT", "[SPACE] Stabilise the halo orbit",
+				"> TRIM THE ORBIT", "[SPACE] Stabilise the halo orbit",
 				Color(0.35, 0.85, 1.0))
 		SubPhase.STAGE_D_COMMISSION_MAG:
 			objective_banner.set_objective(4, 6, "DEPLOY THE MAGNETOMETER BOOM",
-				"▶ DEPLOY MAGNETOMETER", "[SPACE] Extend the 3.8 m boom",
+				"> DEPLOY MAGNETOMETER", "[SPACE] Extend the 3.8 m boom",
 				Color(0.35, 0.95, 0.65))
 		SubPhase.STAGE_D_COMMISSION_FARADAY:
 			objective_banner.set_objective(5, 6, "DEPLOY THE FARADAY CUP",
-				"▶ DEPLOY FARADAY CUP", "[SPACE] Open the aperture door",
+				"> DEPLOY FARADAY CUP", "[SPACE] Open the aperture door",
 				Color(0.35, 0.95, 0.65))
 		SubPhase.STAGE_D_SYSTEMS_VERIFY:
 			objective_banner.set_objective(5, 6, "VERIFY BUS SYSTEMS",
-				"▶ VERIFY SYSTEMS", "[SPACE] Confirm power, thermal and avionics",
+				"> VERIFY SYSTEMS", "[SPACE] Confirm power, thermal and avionics",
 				Color(0.35, 0.95, 0.65))
 		SubPhase.STAGE_E_SCIENTIFIC_OBSERVATION:
 			objective_banner.set_objective(5, 6, "CALIBRATE THE SENSORS",
-				"▶ CALIBRATE SENSOR", "[SPACE] Run the calibration sweep",
+				"> CALIBRATE SENSOR", "[SPACE] Run the calibration sweep",
 				Color(0.35, 0.95, 0.65))
 		SubPhase.STAGE_F_EARTH_COMM_LOCK:
 			objective_banner.set_objective(6, 6, "LOCK THE EARTH ANTENNA",
-				"▶ LOCK EARTH ANTENNA", "[SPACE] Slew to Earth and acquire DSN",
+				"> LOCK EARTH ANTENNA", "[SPACE] Slew to Earth and acquire DSN",
 				Color(0.35, 0.85, 1.0))
 		SubPhase.STAGE_F_TRANSMIT_WARNING:
 			objective_banner.set_objective(6, 6, "TRANSMIT THE WARNING PACKET",
-				"▶ TRANSMIT TO EARTH", "[SPACE] Beam the early-warning data",
+				"> TRANSMIT TO EARTH", "[SPACE] Beam the early-warning data",
 				Color(1.0, 0.85, 0.30))
 		SubPhase.MISSION_SUCCESS_DEBRIEF:
 			objective_banner.set_objective(6, 6, "MISSION ACCOMPLISHED — HELIOS-4 ONLINE",
-				"▶ VIEW DEBRIEF", "[ENTER] Open the mission debrief",
+				"> VIEW DEBRIEF", "[ENTER] Open the mission debrief",
 				Color(0.35, 0.95, 0.55))

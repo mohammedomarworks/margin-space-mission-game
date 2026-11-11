@@ -1845,3 +1845,29 @@ func animate_part_pulse(part_key: String) -> void:
 		tw.tween_property(node, "scale", base_scale * 1.045, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		tw.tween_property(node, "scale", base_scale, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		node.set_meta("_pulse_tween", tw)
+
+func animate_attachment(part_key: String) -> void:
+	var candidates: Array = []
+	match part_key:
+		"propulsion", "propulsion_engines", "stage1_engine":
+			candidates = [engine_cluster_node, stage2_node]
+		"solar_wings", "power":
+			candidates = [solar_wing_left, solar_wing_right]
+		"grid_fins":
+			candidates = [grid_fins_node]
+		"fairing":
+			candidates = [fairing_left, fairing_right]
+		_:
+			candidates = [probe_node]
+	for raw_node in candidates:
+		var node := raw_node as Node3D
+		if node == null or not is_instance_valid(node) or not node.visible:
+			continue
+		var target_position: Vector3 = node.position
+		var target_scale: Vector3 = node.scale
+		node.position = target_position + Vector3(0.0, 0.62, 0.0)
+		node.scale = target_scale * 0.72
+		var tween := create_tween()
+		tween.set_parallel(true)
+		tween.tween_property(node, "position", target_position, 0.34).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.tween_property(node, "scale", target_scale, 0.34).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

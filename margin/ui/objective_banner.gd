@@ -62,7 +62,7 @@ func _build() -> void:
 
 	_action_btn = Button.new()
 	_action_btn.name = "ObjectiveActionBtn"
-	_action_btn.text = "▶ START"
+	_action_btn.text = "> START"
 	_action_btn.custom_minimum_size = Vector2(0, 34)
 	_action_btn.add_theme_font_size_override("font_size", 14)
 	_action_btn.focus_mode = Control.FOCUS_NONE

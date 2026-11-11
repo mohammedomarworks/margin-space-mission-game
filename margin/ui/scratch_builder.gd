@@ -52,9 +52,9 @@ const STEPS: Array = [
 		"title": "4. THERMAL SHIELD",
 		"desc": "Heat rejection and radiation shielding.",
 		"options": [
-			{"label": "Active Louvers + MLI (nominal)", "apply": {"thermal_type": "thermal_active_louvers_mli", "thermal_power_w": 25.0, "thermal_mass_kg": 18.0, "thermal_cost_m": 4.5}},
-			{"label": "Heavy Shield (CME hardened)", "apply": {"thermal_type": "thermal_heavy_shield", "thermal_power_w": 40.0, "thermal_mass_kg": 42.0, "thermal_cost_m": 9.0}},
-			{"label": "Passive MLI (light)", "apply": {"thermal_type": "thermal_passive_mli", "thermal_power_w": 10.0, "thermal_mass_kg": 12.0, "thermal_cost_m": 3.0}}
+			{"label": "Active Louvers + MLI (nominal)", "apply": {"thermal_type": "thermal_active_louvers_mli", "thermal_power_w": 25.0, "thermal_mass_kg": 18.0, "thermal_emissivity": 0.82, "thermal_absorptivity": 0.23, "thermal_radiator_area_m2": 1.8, "thermal_max_temp_k": 360.0, "thermal_cost_m": 4.5}},
+			{"label": "Heavy Shield (CME hardened)", "apply": {"thermal_type": "thermal_heavy_shield", "thermal_power_w": 40.0, "thermal_mass_kg": 42.0, "thermal_emissivity": 0.78, "thermal_absorptivity": 0.15, "thermal_radiator_area_m2": 2.2, "thermal_max_temp_k": 415.0, "thermal_cost_m": 9.0}},
+			{"label": "Passive MLI (light)", "apply": {"thermal_type": "thermal_passive_mli", "thermal_power_w": 10.0, "thermal_mass_kg": 12.0, "thermal_emissivity": 0.55, "thermal_absorptivity": 0.34, "thermal_radiator_area_m2": 1.6, "thermal_max_temp_k": 335.0, "thermal_cost_m": 3.0}}
 		]
 	},
 	{
@@ -80,18 +80,15 @@ const STEPS: Array = [
 	}
 ]
 
-var current_step: int = 0
-var _step_label: Label = null
-var _desc_label: Label = null
-var _options_box: VBoxContainer = null
-var _progress_label: Label = null
-var _completed: Dictionary = {}
+var _slot_selectors: Dictionary = {}
+var _equations_label: Label = null
+var last_changed_slot_id: String = ""
 
 
 func _ready() -> void:
 	theme = MarginTheme.get_theme()
 	_build()
-	_show_step(0)
+	refresh_from_config()
 
 
 func _build() -> void:
@@ -103,143 +100,144 @@ func _build() -> void:
 	sb.set_content_margin_all(10)
 	add_theme_stylebox_override("panel", sb)
 
+	var scroll := ScrollContainer.new()
+	scroll.name = "WorkbenchScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroll.add_theme_constant_override("margin_right", 4)
+	add_child(scroll)
 	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 6)
-	add_child(vb)
+	vb.add_theme_constant_override("separation", 7)
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vb)
 
 	var head := Label.new()
-	head.text = "SCRATCH BUILD"
+	head.text = "SPACECRAFT ASSEMBLY WORKBENCH"
 	head.add_theme_font_size_override("font_size", 14)
 	head.add_theme_color_override("font_color", Color(0.85, 0.93, 1.0))
 	vb.add_child(head)
 
-	_progress_label = Label.new()
-	_progress_label.add_theme_font_size_override("font_size", 10)
-	_progress_label.add_theme_color_override("font_color", Color(0.62, 0.74, 0.86))
-	vb.add_child(_progress_label)
+	var intro := Label.new()
+	intro.text = "Select a module in each station. The spacecraft and flight math update live."
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	intro.add_theme_font_size_override("font_size", 10)
+	intro.add_theme_color_override("font_color", Color(0.65, 0.78, 0.90))
+	vb.add_child(intro)
 
-	_step_label = Label.new()
-	_step_label.add_theme_font_size_override("font_size", 12)
-	_step_label.add_theme_color_override("font_color", Color(0.45, 0.85, 1.0))
-	vb.add_child(_step_label)
+	for i in STEPS.size():
+		var step: Dictionary = STEPS[i]
+		var slot := VBoxContainer.new()
+		slot.add_theme_constant_override("separation", 3)
+		var slot_title := Label.new()
+		slot_title.text = step["title"]
+		slot_title.add_theme_font_size_override("font_size", 10)
+		slot_title.add_theme_color_override("font_color", Color(0.45, 0.85, 1.0))
+		slot.add_child(slot_title)
+		var selector := OptionButton.new()
+		selector.name = "AssemblySlot_" + str(step["id"])
+		selector.custom_minimum_size = Vector2(0.0, 30.0)
+		selector.add_theme_font_size_override("font_size", 9)
+		selector.focus_mode = Control.FOCUS_NONE
+		for opt in step["options"]:
+			selector.add_item(str(opt["label"]))
+		var step_index: int = i
+		selector.item_selected.connect(func(option_index: int) -> void:
+			_apply_option(step_index, option_index)
+		)
+		slot.add_child(selector)
+		vb.add_child(slot)
+		_slot_selectors[str(step["id"])] = selector
 
-	_desc_label = Label.new()
-	_desc_label.add_theme_font_size_override("font_size", 10)
-	_desc_label.add_theme_color_override("font_color", Color(0.66, 0.76, 0.86))
-	_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vb.add_child(_desc_label)
+	var eq_panel := PanelContainer.new()
+	eq_panel.name = "LiveEquationsPanel"
+	var eq_style := StyleBoxFlat.new()
+	eq_style.bg_color = Color(0.025, 0.055, 0.095, 0.98)
+	eq_style.border_color = Color(0.20, 0.62, 0.82, 0.85)
+	eq_style.set_border_width_all(1)
+	eq_style.set_corner_radius_all(5)
+	eq_style.set_content_margin_all(8)
+	eq_panel.add_theme_stylebox_override("panel", eq_style)
+	var eq_box := VBoxContainer.new()
+	eq_box.add_theme_constant_override("separation", 4)
+	eq_panel.add_child(eq_box)
+	var eq_title := Label.new()
+	eq_title.text = "LIVE FLIGHT EQUATIONS"
+	eq_title.add_theme_font_size_override("font_size", 11)
+	eq_title.add_theme_color_override("font_color", Color(0.35, 0.9, 1.0))
+	eq_box.add_child(eq_title)
+	_equations_label = Label.new()
+	_equations_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_equations_label.add_theme_font_size_override("font_size", 9)
+	_equations_label.add_theme_color_override("font_color", Color(0.87, 0.92, 0.98))
+	eq_box.add_child(_equations_label)
+	vb.add_child(eq_panel)
 
-	_options_box = VBoxContainer.new()
-	_options_box.add_theme_constant_override("separation", 4)
-	vb.add_child(_options_box)
+	var rad_note := Label.new()
+	rad_note.text = "CME proton survival needs rad-hard avionics;\nthermal shields alone do not block particles."
+	rad_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rad_note.add_theme_font_size_override("font_size", 8)
+	rad_note.add_theme_color_override("font_color", Color(0.98, 0.72, 0.42))
+	vb.add_child(rad_note)
 
-	var nav := HBoxContainer.new()
-	nav.add_theme_constant_override("separation", 6)
-	vb.add_child(nav)
-
-	var prev := Button.new()
-	prev.name = "ScratchPrevBtn"
-	prev.text = "◀ BACK"
-	prev.add_theme_font_size_override("font_size", 11)
-	prev.focus_mode = Control.FOCUS_NONE
-	prev.pressed.connect(_on_prev)
-	nav.add_child(prev)
-
-	var next := Button.new()
-	next.name = "ScratchNextBtn"
-	next.text = "NEXT ▶"
-	next.add_theme_font_size_override("font_size", 11)
-	next.focus_mode = Control.FOCUS_NONE
-	next.pressed.connect(_on_next)
-	nav.add_child(next)
-
-	var auto := Button.new()
-	auto.name = "AutoBuildPresetBtn"
-	auto.text = "AUTO-BUILD NASA PRESET"
-	auto.add_theme_font_size_override("font_size", 11)
-	auto.focus_mode = Control.FOCUS_NONE
-	auto.pressed.connect(_on_auto_build)
-	vb.add_child(auto)
-
-
-func _show_step(idx: int) -> void:
-	current_step = clampi(idx, 0, STEPS.size() - 1)
-	var step: Dictionary = STEPS[current_step]
-	_step_label.text = "STEP %d / %d — %s" % [current_step + 1, STEPS.size(), step["title"]]
-	_desc_label.text = str(step["desc"])
-
-	var done: int = _completed.size()
-	_progress_label.text = "%d / %d steps configured" % [done, STEPS.size()]
-
-	for c in _options_box.get_children():
-		c.queue_free()
-
-	for opt in step["options"]:
-		var btn := Button.new()
-		btn.text = str(opt["label"])
-		btn.add_theme_font_size_override("font_size", 10)
-		btn.focus_mode = Control.FOCUS_NONE
-		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		var payload: Dictionary = opt["apply"]
-		var step_id: String = str(step["id"])
-		btn.pressed.connect(func() -> void: _apply_option(step_id, payload))
-		_options_box.add_child(btn)
-
-
-func _apply_option(step_id: String, payload: Dictionary) -> void:
+func _apply_option(step_index: int, option_index: int) -> void:
+	var step: Dictionary = STEPS[step_index]
+	var opt: Dictionary = step["options"][option_index]
+	var step_id: String = str(step["id"])
+	var payload: Dictionary = opt["apply"]
+	last_changed_slot_id = step_id
 	if Helios4CampaignData.probe_config.is_empty():
 		Helios4CampaignData.probe_config = Helios4CampaignData.get_default_probe_config()
 	for k in payload:
 		Helios4CampaignData.probe_config[k] = payload[k]
-	_completed[step_id] = true
 	Sfx.part_attach()
-	_progress_label.text = "%d / %d steps configured" % [_completed.size(), STEPS.size()]
+	_refresh_equations()
 	build_changed.emit()
-	# Auto-advance so the player is always pushed to the next step
-	if current_step < STEPS.size() - 1:
-		_show_step(current_step + 1)
 
+func refresh_from_config() -> void:
+	if Helios4CampaignData.probe_config.is_empty():
+		Helios4CampaignData.probe_config = Helios4CampaignData.get_default_probe_config()
+	for step in STEPS:
+		var step_id: String = str(step["id"])
+		var selector: OptionButton = _slot_selectors.get(step_id, null)
+		if selector == null:
+			continue
+		var selected_index: int = _find_matching_option(step, Helios4CampaignData.probe_config)
+		selector.set_block_signals(true)
+		selector.select(selected_index)
+		selector.set_block_signals(false)
+	_refresh_equations()
 
-func _on_prev() -> void:
-	Sfx.ui_back()
-	_show_step(current_step - 1)
+func _find_matching_option(step: Dictionary, config: Dictionary) -> int:
+	for i in step["options"].size():
+		var payload: Dictionary = step["options"][i]["apply"]
+		var matches: bool = true
+		for key in payload:
+			if not config.has(key) or config[key] != payload[key]:
+				matches = false
+				break
+		if matches:
+			return i
+	return 0
 
-
-func _on_next() -> void:
-	Sfx.ui_click()
-	_show_step(current_step + 1)
-
-
-func _on_auto_build() -> void:
-	var dest: String = Helios4CampaignData.get_destination()
-	Helios4CampaignData.probe_config = Helios4CampaignData.get_default_probe_config()
-
-	# Destination-aware preset: the NASA reference build that satisfies the gates.
-	match dest:
-		"mars_orbiter":
-			Helios4CampaignData.probe_config["solar_array_area_m2"] = 10.0
-			Helios4CampaignData.probe_config["battery_capacity_wh"] = 1600.0
-			Helios4CampaignData.probe_config["propellant_mass_kg"] = 380.0
-			Helios4CampaignData.probe_config["probe_isp_s"] = 420.0
-			Helios4CampaignData.probe_config["antenna_diameter_m"] = 2.0
-			Helios4CampaignData.probe_config["thermal_type"] = "thermal_heavy_shield"
-			Helios4CampaignData.probe_config["thermal_power_w"] = 40.0
-			Helios4CampaignData.probe_config["thermal_mass_kg"] = 42.0
-		"lunar_south_pole":
-			Helios4CampaignData.probe_config["battery_capacity_wh"] = 1600.0
-			Helios4CampaignData.probe_config["solar_array_area_m2"] = 6.5
-			Helios4CampaignData.probe_config["instruments"] = {
-				"radar": {"id": "inst_sar_radar", "name": "Synthetic Aperture Radar", "heritage": "NASA LRO Mini-RF", "mass_kg": 16.0, "power_w": 22.0, "science_score": 20.0, "cost_m": 11.0, "data_rate_kbps": 10.0},
-				"spectrometer": {"id": "inst_neutron_spectrometer", "name": "Neutron Spectrometer", "heritage": "NASA Lunar Prospector LP-NS", "mass_kg": 11.0, "power_w": 14.0, "science_score": 17.0, "cost_m": 8.0, "data_rate_kbps": 5.0}
-			}
-		_:
-			# Sun-Earth L1 default suite already ships Mag + Faraday + SEP
-			Helios4CampaignData.probe_config["solar_array_area_m2"] = 6.5
-			Helios4CampaignData.probe_config["battery_capacity_wh"] = 1200.0
-
-	for s in STEPS:
-		_completed[str(s["id"])] = true
-	Sfx.success_chime()
-	_progress_label.text = "%d / %d steps configured" % [_completed.size(), STEPS.size()]
-	build_changed.emit()
-	_show_step(STEPS.size() - 1)
+func _refresh_equations() -> void:
+	if _equations_label == null:
+		return
+	var tel: Dictionary = Helios4CampaignData.calculate_hangar_telemetry()
+	var dest_id: String = Helios4CampaignData.get_destination()
+	var req: Dictionary = DestinationData.get_requirements(dest_id)
+	var meta: Dictionary = DestinationData.get_metadata(dest_id)
+	var probe_dv: float = tel.get("delta_v_probe", 0.0)
+	var launch_dv: float = tel.get("total_launch_delta_v", 0.0)
+	var power_net: float = tel.get("power_margin_w", 0.0)
+	var thermal: float = tel.get("thermal_flux_tolerance_w_m2", 0.0)
+	_equations_label.text = "Δv = Isp · g0 · ln(mwet / mdry)\nWet mass: %.0f kg | Probe: %.0f / %.0f m/s\nLaunch: %.0f / %.0f m/s | Cost: $%.1fM / $%.1fM\n\nTWR = Fthrust / (mwet · 9.81) = %.2f | target > 1.20\n\nPnet = Pgen - Pload = %.0f W - %.0f W = %+.0f W\nPgen = A·η·1361·(1 AU / %.2f AU)^2·0.96\nPload = Pav + Padcs + Pthermal + Pcomm + Pscience\nArray flux at target: %.0f W/m^2\n\nThermal limit: εσTmax^4/α = %.0f W/m^2 at %.0f K\nMission minimum: %.0f W/m^2" % [
+		tel.get("liftoff_wet_mass_kg", 0.0),
+		probe_dv, req.get("min_probe_delta_v_ms", tel.get("req_probe_dv", 0.0)),
+		launch_dv, tel.get("req_launch_dv", 0.0), tel.get("total_cost_m", 0.0), tel.get("budget_cap_m", 0.0),
+		tel.get("liftoff_twr", 0.0),
+		power_net + tel.get("total_power_load_w", 0.0), tel.get("total_power_load_w", 0.0), power_net,
+		meta.get("solar_distance_au", 1.0),
+		tel.get("solar_flux_w_m2", 1361.0),
+		thermal, tel.get("thermal_max_temp_k", 360.0),
+		req.get("min_thermal_flux_tolerance_w_m2", 0.0)
+	]

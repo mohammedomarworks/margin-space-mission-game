@@ -322,9 +322,9 @@ anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -310.0
-offset_top = 10.0
+offset_top = 158.0
 offset_right = 310.0
-offset_bottom = 42.0
+offset_bottom = 190.0
 grow_horizontal = 2
 theme_override_constants/separation = 8
 alignment = 1
@@ -687,7 +687,7 @@ offset_right = 30.0
 offset_bottom = 30.0
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
 theme_override_font_sizes/font_size = 16
-text = "┌"
+text = "+"
 
 [node name="ReticleBracketTR" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
 layout_mode = 1
@@ -701,7 +701,7 @@ offset_bottom = 30.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
 theme_override_font_sizes/font_size = 16
-text = "┐"
+text = "+"
 
 [node name="ReticleBracketBL" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
 layout_mode = 1
@@ -715,7 +715,7 @@ offset_bottom = -10.0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
 theme_override_font_sizes/font_size = 16
-text = "└"
+text = "+"
 
 [node name="ReticleBracketBR" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
 layout_mode = 1
@@ -732,7 +732,7 @@ grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.7)
 theme_override_font_sizes/font_size = 16
-text = "┘"
+text = "+"
 
 [node name="ReticleCrosshair" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
 layout_mode = 1
@@ -749,7 +749,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(0.22, 0.74, 0.96, 0.6)
 theme_override_font_sizes/font_size = 14
-text = "┼"
+text = "+"
 horizontal_alignment = 1
 
 [node name="ReticleAngleReadout" type="Label" parent="CanvasLayer/RootUI/ReticleOverlay"]
@@ -827,7 +827,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
 theme_override_font_sizes/font_size = 11
-text = "01 🔒 SAFE MODE"
+text = "01 SAFE MODE"
 
 [node name="BtnSafeOpt1" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card01_SafeMode/VBox"]
 unique_name_in_owner = true
@@ -869,7 +869,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
 theme_override_font_sizes/font_size = 11
-text = "02 🛡 INSTRUMENTS"
+text = "02 INSTRUMENTS"
 
 [node name="BtnInstOpt1" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card02_Instruments/VBox"]
 unique_name_in_owner = true
@@ -911,7 +911,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.45, 0.45, 1)
 theme_override_font_sizes/font_size = 11
-text = "03 📡 COMMS & POWER"
+text = "03 COMMS & POWER"
 
 [node name="BtnCommOpt1" type="Button" parent="CanvasLayer/RootUI/TacticalCrisisPanel/VBox/CardsContainer/Card03_Comms/VBox"]
 unique_name_in_owner = true
@@ -946,7 +946,7 @@ custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
 theme_override_font_sizes/font_size = 12
-text = "★ COMMIT TACTICAL RESPONSE & RUN CRISIS SIMULATION"
+text = "* COMMIT TACTICAL RESPONSE & RUN CRISIS SIMULATION"
 
 [node name="BottomControlsDeck" type="HBoxContainer" parent="CanvasLayer/RootUI"]
 layout_mode = 1
@@ -1002,7 +1002,7 @@ custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
 theme_override_font_sizes/font_size = 12
-text = "🚀 EXECUTE INJECTION BURN"
+text = "EXECUTE INJECTION BURN"
 
 [node name="BtnSecondaryAction" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
 unique_name_in_owner = true
@@ -1010,14 +1010,14 @@ visible = false
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryActionBtn")
 theme_override_font_sizes/font_size = 11
-text = "⚡ ALIGN ARRAYS SUNWARD"
+text = "ALIGN ARRAYS SUNWARD"
 
 [node name="BtnPauseSim" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryActionBtn")
 theme_override_font_sizes/font_size = 11
-text = "⏸ PAUSE"
+text = "PAUSE"
 
 [node name="AdvisoryBanner" type="Label" parent="CanvasLayer/RootUI"]
 unique_name_in_owner = true
@@ -1031,7 +1031,7 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
 theme_override_font_sizes/font_size = 11
-text = "★ HELIOS-4 IN PARKING ORBIT: Systems nominal. Awaiting Trans-L1 Deep Space Injection Burn (TLI)."
+text = "* HELIOS-4 IN PARKING ORBIT: Systems nominal. Awaiting Trans-L1 Deep Space Injection Burn (TLI)."
 horizontal_alignment = 1
 
 [node name="SimPauseBanner" type="PanelContainer" parent="CanvasLayer/RootUI"]
@@ -1055,5 +1055,5 @@ theme_override_styles/panel = SubResource("Style_ObjectivePanel")
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.35, 1)
 theme_override_font_sizes/font_size = 13
-text = "⏸ SIMULATION PAUSED — PRESS [P] OR CLICK RESUME"
+text = "SIMULATION PAUSED — PRESS [P] OR CLICK RESUME"
 horizontal_alignment = 1

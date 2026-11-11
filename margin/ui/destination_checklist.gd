@@ -86,8 +86,8 @@ func refresh() -> void:
 		var unit: String = r.get("unit", "")
 		var actual: float = float(r.get("actual", 0.0))
 		var required: float = float(r.get("required", 0.0))
-		var actual_str: String = ("%.0f" % actual) if unit in ["m/s", "W", "Wh", "pts"] else ("%.1f" % actual)
-		var req_str: String = ("%.0f" % required) if unit in ["m/s", "W", "Wh", "pts"] else ("%.1f" % required)
+		var actual_str: String = ("%.0f" % actual) if unit in ["m/s", "W", "Wh", "pts", "W/m2"] else ("%.1f" % actual)
+		var req_str: String = ("%.0f" % required) if unit in ["m/s", "W", "Wh", "pts", "W/m2"] else ("%.1f" % required)
 		if unit == "":
 			line.text = ("[OK] " if ok else "[X] ") + str(r.get("label", ""))
 		else:

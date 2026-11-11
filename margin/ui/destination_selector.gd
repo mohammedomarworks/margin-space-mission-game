@@ -103,7 +103,7 @@ func _build() -> void:
 
 	_confirm_btn = Button.new()
 	_confirm_btn.name = "ConfirmDestinationBtn"
-	_confirm_btn.text = "CONFIRM TARGET →"
+	_confirm_btn.text = "CONFIRM DESTINATION"
 	_confirm_btn.custom_minimum_size = Vector2(0, 44)
 	_confirm_btn.add_theme_font_size_override("font_size", 16)
 	_confirm_btn.pressed.connect(_on_confirm)
@@ -137,21 +137,21 @@ func _make_card(meta: Dictionary) -> PanelContainer:
 	vb.add_child(name_lbl)
 
 	var code_lbl := Label.new()
-	code_lbl.text = meta["code"] + " • " + meta["subtitle"]
+	code_lbl.text = meta["code"] + " | " + meta["subtitle"]
 	code_lbl.add_theme_font_size_override("font_size", 10)
 	code_lbl.add_theme_color_override("font_color", Color(0.60, 0.70, 0.82))
 	code_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(code_lbl)
 
 	var stars := Label.new()
-	stars.text = "★".repeat(int(meta["difficulty_stars"])) + "☆".repeat(3 - int(meta["difficulty_stars"]))
+	stars.text = "DIFFICULTY %d / 3" % int(meta["difficulty_stars"])
 	stars.add_theme_font_size_override("font_size", 13)
 	stars.add_theme_color_override("font_color", Color(1.0, 0.82, 0.30))
 	stars.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vb.add_child(stars)
 
 	var stats := Label.new()
-	stats.text = "Δv %s\n%s • %s" % [meta["delta_v_label"], meta["distance_label"], meta["flight_time_label"]]
+	stats.text = "DELTA-V %s\n%s | %s" % [meta["delta_v_label"], meta["distance_label"], meta["flight_time_label"]]
 	stats.add_theme_font_size_override("font_size", 10)
 	stats.add_theme_color_override("font_color", Color(0.72, 0.82, 0.92))
 	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -160,7 +160,7 @@ func _make_card(meta: Dictionary) -> PanelContainer:
 	var needs := Label.new()
 	var need_lines: Array = []
 	for n in meta["needs"]:
-		need_lines.append("• " + str(n))
+		need_lines.append("- " + str(n))
 	needs.text = "\n".join(need_lines)
 	needs.add_theme_font_size_override("font_size", 10)
 	needs.add_theme_color_override("font_color", Color(0.66, 0.76, 0.86))
@@ -199,7 +199,7 @@ func _refresh_selection() -> void:
 
 	if _confirm_btn:
 		var m: Dictionary = DestinationData.get_metadata(selected_id)
-		_confirm_btn.text = "CONFIRM TARGET: %s →" % m["name"]
+		_confirm_btn.text = "CONFIRM TARGET: %s" % m["name"]
 
 
 func _on_confirm() -> void:

@@ -405,19 +405,20 @@ func test_continuous_gameplay_integration() -> void:
 	_assert_approx(mass_after_staging, 6650.0, 1.0, "10. Stage separation drops Stage 1 dry mass and updates vehicle configuration")
 	
 	# Point 11: Upper-stage ignition uses remaining fuel and mass
-	var s2_fuel_kg = 5400.0
-	var s2_thrust_n = 65000.0
+	var s2_fuel_kg = 9000.0
+	var s2_thrust_n = 140000.0
 	var s2_isp = 450.0
 	var s2_mdot = s2_thrust_n / (s2_isp * g0)
 	var s2_fuel_consumed = s2_mdot * 10.0
-	_assert_approx(s2_fuel_consumed, 147.17, 1.0, "11. Upper-stage vacuum ignition burns Stage 2 propellant and mass")
+	_assert_approx(s2_fuel_consumed, 317.4, 1.0, "11. Upper-stage vacuum ignition burns Stage 2 propellant and mass")
 	
 	# Point 12: Orbital insertion depends on flight conditions
-	var satisfies_orbit = func(h: float, v: float, gamma: float) -> bool:
-		return (h >= 160000.0 and v >= 7700.0 and abs(gamma) <= 8.0)
-	_assert_true(satisfies_orbit.call(165000.0, 7750.0, 3.2), "12. Orbital insertion accepts nominal orbital parameters (165 km, 7750 m/s, 3.2°)")
-	_assert_true(not satisfies_orbit.call(165000.0, 6500.0, 3.2), "12b. Orbital insertion rejects suborbital velocity (6500 m/s)")
-	_assert_true(not satisfies_orbit.call(110000.0, 7750.0, 3.2), "12c. Orbital insertion rejects low perigee altitude (110 km)")
+	var satisfies_orbit = func(h: float, vtheta: float, vr: float) -> bool:
+		return (abs(h - 185000.0) <= 8000.0 and abs(vtheta - 7797.4) <= 20.0 and abs(vr) <= 50.0)
+	_assert_true(satisfies_orbit.call(185000.0, 7797.4, 0.0), "12. Orbital capture accepts circular 185 km polar state")
+	_assert_true(not satisfies_orbit.call(185000.0, 6500.0, 0.0), "12b. Orbital insertion rejects suborbital tangential velocity")
+	_assert_true(not satisfies_orbit.call(165000.0, 7797.4, 0.0), "12c. Orbital insertion rejects an off-target altitude")
+	_assert_true(not satisfies_orbit.call(185000.0, 7797.4, 110.0), "12d. Orbital insertion rejects excessive vertical speed")
 	
 	# Point 13: Successful launch continues to Deep Space Transfer
 	Helios4CampaignData.current_stage = Helios4CampaignData.Stage.PHASE_2_LAUNCH

@@ -123,7 +123,7 @@ func _load_crisis_step(step: CrisisStep) -> void:
 			
 		CrisisStep.ALL_CRISES_RESOLVED:
 			step_title.text = "PHASE 4 COMPLETE: ALL CRISIS HAZARDS MITIGATED"
-			warning_banner.text = "★ MISSION STATE STABILIZED: Spacecraft systems secured for Sun-Earth L1 Halo-Orbit Insertion."
+			warning_banner.text = "* MISSION STATE STABILIZED: Spacecraft systems secured for Sun-Earth L1 Halo-Orbit Insertion."
 			warning_banner.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 			step_desc.text = "Decision audit recorded:\n• Solar Storm Strategy: %s\n• Leak Mitigation: %s (Propellant lost: %.1f kg)\n• Attitude Recovery: %s (Attitude accuracy: ±%.2f°)\n\nEquipment Health: %.1f%% • Science Points: +%.1f pts" % [
 				decisions_log[0]["title"], decisions_log[1]["title"], propellant_lost_kg, decisions_log[2]["title"], attitude_accuracy_deg,
@@ -234,5 +234,5 @@ func _apply_storm_response(choice_idx: int) -> void:
 		equipment_degradation_pct += 10.0
 	if thermal_temp_c > 60.0:
 		equipment_degradation_pct += min(15.0, (thermal_temp_c - 60.0) * 0.25)
-	role_advice_label.text = "STORM RESPONSE: Solar %.0f W • Load %.0f W • Battery %.0f→%.0f Wh • Bus %.1f°C • Shield %s" % [solar_generation_w, subsystem_load_w, battery_before, battery_charge_wh, thermal_temp_c, "SUNWARD" if thermal_shield_oriented else "OFF-AXIS"]
+	role_advice_label.text = "STORM RESPONSE: Solar %.0f W • Load %.0f W • Battery %.0f>%.0f Wh • Bus %.1f°C • Shield %s" % [solar_generation_w, subsystem_load_w, battery_before, battery_charge_wh, thermal_temp_c, "SUNWARD" if thermal_shield_oriented else "OFF-AXIS"]
 	Helios4CampaignData.record_team_decision(Helios4CampaignData.ROLE_SYSTEMS, "Storm Power/Thermal Budget", "Solar %.0f W; load %.0f W; battery %.0f Wh; thermal bus %.1f C; shield %s." % [solar_generation_w, subsystem_load_w, battery_charge_wh, thermal_temp_c, "sunward" if thermal_shield_oriented else "off-axis"])

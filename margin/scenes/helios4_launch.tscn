@@ -274,10 +274,10 @@ text = "T- 00:03"
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_left = 24.0
-offset_top = 48.0
+offset_left = 184.0
+offset_top = 232.0
 offset_right = -24.0
-offset_bottom = 76.0
+offset_bottom = 260.0
 grow_horizontal = 2
 alignment = 1
 theme_override_constants/separation = 6
@@ -571,9 +571,9 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -96.0
-offset_top = 14.0
+offset_top = 52.0
 offset_right = -16.0
-offset_bottom = 94.0
+offset_bottom = 132.0
 grow_horizontal = 0
 
 [node name="RightFlightPanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
@@ -694,7 +694,7 @@ custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_ActionBtn")
 theme_override_font_sizes/font_size = 11
-text = "PROCEED TO TRANSFER →"
+text = "PROCEED TO TRANSFER >"
 
 [node name="AdvisoryBanner" type="Label" parent="CanvasLayer/RootUI"]
 layout_mode = 1

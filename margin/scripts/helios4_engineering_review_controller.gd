@@ -146,7 +146,7 @@ func _populate_checks() -> void:
 			fix_hbox.add_child(cor_lbl)
 			
 			var fix_btn := Button.new()
-			fix_btn.text = "FIX IN %s →" % chk["role"].to_upper()
+			fix_btn.text = "FIX IN %s >" % chk["role"].to_upper()
 			fix_btn.add_theme_font_size_override("font_size", 10)
 			var btn_style := StyleBoxFlat.new()
 			btn_style.bg_color = Color(0.2, 0.08, 0.08, 0.95)
@@ -211,16 +211,16 @@ func _update_launch_button_state() -> void:
 		launch_btn.text = "REVIEW HOLD — WAIVER AVAILABLE"
 		Helios4CampaignData.is_launch_authorized = false
 	elif not all_voted:
-		status_banner.text = "● ENGINEERING CHECKS PASSED: All 4 workstations must sign off [GO] for final launchpad clearance."
+		status_banner.text = "- ENGINEERING CHECKS PASSED: All 4 workstations must sign off [GO] for final launchpad clearance."
 		status_banner.add_theme_color_override("font_color", Color(0.98, 0.65, 0.2))
 		launch_btn.disabled = true
 		launch_btn.text = "AWAITING 4-OFFICER GO SIGN-OFF"
 		Helios4CampaignData.is_launch_authorized = false
 	else:
-		status_banner.text = "★ UNANIMOUS GO FOR LAUNCH: HELIOS-4 Launchpad clearance granted."
+		status_banner.text = "* UNANIMOUS GO FOR LAUNCH: HELIOS-4 Launchpad clearance granted."
 		status_banner.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 		launch_btn.disabled = false
-		launch_btn.text = "PROCEED TO EARTH LAUNCH (PHASE 2) →"
+		launch_btn.text = "PROCEED TO EARTH LAUNCH (PHASE 2) >"
 		Helios4CampaignData.set_launch_authorized(true)
 
 func _on_launch_pressed() -> void:

@@ -87,13 +87,13 @@ func _run_all_tests() -> void:
 func _test_1_orbital_insertion_transition(ctrl: Helios4DeepSpaceController) -> void:
 	print("\n[TEST 1] Orbital Insertion Transition to Deep Space Injection")
 	Helios4CampaignData.launch_telemetry = {
-		"orbit_altitude_km": 165.0,
-		"orbit_velocity_ms": 7750.0,
+		"orbit_altitude_km": 185.0,
+		"orbit_velocity_ms": 7797.393,
 		"is_orbital_insertion_success": true
 	}
 	ctrl._inherit_campaign_state()
-	_assert_approx(ctrl.distance_km, 165.0, 1.0, "Starts in Earth parking orbit (165 km)")
-	_assert_approx(ctrl.velocity_kms, 7.75, 0.05, "Parking orbit velocity is circular ~7.75 km/s")
+	_assert_approx(ctrl.distance_km, 185.0, 1.0, "Starts in Earth parking orbit (185 km)")
+	_assert_approx(ctrl.velocity_kms, 7.797393, 0.005, "Parking orbit velocity is circular at 185 km")
 	_assert_true(ctrl.current_subphase == Helios4DeepSpaceController.SubPhase.PARKING_ORBIT, "Subphase initialized to PARKING_ORBIT")
 
 func _test_2_actual_spacecraft_state_persistence(ctrl: Helios4DeepSpaceController) -> void:
@@ -114,7 +114,7 @@ func _test_3_transfer_burn_propellant_consumption(ctrl: Helios4DeepSpaceControll
 	# Simulate 2 seconds of burn
 	ctrl._process_injection_burn(2.0)
 	_assert_true(ctrl.probe_propellant_kg < initial_fuel, "Propellant consumed during injection burn (%.1f < %.1f kg)" % [ctrl.probe_propellant_kg, initial_fuel])
-	_assert_true(ctrl.velocity_kms > 7.75, "Velocity increased toward hyperbolic escape (%.2f km/s > 7.75 km/s)" % ctrl.velocity_kms)
+	_assert_true(ctrl.velocity_kms > 7.79, "Velocity increased toward hyperbolic escape (%.2f km/s > circular parking speed)" % ctrl.velocity_kms)
 
 func _test_4_delta_v_feasibility(ctrl: Helios4DeepSpaceController) -> void:
 	print("\n[TEST 4] Available Delta-V Affects Transfer Feasibility")

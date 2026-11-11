@@ -111,17 +111,22 @@ var flight_legend_lbl: Label = null
 # Flight Physics State (Educational Simulation Model)
 var altitude_m: float = 0.0
 var velocity_ms: float = 0.0
+var radial_velocity_ms: float = 0.0
+var tangential_velocity_ms: float = 0.0
+var orbital_angle_rad: float = 0.0
 var throttle: float = 1.0 # 0.0 to 1.0
-var pitch_deg: float = 90.0 # 90 = vertical, 0 = horizontal
+var pitch_deg: float = 90.0 # Degrees above local horizon; 0 = tangential, 90 = radial-out
+var guidance_pitch_target_deg: float = 90.0
+var auto_guidance_enabled: bool = true
 var flight_time_s: float = 0.0
 var countdown_s: float = 10.0
 var _last_countdown_sec: int = -1
 var downrange_m: float = 0.0
 
 var s1_fuel_kg: float = 24000.0
-var s2_fuel_kg: float = 5400.0
+var s2_fuel_kg: float = 9000.0
 var s1_fuel_capacity_kg: float = 24000.0
-var s2_fuel_capacity_kg: float = 5400.0
+var s2_fuel_capacity_kg: float = 9000.0
 
 var current_mass_kg: float = 34000.0
 var dynamic_pressure_kpa: float = 0.0
@@ -134,6 +139,8 @@ var stage1_separated: bool = false
 var orbit_achieved: bool = false
 var systems_activated: bool = false
 var time_warp: float = 1.0
+var _orbit_warp_user_cancelled: bool = false
+var _auto_orbit_warp_active: bool = false
 
 # Camera Smooth Interpolation & Dynamic Vehicle Tracking
 var _cam_relative_offset: Vector3 = Vector3(-3.5, -2.5, 24.0)
@@ -177,6 +184,15 @@ var btn_fairing_jettison: Button = null
 var btn_pause_flight: Button = null
 var btn_abort_flight: Button = null
 var val_throttle_display: Label = null
+var btn_orbit_warp: Button = null
+var btn_guidance_mode: Button = null
+var polar_telemetry_values: Dictionary = {}
+
+func _set_ascent_telemetry_visible(visible: bool) -> void:
+	for node_name in ["PolarTelemetryPanel", "LeftTelemetryTape"]:
+		var panel := find_child(node_name, true, false) as Control
+		if panel:
+			panel.visible = visible
 
 # Custom Procedural HUD Widgets
 var navball_widget: Helios4HUDWidgets.NavBall = null
@@ -191,8 +207,16 @@ var attitude_widget: Helios4HUDWidgets.AttitudeScope = null
 const G0: float = 9.80665
 const RHO_0: float = 1.225 # kg/m^3 sea-level air density
 const SCALE_HEIGHT_M: float = 7500.0 # Earth atmospheric scale height
+const EARTH_RADIUS_M: float = 6371000.0
+const EARTH_MU_M3_S2: float = 3.986004418e14
 const TARGET_ORBIT_ALT_M: float = 185000.0 # 185 km parking orbit
-const TARGET_ORBIT_VEL_MS: float = 7780.0
+const TARGET_ORBIT_VEL_MS: float = 7797.4 # sqrt(mu / (Earth radius + 185 km))
+const ORBIT_INSERTION_ALT_TOLERANCE_M: float = 8000.0
+const ORBIT_INSERTION_RADIAL_SPEED_TOLERANCE_MS: float = 50.0
+const ORBIT_INSERTION_TANGENTIAL_SPEED_TOLERANCE_MS: float = 20.0
+const AUTO_ORBIT_WARP: float = 5.5
+const PHYSICS_SUBSTEP_S: float = 0.025
+const MAX_ASCENT_G_LOAD: float = 4.0
 
 func _ready() -> void:
 	var launch_ui := find_child("RootUI", true, false) as Control
@@ -211,11 +235,17 @@ func _ready() -> void:
 	btn_pause_flight = find_child("BtnPauseFlight", true, false) as Button
 	btn_abort_flight = find_child("BtnAbortFlight", true, false) as Button
 	val_throttle_display = find_child("ValThrottleDisplay", true, false) as Label
+	if obj_panel:
+		# The live objective banner below is the single mission prompt. Keep the
+		# legacy panel in the tree for QA hooks, but don't draw a duplicate prompt.
+		obj_panel.visible = false
 	_build_pause_banner()
 	_build_callout_banner()
 	if launch_ui:
 		_build_camera_hint(launch_ui)
 		_build_objective_banner(launch_ui)
+		_build_polar_telemetry_panel(launch_ui)
+		_build_launch_assists(launch_ui)
 	if launch_ui:
 		MarginTheme.apply_interactive_polish(launch_ui)
 		Sfx.attach_hud_toggle(launch_ui)
@@ -240,6 +270,7 @@ func _ready() -> void:
 	else:
 		current_phase = FlightPhase.PRE_LAUNCH_PREPARATION
 		_build_prelaunch_checklist_ui()
+		_set_ascent_telemetry_visible(false)
 
 	# Print UI coordinates for automated QA and browser testing
 	get_tree().process_frame.connect(func():
@@ -274,8 +305,13 @@ func _init_flight_parameters() -> void:
 
 	altitude_m = 0.0
 	velocity_ms = 0.0
+	radial_velocity_ms = 0.0
+	tangential_velocity_ms = 0.0
+	orbital_angle_rad = 0.0
 	throttle = 1.0
 	pitch_deg = 90.0
+	guidance_pitch_target_deg = 90.0
+	auto_guidance_enabled = true
 	flight_path_angle_deg = 90.0
 	flight_time_s = 0.0
 	countdown_s = 10.0
@@ -289,6 +325,8 @@ func _init_flight_parameters() -> void:
 	orbit_achieved = false
 	systems_activated = false
 	time_warp = 1.0
+	_orbit_warp_user_cancelled = false
+	_auto_orbit_warp_active = false
 	countdown_paused = false
 	max_q_achieved_kpa = 0.0
 	max_g_load_achieved = 1.0
@@ -560,7 +598,7 @@ func _build_launch_pad_facility(parent: Node3D) -> void:
 	parent.add_child(pad_steam_emitter)
 
 func _build_curved_earth_mesh(parent: Node3D) -> void:
-	var earth_radius = 160.0
+	var earth_radius = 540.0
 
 	# 1. Earth Sphere with High-Resolution Procedural Satellite Ocean/Continent/Cloud Texture
 	var earth := MeshInstance3D.new()
@@ -609,19 +647,19 @@ func _build_curved_earth_mesh(parent: Node3D) -> void:
 				col = Color(0.92, 0.95, 1.0)
 			elif elev < 0.08:
 				# Deep Oceanic Blue (Matching Reference 02 deep blue Earth)
-				col = Color(0.04, 0.11, 0.28)
+				col = Color(0.006, 0.035, 0.14)
 			elif elev < 0.16:
 				# Coastal Azure / Turquoise Reefs
-				col = Color(0.06, 0.28, 0.45)
+				col = Color(0.012, 0.16, 0.34)
 			elif elev < 0.30:
 				# Continent Green
-				col = Color(0.12, 0.26, 0.14)
+				col = Color(0.065, 0.18, 0.10)
 			elif elev < 0.42:
 				# Savannah Tan / Arid Land
-				col = Color(0.32, 0.26, 0.16)
+				col = Color(0.24, 0.18, 0.10)
 			else:
 				# Highland Brown
-				col = Color(0.42, 0.35, 0.25)
+				col = Color(0.32, 0.27, 0.20)
 
 			# Clouds: Swirling wispy cloud bands across oceans & continents
 			var c_val = noise_cloud.get_noise_3d(nx * 1.6, ny * 1.6, nz * 1.6)
@@ -652,7 +690,7 @@ void fragment() {
 	float atmo_fresnel = pow(1.0 - NdotV, 4.0);
 	vec3 atmo_cyan = vec3(0.32, 0.76, 1.0);
 
-	vec3 surface = tex_col.rgb * NdotL;
+	vec3 surface = tex_col.rgb * NdotL * 1.15;
 	vec3 final_col = mix(surface, atmo_cyan, atmo_fresnel * 0.70);
 	
 	// Glowing cyan/azure horizon limb
@@ -830,17 +868,83 @@ func _build_engine_exhaust_fx(parent: Node3D) -> void:
 	parent.add_child(plume_smoke_emitter)
 
 func _build_vacuum_exhaust_fx(parent: Node3D) -> void:
-	# Stage 2 Vacuum Expanding Plume (Ethereal Blue/Violet bell)
-	var vac_flame := MeshInstance3D.new()
-	var vf_cyl := CylinderMesh.new()
-	vf_cyl.top_radius = 0.35
-	vf_cyl.bottom_radius = 2.4
-	vf_cyl.height = 4.5
-	vf_cyl.radial_segments = 24
-	vac_flame.mesh = vf_cyl
-	vac_flame.position = Vector3(0.0, -2.25, 0.0)
-	vac_flame.material_override = SpacecraftMaterials.get_mat("vacuum_plume_blue")
-	parent.add_child(vac_flame)
+	# Vacuum engine: translucent additive plasma layers, a white-gold core, and
+	# fine charged-particle sparks. The cone is a luminous volume, not a solid prop.
+	var outer := _make_vacuum_plume_layer("PlasmaOuter", 0.28, 1.42, 4.8,
+		Color(0.10, 0.48, 1.0), 0.22, 2.4)
+	outer.position = Vector3(0.0, -2.35, 0.0)
+	parent.add_child(outer)
+	var inner_halo := _make_vacuum_plume_layer("PlasmaHalo", 0.24, 0.86, 3.9,
+		Color(0.28, 0.72, 1.0), 0.32, 3.5)
+	inner_halo.position = Vector3(0.0, -1.95, 0.0)
+	parent.add_child(inner_halo)
+	var core := _make_vacuum_plume_layer("WhiteGoldCore", 0.16, 0.38, 2.15,
+		Color(1.0, 0.78, 0.38), 0.92, 9.0)
+	core.position = Vector3(0.0, -1.08, 0.0)
+	parent.add_child(core)
+
+	var sparks := CPUParticles3D.new()
+	sparks.name = "VacuumPlumeSparks"
+	sparks.position = Vector3(0.0, -0.32, 0.0)
+	sparks.amount = 28
+	sparks.lifetime = 0.48
+	sparks.emitting = true
+	sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	sparks.emission_sphere_radius = 0.20
+	sparks.direction = Vector3(0.0, -1.0, 0.0)
+	sparks.spread = 28.0
+	sparks.initial_velocity_min = 7.0
+	sparks.initial_velocity_max = 17.0
+	sparks.gravity = Vector3(0.0, -1.0, 0.0)
+	sparks.scale_amount_min = 0.025
+	sparks.scale_amount_max = 0.075
+	var spark_mesh := SphereMesh.new()
+	spark_mesh.radius = 0.05
+	spark_mesh.height = 0.10
+	sparks.mesh = spark_mesh
+	var spark_material := StandardMaterial3D.new()
+	spark_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	spark_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	spark_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	spark_material.albedo_color = Color(1.0, 0.78, 0.38, 0.95)
+	spark_material.emission_enabled = true
+	spark_material.emission = Color(1.0, 0.64, 0.25)
+	spark_material.emission_energy_multiplier = 5.0
+	sparks.material_override = spark_material
+	parent.add_child(sparks)
+
+	var plume_light := OmniLight3D.new()
+	plume_light.name = "VacuumPlumeLight"
+	plume_light.light_color = Color(0.34, 0.62, 1.0)
+	plume_light.light_energy = 1.6
+	plume_light.omni_range = 7.0
+	plume_light.position = Vector3(0.0, -0.9, 0.0)
+	parent.add_child(plume_light)
+
+
+func _make_vacuum_plume_layer(layer_name: String, nozzle_radius: float, exit_radius: float,
+		length: float, tint: Color, alpha: float, energy: float) -> MeshInstance3D:
+	var layer := MeshInstance3D.new()
+	layer.name = layer_name
+	var cone := CylinderMesh.new()
+	cone.top_radius = nozzle_radius
+	cone.bottom_radius = exit_radius
+	cone.height = length
+	cone.radial_segments = 32
+	layer.mesh = cone
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_color = Color(tint.r, tint.g, tint.b, alpha)
+	mat.emission_enabled = true
+	mat.emission = tint
+	mat.emission_energy_multiplier = energy
+	layer.material_override = mat
+	layer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return layer
 
 func _build_detached_booster_mesh(parent: Node3D) -> void:
 	# Clone Stage 1 booster stack for physical tumbling separation
@@ -1363,7 +1467,7 @@ func _show_readiness_hold_modal() -> void:
 	hbox.alignment = BoxContainer.ALIGNMENT_END
 
 	var btn_review := Button.new()
-	btn_review.text = "PROCEED TO READINESS REVIEW →"
+	btn_review.text = "PROCEED TO READINESS REVIEW >"
 	btn_review.add_theme_font_size_override("font_size", 11)
 	var r_style := StyleBoxFlat.new()
 	r_style.bg_color = Color(0.12, 0.52, 0.82, 0.95)
@@ -1413,8 +1517,8 @@ func _build_prelaunch_checklist_ui() -> void:
 	prelaunch_panel = PanelContainer.new()
 	prelaunch_panel.name = "PrelaunchChecklistPanel"
 	prelaunch_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	prelaunch_panel.offset_left = 82.0
-	prelaunch_panel.offset_top = 84.0
+	prelaunch_panel.offset_left = 12.0
+	prelaunch_panel.offset_top = 128.0
 	prelaunch_panel.custom_minimum_size = Vector2(340, 310)
 
 	var p_style := StyleBoxFlat.new()
@@ -1472,7 +1576,7 @@ func _build_prelaunch_checklist_ui() -> void:
 	# Action Buttons
 	var auto_btn := Button.new()
 	auto_btn.name = "BtnAutoVerifyPreflight"
-	auto_btn.text = "⚡ AUTO-VERIFY ALL [RAPID PREFLIGHT]"
+	auto_btn.text = "AUTO-VERIFY ALL [RAPID PREFLIGHT]"
 	auto_btn.add_theme_font_size_override("font_size", 10)
 	var auto_style := StyleBoxFlat.new()
 	auto_style.bg_color = Color(0.12, 0.22, 0.35, 0.9)
@@ -1571,7 +1675,7 @@ func _refresh_prelaunch_checklist_ui() -> void:
 	var start_cd_btn = prelaunch_panel.find_child("BtnStartCountdown", true, false) as Button
 	if start_cd_btn:
 		if all_verified:
-			start_cd_btn.text = "INITIATE COUNTDOWN (T-10s) →"
+			start_cd_btn.text = "INITIATE COUNTDOWN (T-10s) >"
 			start_cd_btn.disabled = false
 		else:
 			start_cd_btn.text = "VERIFY ALL CHECKS BEFORE COUNTDOWN"
@@ -1609,7 +1713,7 @@ func _on_pause_countdown_pressed() -> void:
 			p_btn.text = "RESUME" if countdown_paused else "HOLD"
 		var advisory_lbl = find_child("AdvisoryBanner", true, false) as Label
 		if advisory_lbl:
-			advisory_lbl.text = ("● COUNTDOWN HOLD: Paused at T-%.1f seconds." % countdown_s) if countdown_paused else ("RESUMING COUNTDOWN: T-%.1f seconds." % countdown_s)
+			advisory_lbl.text = ("- COUNTDOWN HOLD: Paused at T-%.1f seconds." % countdown_s) if countdown_paused else ("RESUMING COUNTDOWN: T-%.1f seconds." % countdown_s)
 			advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15) if countdown_paused else Color(0.35, 0.85, 1.0))
 
 func _on_abort_countdown_pressed() -> void:
@@ -1619,7 +1723,7 @@ func _on_abort_countdown_pressed() -> void:
 	if pad_steam_emitter: pad_steam_emitter.emitting = false
 	var advisory_lbl = find_child("AdvisoryBanner", true, false) as Label
 	if advisory_lbl:
-		advisory_lbl.text = "● LAUNCH COUNTDOWN ABORTED: Pad safe, reset to pre-flight standby."
+		advisory_lbl.text = "- LAUNCH COUNTDOWN ABORTED: Pad safe, reset to pre-flight standby."
 		advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15))
 	_refresh_prelaunch_checklist_ui()
 
@@ -1630,7 +1734,7 @@ func _physics_process(delta: float) -> void:
 		_update_ui()
 		return
 
-	delta *= time_warp
+	var sim_delta: float = delta * time_warp
 	if current_phase == FlightPhase.FLIGHT_COMPLETED or current_phase == FlightPhase.FLIGHT_ABORTED or current_phase == FlightPhase.READINESS_HOLD:
 		_update_camera_smooth(camera_delta)
 		return
@@ -1644,7 +1748,7 @@ func _physics_process(delta: float) -> void:
 	# Countdown
 	if current_phase == FlightPhase.COUNTDOWN:
 		if not countdown_paused:
-			countdown_s -= delta
+			countdown_s -= sim_delta
 			var cd_sec: int = int(ceil(countdown_s))
 			if cd_sec != _last_countdown_sec and cd_sec >= 0:
 				_last_countdown_sec = cd_sec
@@ -1658,16 +1762,23 @@ func _physics_process(delta: float) -> void:
 		_update_camera_smooth(camera_delta)
 		return
 
-	flight_time_s += delta
-	_process_space_environment(delta)
-	_tick_auto_assist(delta)
-	_update_flight_physics(delta)
+	# Integrate at a bounded simulation step even when the player engages time
+	# compression. This keeps the polar equations stable at 5.5x warp.
+	var remaining_sim_time: float = sim_delta
+	while remaining_sim_time > 0.0 and not orbit_achieved and current_phase != FlightPhase.FLIGHT_ABORTED and current_phase != FlightPhase.FLIGHT_COMPLETED:
+		var step: float = minf(remaining_sim_time, PHYSICS_SUBSTEP_S)
+		flight_time_s += step
+		_process_space_environment(step)
+		_tick_auto_assist(step)
+		_update_flight_physics(step)
+		_check_phase_transitions()
+		remaining_sim_time -= step
+
 	if current_phase == FlightPhase.ASCENT_STAGE1 or current_phase == FlightPhase.MAX_Q_CORRIDOR or current_phase == FlightPhase.ASCENT_STAGE2:
 		var roar_density: float = clampf(exp(-altitude_m / SCALE_HEIGHT_M), 0.0, 1.0) if altitude_m < 85000.0 else 0.0
 		Sfx.set_engine_level(throttle, roar_density)
-	_update_3d_visuals(delta)
+	_update_3d_visuals(sim_delta)
 	_update_ui()
-	_check_phase_transitions()
 	_update_camera_smooth(camera_delta)
 
 func _execute_ignition_liftoff() -> void:
@@ -1715,6 +1826,7 @@ func _execute_ignition_liftoff() -> void:
 
 	if prelaunch_panel:
 		prelaunch_panel.visible = false
+	_set_ascent_telemetry_visible(true)
 
 	# Auto-switch to Chase view if on Pad camera
 	if current_cam_mode == CameraMode.PAD and not _user_manually_selected_cam:
@@ -1724,11 +1836,12 @@ func _update_flight_physics(delta: float) -> void:
 	var v_cfg = Helios4CampaignData.vehicle_config
 	var thrust_n: float = 0.0
 	var isp_s: float = 320.0
+	var radius_m: float = EARTH_RADIUS_M + altitude_m
 
 	# Atmospheric Density Model: rho = rho_0 * exp(-h / H)
 	var air_density: float = RHO_0 * exp(-altitude_m / SCALE_HEIGHT_M) if altitude_m < 85000.0 else 0.0
 
-	# Dynamic Pressure: q = 0.5 * rho * v^2 / 1000.0 (in kPa)
+	# Dynamic Pressure uses total inertial speed (radial + tangential).
 	dynamic_pressure_kpa = (0.5 * air_density * velocity_ms * velocity_ms) / 1000.0
 	if dynamic_pressure_kpa > max_q_achieved_kpa:
 		max_q_achieved_kpa = dynamic_pressure_kpa
@@ -1743,6 +1856,9 @@ func _update_flight_physics(delta: float) -> void:
 			vapor_cone_node.visible = true
 			var cone_scale = clamp((dynamic_pressure_kpa - 25.0) / 10.0, 0.8, 1.25)
 			vapor_cone_node.scale = Vector3(cone_scale, cone_scale, cone_scale)
+		# Closed-loop throttle protection keeps the player inside the Max-Q envelope.
+		if dynamic_pressure_kpa >= 30.0:
+			throttle = minf(throttle, 0.70)
 
 		# Auto-switch to signature Max-Q camera if on Chase view
 		if current_cam_mode == CameraMode.CHASE and dynamic_pressure_kpa > 30.0 and not _user_manually_selected_cam:
@@ -1758,18 +1874,28 @@ func _update_flight_physics(delta: float) -> void:
 	else:
 		if vapor_cone_node:
 			vapor_cone_node.visible = false
+		if current_phase == FlightPhase.MAX_Q_CORRIDOR and dynamic_pressure_kpa < 22.0:
+			current_phase = FlightPhase.ASCENT_STAGE1
+			throttle = maxf(throttle, 1.0)
 
-	# Propulsion and Fuel Depletion
+	# Propulsion, mass flow, and stage jettisons use the actual wet-to-dry mass
+	# bookkeeping from the hangar model. Fuel never vanishes behind a mass floor.
 	if not stage1_separated:
-		var s1_thrust_max = v_cfg.get("stage1_thrust_kn", 480.0) * 1000.0
-		thrust_n = s1_thrust_max * throttle
-		isp_s = v_cfg.get("stage1_isp_s", 320.0)
-		var mdot = thrust_n / (isp_s * G0) if thrust_n > 0.0 else 0.0
-		var burn_fuel = mdot * delta
-		s1_fuel_kg = max(0.0, s1_fuel_kg - burn_fuel)
-		current_mass_kg = max(current_mass_kg - burn_fuel, 8000.0)
+		if current_phase == FlightPhase.STAGE1_BURNOUT or current_phase == FlightPhase.STAGE_SEPARATION:
+			thrust_n = 0.0
+		else:
+			var s1_thrust_max: float = v_cfg.get("stage1_thrust_kn", 480.0) * 1000.0
+			thrust_n = s1_thrust_max * throttle
+			isp_s = v_cfg.get("stage1_isp_s", 320.0)
+			var mdot: float = thrust_n / (isp_s * G0) if thrust_n > 0.0 else 0.0
+			var requested_burn: float = mdot * delta
+			var burn_fuel: float = minf(s1_fuel_kg, requested_burn)
+			if requested_burn > 0.0 and burn_fuel < requested_burn:
+				thrust_n *= burn_fuel / requested_burn
+			s1_fuel_kg = maxf(0.0, s1_fuel_kg - burn_fuel)
+			current_mass_kg = maxf(current_mass_kg - burn_fuel, 1.0)
 
-		if s1_fuel_kg <= 0.0 and current_phase != FlightPhase.STAGE1_BURNOUT and current_phase != FlightPhase.STAGE_SEPARATION:
+		if s1_fuel_kg <= 0.001 and current_phase != FlightPhase.STAGE1_BURNOUT and current_phase != FlightPhase.STAGE_SEPARATION:
 			current_phase = FlightPhase.STAGE1_BURNOUT
 			throttle = 0.0
 			thrust_n = 0.0
@@ -1780,29 +1906,39 @@ func _update_flight_physics(delta: float) -> void:
 			if not _user_manually_selected_cam:
 				_set_camera_mode(CameraMode.SEPARATION)
 			print("[Launch] MECO: Main Engine Cut-Off. Stage 1 Burnout confirmed.")
-	elif not orbit_achieved:
+	elif not orbit_achieved and s2_fuel_kg > 0.0:
 		# Stage 2 Vacuum Burn
-		var s2_thrust_max = v_cfg.get("stage2_thrust_kn", 65.0) * 1000.0
-		thrust_n = s2_thrust_max * throttle
+		var s2_thrust_max: float = v_cfg.get("stage2_thrust_kn", 140.0) * 1000.0
+		# Limit terminal acceleration to a human-rated 4 g while preserving the
+		# designed 140 kN maximum thrust early in the vacuum burn.
+		thrust_n = minf(s2_thrust_max * throttle, current_mass_kg * G0 * MAX_ASCENT_G_LOAD)
 		isp_s = v_cfg.get("stage2_isp_s", 450.0)
-		var mdot2 = thrust_n / (isp_s * G0) if thrust_n > 0.0 else 0.0
-		var burn_fuel2 = mdot2 * delta
-		s2_fuel_kg = max(0.0, s2_fuel_kg - burn_fuel2)
-		current_mass_kg = max(current_mass_kg - burn_fuel2, 1200.0)
+		var mdot2: float = thrust_n / (isp_s * G0) if thrust_n > 0.0 else 0.0
+		var requested_burn2: float = mdot2 * delta
+		var burn_fuel2: float = minf(s2_fuel_kg, requested_burn2)
+		if requested_burn2 > 0.0 and burn_fuel2 < requested_burn2:
+			thrust_n *= burn_fuel2 / requested_burn2
+		s2_fuel_kg = maxf(0.0, s2_fuel_kg - burn_fuel2)
+		current_mass_kg = maxf(current_mass_kg - burn_fuel2, 1.0)
 
-		if s2_fuel_kg <= 0.0 and velocity_ms < 7700.0:
-			_trigger_flight_abort("SUBORBITAL TRAJECTORY: Upper stage fuel depleted before reaching orbital velocity (%.0f m/s < 7,700 m/s)." % velocity_ms)
-			return
+	# Smoothly follow a pitch schedule, then use radial-velocity feedback to
+	# circularize. In manual mode A/D controls remain authoritative.
+	guidance_pitch_target_deg = _get_gravity_turn_pitch_target(thrust_n)
+	if auto_guidance_enabled and thrust_n > 0.0:
+		pitch_deg = move_toward(pitch_deg, guidance_pitch_target_deg, 45.0 * delta)
 
 	# G-load: T / (m * g0)
 	g_load = (thrust_n / (current_mass_kg * G0)) if current_mass_kg > 0.0 else 1.0
 	if g_load > max_g_load_achieved:
 		max_g_load_achieved = g_load
 
-	# Aerodynamic Drag: D = 0.5 * rho * v^2 * Cd * A
+	# Aerodynamic drag opposes the vehicle's local velocity vector.
 	var drag_n: float = dynamic_pressure_kpa * 1000.0 * 0.28 * 4.5
+	var gamma_rad: float = atan2(radial_velocity_ms, maxf(tangential_velocity_ms, 0.001))
+	flight_path_angle_deg = rad_to_deg(gamma_rad)
+	velocity_ms = sqrt(radial_velocity_ms * radial_velocity_ms + tangential_velocity_ms * tangential_velocity_ms)
 
-	# Angle of attack: difference between vehicle pitch and flight path angle
+	# Angle of attack: vehicle pitch relative to the local flight-path angle.
 	var alpha_deg: float = abs(pitch_deg - flight_path_angle_deg)
 	if dynamic_pressure_kpa > 5.0 and alpha_deg > 14.0:
 		structural_stress_pct += delta * 6.0 * (alpha_deg - 14.0)
@@ -1810,26 +1946,25 @@ func _update_flight_physics(delta: float) -> void:
 			_trigger_flight_abort("AERODYNAMIC SHEAR FAILURE: High angle of attack (%.1f°) at %.1f kPa dynamic pressure tore vehicle apart." % [alpha_deg, dynamic_pressure_kpa])
 			return
 
-	# Effective Tangential Acceleration along velocity vector
-	var thrust_tangential = thrust_n * cos(deg_to_rad(alpha_deg)) - drag_n
-	var gamma_rad = deg_to_rad(flight_path_angle_deg)
-	var accel_ms2: float = (thrust_tangential / current_mass_kg) - (G0 * sin(gamma_rad))
-	velocity_ms = max(0.0, velocity_ms + accel_ms2 * delta)
-
-	# Gravity turn rate: change of flight path angle
-	if velocity_ms > 2.0:
-		var normal_thrust = thrust_n * sin(deg_to_rad(pitch_deg - flight_path_angle_deg))
-		var centrifugal = (velocity_ms * velocity_ms * cos(gamma_rad)) / (6371000.0 + altitude_m)
-		var gamma_dot_rad = (normal_thrust / (current_mass_kg * velocity_ms)) - ((G0 * cos(gamma_rad)) / velocity_ms) + (centrifugal / velocity_ms)
-		flight_path_angle_deg = clamp(flight_path_angle_deg + rad_to_deg(gamma_dot_rad) * delta, 0.0, 90.0)
-	else:
-		flight_path_angle_deg = 90.0
-
-	# Altitude and downrange integration
-	var v_vert = velocity_ms * sin(deg_to_rad(flight_path_angle_deg))
-	var v_horiz = velocity_ms * cos(deg_to_rad(flight_path_angle_deg))
-	altitude_m += v_vert * delta
-	downrange_m += v_horiz * delta
+	# Earth-centered polar orbital kinematics:
+	# dr/dt = vr; dθ/dt = vθ/r
+	# dvr/dt = (T sin ψ - D sin γ)/m - μ/r² + vθ²/r
+	# dvθ/dt = (T cos ψ - D cos γ)/m - vr vθ/r
+	var pitch_rad: float = deg_to_rad(pitch_deg)
+	var radial_accel: float = (thrust_n * sin(pitch_rad) - drag_n * sin(gamma_rad)) / current_mass_kg \
+		- EARTH_MU_M3_S2 / (radius_m * radius_m) \
+		+ (tangential_velocity_ms * tangential_velocity_ms) / radius_m
+	var tangential_accel: float = (thrust_n * cos(pitch_rad) - drag_n * cos(gamma_rad)) / current_mass_kg \
+		- (radial_velocity_ms * tangential_velocity_ms) / radius_m
+	radial_velocity_ms += radial_accel * delta
+	tangential_velocity_ms = maxf(0.0, tangential_velocity_ms + tangential_accel * delta)
+	altitude_m += radial_velocity_ms * delta
+	radius_m = EARTH_RADIUS_M + altitude_m
+	var angular_rate_rad_s: float = tangential_velocity_ms / maxf(radius_m, 1.0)
+	orbital_angle_rad += angular_rate_rad_s * delta
+	downrange_m = orbital_angle_rad * EARTH_RADIUS_M
+	velocity_ms = sqrt(radial_velocity_ms * radial_velocity_ms + tangential_velocity_ms * tangential_velocity_ms)
+	flight_path_angle_deg = rad_to_deg(atan2(radial_velocity_ms, maxf(tangential_velocity_ms, 0.001)))
 
 	# Check terrain impact
 	if altitude_m < 0.0 and flight_time_s > 3.0:
@@ -1837,11 +1972,44 @@ func _update_flight_physics(delta: float) -> void:
 		_trigger_flight_abort("TERRAIN IMPACT: Rocket pitched below horizon and collided with ocean/terrain.")
 		return
 
-	# Natural Gravity Turn Guidance: Optimal pitch schedule comparison for scoring
-	var target_pitch = 90.0 * (1.0 - sqrt(clamp(altitude_m / 140000.0, 0.0, 1.0)))
-	var pitch_deviation = abs(pitch_deg - target_pitch)
+	# Fuel exhaustion before a valid circular capture is a real launch failure.
+	var orbit_state_ready: bool = absf(altitude_m - TARGET_ORBIT_ALT_M) <= ORBIT_INSERTION_ALT_TOLERANCE_M \
+		and absf(radial_velocity_ms) <= ORBIT_INSERTION_RADIAL_SPEED_TOLERANCE_MS \
+		and absf(tangential_velocity_ms - TARGET_ORBIT_VEL_MS) <= ORBIT_INSERTION_TANGENTIAL_SPEED_TOLERANCE_MS
+	if stage1_separated and s2_fuel_kg <= 0.001 and not orbit_state_ready:
+		_trigger_flight_abort("SUBORBITAL TRAJECTORY: Upper-stage propellant depleted at %.0f km with vθ %.0f m/s and vr %.0f m/s." % [altitude_m / 1000.0, tangential_velocity_ms, radial_velocity_ms])
+		return
+
+	# Natural gravity-turn guidance error remains visible to the debrief.
+	var target_pitch: float = _get_gravity_turn_pitch_target(maxf(thrust_n, 1.0))
+	var pitch_deviation: float = absf(pitch_deg - target_pitch)
 	if pitch_deviation > 12.0:
 		trajectory_error_pct += delta * 1.5
+
+
+func _get_gravity_turn_pitch_target(thrust_n: float) -> float:
+	if altitude_m < 1000.0:
+		return 90.0 - clampf(altitude_m / 1000.0, 0.0, 1.0)
+	if altitude_m < 30000.0:
+		var u1: float = clampf((altitude_m - 1000.0) / 29000.0, 0.0, 1.0)
+		var eased1: float = u1 * u1 * (3.0 - 2.0 * u1)
+		return lerpf(89.0, 61.0, eased1)
+	if altitude_m < 100000.0:
+		var u2: float = clampf((altitude_m - 30000.0) / 70000.0, 0.0, 1.0)
+		var eased2: float = u2 * u2 * (3.0 - 2.0 * u2)
+		return lerpf(61.0, 10.0, eased2)
+
+	if thrust_n <= 0.0:
+		return 0.0
+	var radius_m: float = EARTH_RADIUS_M + altitude_m
+	var gamma_rad: float = atan2(radial_velocity_ms, maxf(tangential_velocity_ms, 0.001))
+	var desired_radial_speed: float = clampf((TARGET_ORBIT_ALT_M - altitude_m) / 35.0, -35.0, 700.0)
+	var desired_radial_accel: float = clampf((desired_radial_speed - radial_velocity_ms) * 0.16, -14.0, 8.0)
+	var q_pa: float = dynamic_pressure_kpa * 1000.0
+	var drag_n: float = q_pa * 0.28 * 4.5
+	var required_radial_thrust: float = current_mass_kg * (desired_radial_accel + EARTH_MU_M3_S2 / (radius_m * radius_m) - tangential_velocity_ms * tangential_velocity_ms / radius_m) \
+		+ drag_n * sin(gamma_rad)
+	return rad_to_deg(asin(clampf(required_radial_thrust / thrust_n, -0.85, 0.85)))
 
 func _check_phase_transitions() -> void:
 	# Fairing Jettison check (Above dense atmosphere: > 68,000m)
@@ -1851,11 +2019,27 @@ func _check_phase_transitions() -> void:
 			btn_fairing_jettison.disabled = false
 			print("[Launch] FAIRING RELEASE AVAILABLE: Vehicle in vacuum (>68 km). Press [J] or click FAIRING JETTISON.")
 
-	# Orbital insertion target is 185 km with a 160–210 km playable tolerance; fairing must already be jettisoned.
-	if fairing_separated and velocity_ms >= 7700.0 and altitude_m >= TARGET_ORBIT_ALT_M - 25000.0 and altitude_m <= TARGET_ORBIT_ALT_M + 25000.0 and flight_path_angle_deg <= 8.0 and not orbit_achieved:
+	# The long vacuum insertion is compressed only after the fairing is gone and
+	# the atmosphere is behind the vehicle. A manual 1x override stays respected.
+	if current_phase == FlightPhase.ASCENT_STAGE2 and altitude_m >= 85000.0 and fairing_separated and not _orbit_warp_user_cancelled and not orbit_achieved:
+		if time_warp != AUTO_ORBIT_WARP:
+			time_warp = AUTO_ORBIT_WARP
+			_auto_orbit_warp_active = true
+			print("[Launch] Auto time compression engaged at %.1fx for the upper-stage circularization burn." % AUTO_ORBIT_WARP)
+
+	# Capture requires a near-circular state at the target radius, not a high
+	# scalar speed while the vehicle is still moving rapidly upward.
+	var altitude_error_m: float = absf(altitude_m - TARGET_ORBIT_ALT_M)
+	var circular_capture: bool = fairing_separated \
+		and altitude_error_m <= ORBIT_INSERTION_ALT_TOLERANCE_M \
+		and absf(radial_velocity_ms) <= ORBIT_INSERTION_RADIAL_SPEED_TOLERANCE_MS \
+		and absf(tangential_velocity_ms - TARGET_ORBIT_VEL_MS) <= ORBIT_INSERTION_TANGENTIAL_SPEED_TOLERANCE_MS
+	if circular_capture and not orbit_achieved:
 		orbit_achieved = true
 		current_phase = FlightPhase.ORBITAL_INJECTION
 		throttle = 0.0
+		time_warp = 1.0
+		_auto_orbit_warp_active = false
 		_tween_plume_node(vacuum_plume_node, false, Vector3.ONE, 0.45)
 		if not _orbit_banner_shown:
 			_orbit_banner_shown = true
@@ -1864,7 +2048,7 @@ func _check_phase_transitions() -> void:
 			_show_callout_banner("ORBITAL INSERTION CONFIRMED — 185 KM PARKING ORBIT REACHED", Color(0.35, 0.95, 0.55), 4.0)
 		if not _user_manually_selected_cam:
 			_set_camera_mode(CameraMode.ORBITAL)
-		print("[Launch] Orbital Insertion Achieved! Orbit: %.0f km circular parking orbit, v = %.0f m/s." % [altitude_m / 1000.0, velocity_ms])
+		print("[Launch] Orbital Insertion Achieved! Orbit: %.1f km, vr = %.1f m/s, vtheta = %.1f m/s." % [altitude_m / 1000.0, radial_velocity_ms, tangential_velocity_ms])
 
 func _execute_stage_separation() -> void:
 	if stage1_separated:
@@ -1883,13 +2067,13 @@ func _execute_stage_separation() -> void:
 	var btn_stage = find_child("BtnStageSeparation", true, false) as Button
 	if btn_stage:
 		btn_stage.disabled = true
-		btn_stage.text = "STAGE 1 SEPARATED ✓"
+		btn_stage.text = "STAGE 1 SEPARATED [OK]"
 
 	# Drop Stage 1 dry mass + fin mass from vehicle
 	var tel = Helios4CampaignData.calculate_hangar_telemetry()
 	var v_cfg = Helios4CampaignData.vehicle_config
-	var s1_dry = v_cfg.get("stage1_dry_mass_kg", 2800.0) + v_cfg.get("stage1_fin_mass_kg", 220.0)
-	current_mass_kg = max(current_mass_kg - s1_dry, 1400.0)
+	var s1_dry: float = v_cfg.get("stage1_dry_mass_kg", 2800.0) + v_cfg.get("stage1_fin_mass_kg", 220.0)
+	current_mass_kg = maxf(current_mass_kg - s1_dry, 1.0)
 
 	# Hide Stage 1 on vehicle
 	if rocket_visual and rocket_visual.stage1_node:
@@ -1913,13 +2097,11 @@ func _execute_fairing_jettison() -> void:
 	if fairing_separated:
 		return
 	fairing_separated = true
+	var v_cfg: Dictionary = Helios4CampaignData.vehicle_config
+	current_mass_kg = maxf(current_mass_kg - v_cfg.get("fairing_mass_kg", 420.0), 1.0)
 	if btn_fairing_jettison:
 		btn_fairing_jettison.disabled = true
-		btn_fairing_jettison.text = "FAIRING JETTISONED ✓"
-
-	var v_cfg = Helios4CampaignData.vehicle_config
-	var fairing_m = v_cfg.get("fairing_mass_kg", 420.0)
-	current_mass_kg = max(current_mass_kg - fairing_m, 1100.0)
+		btn_fairing_jettison.text = "FAIRING JETTISONED [OK]"
 
 	if rocket_visual:
 		rocket_visual.set_fairing_open_instant(true)
@@ -1948,7 +2130,7 @@ func _execute_systems_activation() -> void:
 		var btn_systems = find_child("BtnSystemsActivate", true, false) as Button
 		if btn_systems:
 			btn_systems.disabled = true
-			btn_systems.text = "SYSTEMS ACTIVATED ✓"
+			btn_systems.text = "SYSTEMS ACTIVATED [OK]"
 		print("[Launch] Systems Officer activated: Power online, DSN telemetry linked, early solar telemetry streaming.")
 
 func _trigger_flight_abort(reason: String) -> void:
@@ -2038,7 +2220,7 @@ func _show_abort_modal(reason: String) -> void:
 
 	var btn_hangar := Button.new()
 	btn_hangar.name = "BtnReturnToHangar"
-	btn_hangar.text = "← REBUILD IN HANGAR"
+	btn_hangar.text = "< REBUILD IN HANGAR"
 	btn_hangar.add_theme_font_size_override("font_size", 11)
 	var h_style := StyleBoxFlat.new()
 	h_style.bg_color = Color(0.12, 0.16, 0.22, 0.9)
@@ -2122,15 +2304,15 @@ func _update_3d_visuals(delta: float) -> void:
 	if earth_curvature:
 		var alt_ratio = clamp(altitude_m / 160000.0, 0.0, 1.0)
 		# Smooth natural recession of the planet surface as altitude increases
-		var earth_recession_y = pow(alt_ratio, 0.6) * 180.0
-		var earth_recession_z = pow(alt_ratio, 0.6) * 75.0
+		var earth_recession_y = pow(alt_ratio, 0.6) * 280.0
+		var earth_recession_z = pow(alt_ratio, 0.6) * 750.0
 		# Downrange travel: The rocket flies faster downrange than Earth curvature,
 		# creating genuine relative motion as Earth scrolls backward underneath the vehicle
 		var earth_lag_x = visual_x * 0.45
 		
 		var target_earth_x = 18.0 + (visual_x - earth_lag_x)
-		var target_earth_y = -165.0 + visual_y * 0.85 - earth_recession_y
-		var target_earth_z = -60.0 - earth_recession_z
+		var target_earth_y = visual_y - 340.0 - earth_recession_y
+		var target_earth_z = -900.0 - earth_recession_z
 		
 		earth_curvature.position = Vector3(target_earth_x, target_earth_y, target_earth_z)
 		# Earth planetary rotation speeds up with orbital velocity
@@ -2238,10 +2420,16 @@ func _connect_controls() -> void:
 
 	# Pitch Buttons (Steering: Zenith = pitch up toward 90°, Horizon = pitch down toward 0°)
 	var btn_pitch_left = find_child("BtnPitchLeft", true, false) as Button
-	if btn_pitch_left: btn_pitch_left.pressed.connect(func(): pitch_deg = clamp(pitch_deg + 2.0, 0.0, 90.0))
+	if btn_pitch_left: btn_pitch_left.pressed.connect(func():
+		auto_guidance_enabled = false
+		pitch_deg = clampf(pitch_deg + 2.0, -20.0, 90.0)
+	)
 
 	var btn_pitch_right = find_child("BtnPitchRight", true, false) as Button
-	if btn_pitch_right: btn_pitch_right.pressed.connect(func(): pitch_deg = clamp(pitch_deg - 2.0, 0.0, 90.0))
+	if btn_pitch_right: btn_pitch_right.pressed.connect(func():
+		auto_guidance_enabled = false
+		pitch_deg = clampf(pitch_deg - 2.0, -20.0, 90.0)
+	)
 
 	# Quick Flight Actions (Pause / Abort)
 	if btn_pause_flight:
@@ -2339,10 +2527,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		throttle = clamp(throttle - 0.05, 0.0, 1.0)
 	elif event.is_action_pressed("ui_left") or (event is InputEventKey and event.keycode == KEY_A and event.pressed):
 		# [A] = Pitch Up toward Zenith (90°)
-		pitch_deg = clamp(pitch_deg + 2.0, 0.0, 90.0)
+		auto_guidance_enabled = false
+		pitch_deg = clampf(pitch_deg + 2.0, -20.0, 90.0)
 	elif event.is_action_pressed("ui_right") or (event is InputEventKey and event.keycode == KEY_D and event.pressed):
 		# [D] = Pitch Down toward Horizon (0°)
-		pitch_deg = clamp(pitch_deg - 2.0, 0.0, 90.0)
+		auto_guidance_enabled = false
+		pitch_deg = clampf(pitch_deg - 2.0, -20.0, 90.0)
 	elif event is InputEventKey and event.keycode == KEY_SPACE and event.pressed:
 		if current_phase == FlightPhase.PRE_LAUNCH_PREPARATION:
 			_on_start_countdown_pressed()
@@ -2364,8 +2554,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		if current_phase == FlightPhase.PRE_LAUNCH_PREPARATION:
 			_on_auto_verify_all_pressed()
 	elif event is InputEventKey and event.keycode == KEY_T and event.pressed:
-		time_warp = 4.0 if time_warp == 1.0 else 1.0
+		if time_warp > 1.0:
+			time_warp = 1.0
+			_orbit_warp_user_cancelled = true
+			_auto_orbit_warp_active = false
+		else:
+			time_warp = AUTO_ORBIT_WARP
+			_orbit_warp_user_cancelled = false
 		print("[Launch] Time warp toggled to: ", time_warp, "x")
+	elif event is InputEventKey and event.keycode == KEY_G and event.pressed:
+		auto_guidance_enabled = not auto_guidance_enabled
+		if auto_guidance_enabled:
+			pitch_deg = guidance_pitch_target_deg
+		print("[Launch] Gravity-turn guidance: ", "AUTO" if auto_guidance_enabled else "MANUAL")
 	elif event is InputEventKey and event.keycode == KEY_P and event.pressed:
 		_toggle_flight_pause()
 	elif event is InputEventKey and event.keycode == KEY_X and event.pressed:
@@ -2406,12 +2607,17 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _execute_fast_forward_orbit() -> void:
 	altitude_m = TARGET_ORBIT_ALT_M
+	radial_velocity_ms = 0.0
+	tangential_velocity_ms = TARGET_ORBIT_VEL_MS
 	velocity_ms = TARGET_ORBIT_VEL_MS
+	orbital_angle_rad = downrange_m / EARTH_RADIUS_M
 	pitch_deg = 0.0
+	guidance_pitch_target_deg = 0.0
 	flight_path_angle_deg = 0.0
 	stage1_separated = true
 	fairing_separated = true
 	orbit_achieved = true
+	time_warp = 1.0
 	current_phase = FlightPhase.ORBITAL_INJECTION
 	if prelaunch_panel: prelaunch_panel.visible = false
 	if rocket_visual:
@@ -2489,13 +2695,32 @@ func _update_ui() -> void:
 
 	# Pitch / Guidance readout
 	if lbl_pitch_readout:
-		var target_pitch = 90.0 * (1.0 - sqrt(clamp(altitude_m / 140000.0, 0.0, 1.0)))
+		var target_pitch := guidance_pitch_target_deg
 		var steer_hint = "ON TARGET"
-		if pitch_deg > target_pitch + 3.0:
+		if auto_guidance_enabled:
+			steer_hint = "AUTO HOLD"
+		elif pitch_deg > target_pitch + 3.0:
 			steer_hint = "HORIZON [D] ►"
 		elif pitch_deg < target_pitch - 3.0:
 			steer_hint = "◄ [A] ZENITH"
 		lbl_pitch_readout.text = "PITCH: %4.1f° | TARGET: %4.1f° | FPA: %4.1f° | GUIDANCE: %s" % [pitch_deg, target_pitch, flight_path_angle_deg, steer_hint]
+
+	# Transparent Earth-centered telemetry: radial and tangential velocity remain
+	# separate so a high speed during a steep climb cannot masquerade as orbit.
+	if polar_telemetry_values.has("altitude"):
+		(polar_telemetry_values["altitude"] as Label).text = "%.1f km" % (altitude_m / 1000.0)
+	if polar_telemetry_values.has("downrange"):
+		(polar_telemetry_values["downrange"] as Label).text = "%.1f km" % (downrange_m / 1000.0)
+	if polar_telemetry_values.has("radial"):
+		(polar_telemetry_values["radial"] as Label).text = "%+.0f m/s" % radial_velocity_ms
+	if polar_telemetry_values.has("tangential"):
+		(polar_telemetry_values["tangential"] as Label).text = "%.0f m/s" % tangential_velocity_ms
+	if btn_guidance_mode:
+		btn_guidance_mode.text = "GRAVITY TURN: %s [G]" % ("AUTO" if auto_guidance_enabled else "MANUAL")
+		btn_guidance_mode.modulate = Color(0.72, 1.0, 0.88) if auto_guidance_enabled else Color(1.0, 0.84, 0.62)
+	if btn_orbit_warp:
+		btn_orbit_warp.visible = current_phase == FlightPhase.ASCENT_STAGE2 and fairing_separated
+		btn_orbit_warp.text = "WARP: %.1fx [T] — CLICK TO %s" % [time_warp, "PAUSE" if time_warp > 1.0 else "RESUME"]
 
 	# Flight Event Advisory Banner & Buttons
 	var advisory_lbl = find_child("AdvisoryBanner", true, false) as Label
@@ -2515,7 +2740,7 @@ func _update_ui() -> void:
 		FlightPhase.COUNTDOWN:
 			if advisory_lbl:
 				if countdown_paused:
-					advisory_lbl.text = "● COUNTDOWN HOLD: Paused at T-%.1f seconds. Press RESUME [P] to continue." % countdown_s
+					advisory_lbl.text = "- COUNTDOWN HOLD: Paused at T-%.1f seconds. Press RESUME [P] to continue." % countdown_s
 					advisory_lbl.add_theme_color_override("font_color", Color(0.98, 0.65, 0.15))
 				else:
 					advisory_lbl.text = "T-MINUS %.1f SECONDS — PAD CLEARED • STANDBY FOR BOOSTER IGNITION" % countdown_s
@@ -2557,11 +2782,11 @@ func _update_ui() -> void:
 					advisory_lbl.text = "FAIRING RELEASE AVAILABLE: EXOSPHERIC VACUUM (>68 km) • PRESS [J] OR JETTISON FAIRING"
 					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 				elif altitude_m >= 140000.0 and velocity_ms >= 6500.0:
-					advisory_lbl.text = "PARKING ORBIT APPROACHING: ACCELERATING TO CIRCULAR INSERTION (7,780 m/s)"
+					advisory_lbl.text = "PARKING ORBIT APPROACHING: CIRCULAR SPEED %.0f m/s" % TARGET_ORBIT_VEL_MS
 					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
 				else:
 					var fairing_tag = " • FAIRING JETTISONED" if fairing_separated else ""
-					advisory_lbl.text = "UPPER STAGE VACUUM BURN: ACCELERATING TO ORBIT (%.0f m/s / 7,780 m/s)%s" % [velocity_ms, fairing_tag]
+					advisory_lbl.text = "UPPER STAGE VACUUM BURN: vθ %.0f / %.0f m/s%s" % [tangential_velocity_ms, TARGET_ORBIT_VEL_MS, fairing_tag]
 					advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
 			if btn_stage: btn_stage.disabled = true
 		FlightPhase.ORBITAL_INJECTION:
@@ -2571,7 +2796,7 @@ func _update_ui() -> void:
 			if btn_systems: btn_systems.disabled = false
 		FlightPhase.SYSTEMS_ACTIVATION:
 			if advisory_lbl:
-				advisory_lbl.text = "★ ALL SYSTEMS NOMINAL: HELIOS-4 INJECTED TOWARD SUN-EARTH L1!"
+				advisory_lbl.text = "* ALL SYSTEMS NOMINAL: HELIOS-4 INJECTED TOWARD SUN-EARTH L1!"
 				advisory_lbl.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 			if btn_proceed:
 				if not btn_proceed.visible:
@@ -2671,15 +2896,15 @@ func _update_flight_objective_panel() -> void:
 					lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55))
 				if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Jettison protective fairings in vacuum to reduce vehicle dead weight."
 				if lbl_obj_action: lbl_obj_action.text = "ACTION: Press [J] or click FAIRING JETTISON to expose HELIOS-4 probe."
-				if lbl_obj_next: lbl_obj_next.text = "NEXT: Parking Orbit Insertion (185 km / 7,780 m/s)"
+				if lbl_obj_next: lbl_obj_next.text = "NEXT: Parking Orbit Insertion (185 km / %.0f m/s)" % TARGET_ORBIT_VEL_MS
 				if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [J] Jettison Fairing | [W/S] Throttle | [A/D] Pitch"
 			else:
 				if lbl_obj_phase: lbl_obj_phase.text = "PHASE: UPPER STAGE VACUUM BURN"
 				if lbl_obj_status:
-					lbl_obj_status.text = "STATUS: ACCELERATING (%.0f / 7,780 m/s)" % velocity_ms
+					lbl_obj_status.text = "STATUS: vθ %.0f / %.0f m/s" % [tangential_velocity_ms, TARGET_ORBIT_VEL_MS]
 					lbl_obj_status.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
 				if lbl_obj_primary: lbl_obj_primary.text = "OBJECTIVE: Accelerate into circular parking orbit at 185 km altitude."
-				if lbl_obj_action: lbl_obj_action.text = "ACTION: Guide pitch toward horizon (0°) as velocity approaches 7,780 m/s."
+				if lbl_obj_action: lbl_obj_action.text = "ACTION: Auto guidance trims radial speed toward 0 for circular capture."
 				if lbl_obj_next: lbl_obj_next.text = "NEXT: 185 km Circular Orbit Cutoff"
 				if lbl_obj_controls: lbl_obj_controls.text = "CONTROLS: [W/S] Throttle | [A/D] Pitch | [C] / 1-7 Camera"
 
@@ -2793,11 +3018,13 @@ func _build_camera_hint(root_ui: Control) -> void:
 		return
 	_cam_hint_label = Label.new()
 	_cam_hint_label.name = "CameraHintLabel"
-	_cam_hint_label.text = "[Drag Mouse: Rotate 360° 3D View | Scroll: Zoom | Keys 1-7: Camera Presets]"
+	_cam_hint_label.text = "DRAG: ORBIT CAMERA  |  SCROLL: ZOOM  |  KEYS 1-7: CAMERA VIEWS"
 	_cam_hint_label.add_theme_font_size_override("font_size", 10)
 	_cam_hint_label.add_theme_color_override("font_color", Color(0.55, 0.70, 0.85, 0.85))
-	_cam_hint_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_cam_hint_label.position = Vector2(16, -26)
+	_cam_hint_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_cam_hint_label.position = Vector2(138, 566)
+	_cam_hint_label.custom_minimum_size = Vector2(360.0, 18.0)
+	_cam_hint_label.size = Vector2(360.0, 18.0)
 	root_ui.add_child(_cam_hint_label)
 
 
@@ -3028,11 +3255,127 @@ func _build_objective_banner(root_ui: Control) -> void:
 	objective_banner = ObjectiveBanner.new()
 	objective_banner.name = "ObjectiveBanner"
 	objective_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	objective_banner.position = Vector2(-190, 12)
-	objective_banner.custom_minimum_size = Vector2(380, 0)
-	objective_banner.size = Vector2(380, 0)
+	objective_banner.position = Vector2(-230, 50)
+	objective_banner.custom_minimum_size = Vector2(460, 0)
+	objective_banner.size = Vector2(460, 0)
 	objective_banner.action_pressed.connect(_on_objective_action_pressed)
 	root_ui.add_child(objective_banner)
+
+
+func _build_polar_telemetry_panel(root_ui: Control) -> void:
+	if root_ui == null or root_ui.find_child("PolarTelemetryPanel", true, false) != null:
+		return
+	var panel := PanelContainer.new()
+	panel.name = "PolarTelemetryPanel"
+	panel.set_anchors_preset(Control.PRESET_CENTER_LEFT)
+	panel.offset_left = 72.0
+	panel.offset_top = 0.0
+	panel.offset_right = 298.0
+	panel.offset_bottom = 172.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.025, 0.055, 0.095, 0.92)
+	style.border_color = Color(0.18, 0.48, 0.68, 0.9)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 9
+	style.content_margin_right = 9
+	style.content_margin_top = 7
+	style.content_margin_bottom = 7
+	panel.add_theme_stylebox_override("panel", style)
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 4)
+	panel.add_child(rows)
+	var title := Label.new()
+	title.text = "POLAR ORBIT STATE"
+	title.add_theme_font_size_override("font_size", 10)
+	title.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+	rows.add_child(title)
+	for metric in [
+		{"id": "altitude", "title": "ALTITUDE h", "color": Color(0.94, 0.97, 1.0)},
+		{"id": "downrange", "title": "DOWNRANGE", "color": Color(0.72, 0.85, 0.98)},
+		{"id": "radial", "title": "VERTICAL SPEED vr", "color": Color(1.0, 0.78, 0.32)},
+		{"id": "tangential", "title": "ORBITAL SPEED vθ", "color": Color(0.45, 0.96, 0.72)}
+	]:
+		var row := HBoxContainer.new()
+		var name_lbl := Label.new()
+		name_lbl.text = metric["title"]
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_lbl.add_theme_font_size_override("font_size", 9)
+		name_lbl.add_theme_color_override("font_color", Color(0.64, 0.76, 0.88))
+		row.add_child(name_lbl)
+		var value_lbl := Label.new()
+		value_lbl.name = "PolarValue_" + metric["id"]
+		value_lbl.custom_minimum_size = Vector2(92.0, 0.0)
+		value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		value_lbl.add_theme_font_size_override("font_size", 11)
+		value_lbl.add_theme_color_override("font_color", metric["color"])
+		row.add_child(value_lbl)
+		polar_telemetry_values[metric["id"]] = value_lbl
+		rows.add_child(row)
+	root_ui.add_child(panel)
+
+
+func _build_launch_assists(root_ui: Control) -> void:
+	if root_ui == null:
+		return
+	btn_guidance_mode = Button.new()
+	btn_guidance_mode.name = "BtnGuidanceMode"
+	btn_guidance_mode.text = "GRAVITY TURN: AUTO [G]"
+	btn_guidance_mode.tooltip_text = "Automatic pitch-over and radial-velocity hold. Press G or click to switch to manual pitch control."
+	btn_guidance_mode.custom_minimum_size = Vector2(344.0, 30.0)
+	btn_guidance_mode.add_theme_font_size_override("font_size", 10)
+	btn_guidance_mode.focus_mode = Control.FOCUS_NONE
+	btn_guidance_mode.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	btn_guidance_mode.offset_left = -360.0
+	btn_guidance_mode.offset_top = 140.0
+	btn_guidance_mode.offset_right = -16.0
+	btn_guidance_mode.offset_bottom = 170.0
+	btn_guidance_mode.pressed.connect(_on_guidance_mode_pressed)
+	root_ui.add_child(btn_guidance_mode)
+
+	btn_orbit_warp = Button.new()
+	btn_orbit_warp.name = "BtnWarpToOrbit"
+	btn_orbit_warp.text = "WARP TO ORBIT INSERTION · 5.5x"
+	btn_orbit_warp.tooltip_text = "Compresses the vacuum burn to about 45–60 seconds of real play time. Physics still integrates in 0.025 s steps."
+	btn_orbit_warp.custom_minimum_size = Vector2(344.0, 34.0)
+	btn_orbit_warp.add_theme_font_size_override("font_size", 10)
+	btn_orbit_warp.focus_mode = Control.FOCUS_NONE
+	btn_orbit_warp.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	btn_orbit_warp.offset_left = -360.0
+	btn_orbit_warp.offset_top = 176.0
+	btn_orbit_warp.offset_right = -16.0
+	btn_orbit_warp.offset_bottom = 212.0
+	var warp_style := StyleBoxFlat.new()
+	warp_style.bg_color = Color(0.06, 0.25, 0.30, 0.96)
+	warp_style.border_color = Color(0.28, 0.91, 0.80, 0.95)
+	warp_style.set_border_width_all(1)
+	warp_style.set_corner_radius_all(5)
+	btn_orbit_warp.add_theme_stylebox_override("normal", warp_style)
+	btn_orbit_warp.add_theme_stylebox_override("hover", warp_style)
+	btn_orbit_warp.pressed.connect(_on_orbit_warp_pressed)
+	btn_orbit_warp.visible = false
+	root_ui.add_child(btn_orbit_warp)
+
+
+func _on_guidance_mode_pressed() -> void:
+	auto_guidance_enabled = not auto_guidance_enabled
+	if auto_guidance_enabled:
+		pitch_deg = guidance_pitch_target_deg
+	Sfx.ui_click()
+	_update_ui()
+
+
+func _on_orbit_warp_pressed() -> void:
+	if time_warp > 1.0:
+		time_warp = 1.0
+		_orbit_warp_user_cancelled = true
+		_auto_orbit_warp_active = false
+	else:
+		time_warp = AUTO_ORBIT_WARP
+		_orbit_warp_user_cancelled = false
+		_auto_orbit_warp_active = true
+	Sfx.ui_click()
+	_update_ui()
 
 
 func _on_objective_action_pressed() -> void:
@@ -3044,6 +3387,8 @@ func _on_objective_action_pressed() -> void:
 		FlightPhase.ASCENT_STAGE2:
 			if altitude_m >= 68000.0 and not fairing_separated:
 				_execute_fairing_jettison()
+			elif fairing_separated:
+				_on_orbit_warp_pressed()
 		FlightPhase.ORBITAL_INJECTION:
 			_execute_systems_activation()
 		FlightPhase.SYSTEMS_ACTIVATION:
@@ -3057,7 +3402,7 @@ func _update_objective_banner() -> void:
 	match current_phase:
 		FlightPhase.PRE_LAUNCH_PREPARATION:
 			objective_banner.set_objective(1, 4, "RUN PRE-LAUNCH CHECKS",
-				"▶ START COUNTDOWN", "[SPACE] Start countdown • [V] Auto-verify",
+				"> START COUNTDOWN", "[SPACE] Start countdown • [V] Auto-verify",
 				Color(0.35, 0.85, 1.0))
 			_auto_assist_armed = false
 		FlightPhase.COUNTDOWN:
@@ -3067,7 +3412,7 @@ func _update_objective_banner() -> void:
 			_auto_assist_armed = false
 		FlightPhase.ASCENT_STAGE1:
 			objective_banner.set_objective(2, 4, "STEER THE GRAVITY TURN",
-				"", "[A/D] Pitch • [W/S] Throttle • Watch for Max-Q",
+				"", "Auto guidance turns smoothly • [G] manual pitch • Max-Q protected",
 				Color(0.35, 0.85, 1.0))
 			_auto_assist_armed = false
 		FlightPhase.MAX_Q_CORRIDOR:
@@ -3077,7 +3422,7 @@ func _update_objective_banner() -> void:
 			_auto_assist_armed = false
 		FlightPhase.STAGE1_BURNOUT:
 			objective_banner.set_objective(3, 4, "MECO — SEPARATE THE BOOSTER",
-				"▶ STAGE SEPARATION", "[SPACE] Separate now • auto-assist in 4 s",
+				"> STAGE SEPARATION", "[SPACE] Separate now • auto-assist in 4 s",
 				Color(1.0, 0.72, 0.25))
 			_arm_auto_assist()
 		FlightPhase.STAGE_SEPARATION:
@@ -3088,22 +3433,22 @@ func _update_objective_banner() -> void:
 		FlightPhase.ASCENT_STAGE2:
 			if altitude_m >= 68000.0 and not fairing_separated:
 				objective_banner.set_objective(3, 4, "JETTISON THE FAIRING (>68 km)",
-					"▶ JETTISON FAIRING", "[J] Jettison • auto-assist in 4 s",
+					"> JETTISON FAIRING", "[J] Jettison • auto-assist in 4 s",
 					Color(0.35, 0.95, 0.65))
 				_arm_auto_assist()
 			else:
-				objective_banner.set_objective(3, 4, "ACCELERATE TO ORBIT (%.0f / 7,780 m/s)" % velocity_ms,
-					"", "Flatten pitch toward 0° as velocity builds",
+				objective_banner.set_objective(3, 4, "CIRCULARIZE AT 185 km · vθ %.0f / %.0f m/s" % [tangential_velocity_ms, TARGET_ORBIT_VEL_MS],
+					"> WARP TO ORBIT INSERTION", "Auto guidance drives vr toward 0 • [T] toggles 5.5x warp",
 					Color(0.35, 0.85, 1.0))
 				_auto_assist_armed = false
 		FlightPhase.ORBITAL_INJECTION:
 			objective_banner.set_objective(4, 4, "ORBIT ACHIEVED — WAKE THE BUS",
-				"▶ ACTIVATE SYSTEMS", "[E] Activate spacecraft systems",
+				"> ACTIVATE SYSTEMS", "[E] Activate spacecraft systems",
 				Color(0.35, 0.95, 0.55))
 			_auto_assist_armed = false
 		FlightPhase.SYSTEMS_ACTIVATION:
 			objective_banner.set_objective(4, 4, "LAUNCH COMPLETE — BEGIN TRANSFER",
-				"▶ PROCEED TO DEEP SPACE", "[ENTER] Proceed to transfer",
+				"> PROCEED TO DEEP SPACE", "[ENTER] Proceed to transfer",
 				Color(0.35, 0.95, 0.55))
 			_auto_assist_armed = false
 		FlightPhase.FLIGHT_ABORTED:

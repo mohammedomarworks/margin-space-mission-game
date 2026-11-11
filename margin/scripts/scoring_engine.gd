@@ -83,7 +83,7 @@ static func evaluate_mission(
 		"score": p1_score,
 		"weighted_score": p1_score * WEIGHT_SCIENCE,
 		"metric_val": "%0.1f pts | %0.1f%% Cov | %d/6 Targets" % [final_science_score, avg_polar_cov, hydrogen_found],
-		"formula": "Score = (Final Science / 100 × 50) + (Avg Polar Coverage % × 30) + (Targets Confirmed / 6 × 20)",
+		"formula": "Score = (Final Science / 100 x 50) + (Avg Polar Coverage % x 30) + (Targets Confirmed / 6 x 20)",
 		"explanation": "Evaluates neutron spectrometer spectra collected, total south-polar crater mapping density, and confirmed hydrogen proxy candidates identified in cold-trap sectors."
 	}
 
@@ -186,7 +186,7 @@ static func evaluate_mission(
 		"weight": WEIGHT_MASS_VOL,
 		"score": p4_score,
 		"weighted_score": p4_score * WEIGHT_MASS_VOL,
-		"metric_val": "%0.1f kg Wet (%+0.1f%% Margin) | %0.2f m³ Stowed" % [wet_mass, mass_margin_pct, stowed_vol],
+		"metric_val": "%0.1f kg Wet (%+0.1f%% Margin) | %0.2f m^3 Stowed" % [wet_mass, mass_margin_pct, stowed_vol],
 		"formula": "Score = TLI Payload Mass Fraction (60 pts) + Fairing Volume Packaging Ratio (40 pts)",
 		"explanation": "Rewards lightweight structural topology, component density, and positive payload launch margin inside the launch vehicle fairing."
 	}

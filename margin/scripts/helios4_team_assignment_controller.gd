@@ -54,6 +54,12 @@ func _setup_lead_perk_selectors() -> void:
 		Helios4CampaignData.ROLE_ASTROGATOR: "RoleAstrogator",
 		Helios4CampaignData.ROLE_SYSTEMS: "RoleSystems"
 	}
+	var mode_desc := find_child("PlayerCountDesc", true, false) as Label
+	var pass_note := find_child("PassNote", true, false) as Label
+	if mode_desc:
+		mode_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if pass_note:
+		pass_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for role_id in card_map:
 		var card := find_child(card_map[role_id], true, false) as PanelContainer
 		if not card:
@@ -62,14 +68,23 @@ func _setup_lead_perk_selectors() -> void:
 		var vbox := card.get_node_or_null("VBox") as VBoxContainer
 		if not vbox:
 			continue
+		var focus_lbl := vbox.get_node_or_null("Focus") as Label
+		if focus_lbl:
+			focus_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var perk_meta: Dictionary = Helios4CampaignData.TEAM_PERK_METADATA.get(role_id, {})
 		var perk_lbl := Label.new()
-		perk_lbl.text = "ENGINEERING PERK: %s" % perk_meta.get("summary", "")
+		perk_lbl.text = "CAMPAIGN BONUS: %s" % perk_meta.get("summary", "")
 		perk_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		perk_lbl.add_theme_font_size_override("font_size", 10)
+		perk_lbl.add_theme_font_size_override("font_size", 9)
 		var col: Color = perk_meta.get("color", Color(0.25, 0.78, 1.0))
 		perk_lbl.add_theme_color_override("font_color", col.lerp(Color.WHITE, 0.25))
 		vbox.add_child(perk_lbl)
+		var action_lbl := Label.new()
+		action_lbl.text = "ADVISOR ACTION: %s" % perk_meta.get("advisor_action", "One-use flight assist")
+		action_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		action_lbl.add_theme_font_size_override("font_size", 9)
+		action_lbl.add_theme_color_override("font_color", Color(0.72, 0.82, 0.95))
+		vbox.add_child(action_lbl)
 
 		var lead_btn := Button.new()
 		lead_btn.name = "LeadPerkBtn_" + role_id
@@ -96,6 +111,7 @@ func _setup_lead_perk_selectors() -> void:
 		banner.add_theme_stylebox_override("panel", b_style)
 		_perk_banner_lbl = Label.new()
 		_perk_banner_lbl.add_theme_font_size_override("font_size", 11)
+		_perk_banner_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		banner.add_child(_perk_banner_lbl)
 		main_layout.add_child(banner)
 		var bottom_bar := find_child("BottomBar", true, false)
@@ -111,7 +127,7 @@ func _update_lead_perk_ui() -> void:
 		var btn: Button = _lead_perk_btns[role_id]
 		var is_sel: bool = (role_id == selected_lead_role)
 		btn.button_pressed = is_sel
-		btn.text = "ACTIVE LEAD PERK (SELECTED)" if is_sel else "SELECT AS MISSION LEAD PERK"
+		btn.text = "MISSION DIRECTOR SELECTED" if is_sel else "SET AS MISSION DIRECTOR"
 		var card: PanelContainer = _role_cards.get(role_id, null)
 		if card:
 			var col: Color = Helios4CampaignData.ROLE_METADATA[role_id]["color"]
@@ -128,10 +144,7 @@ func _update_lead_perk_ui() -> void:
 	if _perk_banner_lbl:
 		var meta: Dictionary = Helios4CampaignData.TEAM_PERK_METADATA.get(selected_lead_role, {})
 		var col: Color = meta.get("color", Color(0.35, 0.9, 1.0))
-		_perk_banner_lbl.text = "ACTIVE CAMPAIGN PERK: %s — %s (Persists across Hangar, Crisis & L1 HUDs)" % [
-			meta.get("title", "Propulsion Lead"),
-			meta.get("summary", "")
-		]
+		_perk_banner_lbl.text = "MISSION DIRECTOR: %s | Campaign bonus active | One-use flight assist ready" % meta.get("title", "Propulsion Lead")
 		_perk_banner_lbl.add_theme_color_override("font_color", col.lerp(Color.WHITE, 0.30))
 
 func _load_existing_names() -> void:
@@ -158,11 +171,11 @@ func _update_ui_for_player_count() -> void:
 			1:
 				mode_desc.text = "SOLO MISSION: You control all four workstations and can switch roles freely."
 			2:
-				mode_desc.text = "2-PLAYER CO-OP: Player 1 commands Propulsion & Trajectory; Player 2 commands Structures & Systems."
+				mode_desc.text = "2-PLAYER CO-OP: Player 1 commands Propulsion & GNC; Player 2 commands Power / Thermal & Science Payload."
 			3:
-				mode_desc.text = "3-PLAYER CO-OP: Dedicated Propulsion & Structures officers; shared Astrogator & Systems duty."
+				mode_desc.text = "3-PLAYER CO-OP: Propulsion and Power / Thermal leads; GNC and Science Payload share a station."
 			4:
-				mode_desc.text = "4-PLAYER CO-OP: Four dedicated specialist workstations with full pass-and-play handoff."
+				mode_desc.text = "4-PLAYER CO-OP: Four dedicated stations with full pass-and-play handoff."
 
 func _on_confirm_pressed() -> void:
 	Helios4CampaignData.player_count = selected_player_count
@@ -171,9 +184,9 @@ func _on_confirm_pressed() -> void:
 	
 	var names: Dictionary = {
 		Helios4CampaignData.ROLE_PROPULSION: name_propulsion.text.strip_edges() if not name_propulsion.text.is_empty() else "Propulsion Lead",
-		Helios4CampaignData.ROLE_STRUCTURAL: name_structural.text.strip_edges() if not name_structural.text.is_empty() else "Structural Lead",
-		Helios4CampaignData.ROLE_ASTROGATOR: name_astrogator.text.strip_edges() if not name_astrogator.text.is_empty() else "Astrogator Lead",
-		Helios4CampaignData.ROLE_SYSTEMS: name_systems.text.strip_edges() if not name_systems.text.is_empty() else "Systems Lead"
+		Helios4CampaignData.ROLE_STRUCTURAL: name_structural.text.strip_edges() if not name_structural.text.is_empty() else "Power & Thermal Lead",
+		Helios4CampaignData.ROLE_ASTROGATOR: name_astrogator.text.strip_edges() if not name_astrogator.text.is_empty() else "GNC / Trajectory Lead",
+		Helios4CampaignData.ROLE_SYSTEMS: name_systems.text.strip_edges() if not name_systems.text.is_empty() else "Science Payload Lead"
 	}
 	Helios4CampaignData.team_player_names = names
 	Helios4CampaignData.set_team_lead_perk(selected_lead_role)

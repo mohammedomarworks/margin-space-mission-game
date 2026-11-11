@@ -104,12 +104,13 @@ const L1_SIM_POS_KM: Vector3 = Vector3(-1500000.0, 0.0, 0.0)
 const SUN_SIM_POS_KM: Vector3 = Vector3(-150000000.0, 0.0, 0.0)
 
 const EARTH_RADIUS_KM: float = 6371.0          # Earth physical radius (authoritative)
-const PARKING_ORBIT_ALTITUDE_KM: float = 165.0 # Low Earth parking orbit altitude
-const PARKING_ORBIT_RADIUS_KM: float = 6536.0  # 6,371 + 165 = 6,536 km
+const PARKING_ORBIT_ALTITUDE_KM: float = 185.0 # Low Earth parking orbit altitude
+const PARKING_ORBIT_RADIUS_KM: float = 6556.0  # 6,371 + 185 = 6,556 km
+const EARTH_MU_KM3_S2: float = 398600.4418
 const L1_DISTANCE_KM: float = 1500000.0        # Sunward distance from Earth to L1
 
 const EARTH_VISUAL_RADIUS: float = 0.6371      # 6,371 km * 0.0001
-const PARKING_ORBIT_VISUAL_RADIUS: float = 0.6536 # 6,536 km * 0.0001
+const PARKING_ORBIT_VISUAL_RADIUS: float = 0.6556 # 6,556 km * 0.0001
 const ATMOSPHERE_VISUAL_RADIUS: float = 0.66   # Atmosphere outer visual envelope
 
 const EARTH_POS: Vector3 = Vector3(0.0, 0.0, 0.0)
@@ -117,15 +118,15 @@ const L1_POS: Vector3 = Vector3(-150.0, 0.0, 0.0)
 const SUN_POS: Vector3 = Vector3(-15000.0, 0.0, 0.0) # Documented artistic visual position (exaggerated for gameplay)
 
 # Authoritative simulation state (64-bit scalar floats — NOT Vector3)
-var spacecraft_x_km: float = 6536.0
+var spacecraft_x_km: float = PARKING_ORBIT_RADIUS_KM
 var spacecraft_y_km: float = 0.0
 var spacecraft_z_km: float = 0.0
 
-var transfer_start_x_km: float = 6536.0
+var transfer_start_x_km: float = PARKING_ORBIT_RADIUS_KM
 var transfer_start_y_km: float = 0.0
 var transfer_start_z_km: float = 0.0
 
-var parking_orbit_altitude_km: float = 165.0
+var parking_orbit_altitude_km: float = PARKING_ORBIT_ALTITUDE_KM
 var transfer_progress_km: float = 0.0
 var parking_orbit_theta: float = 0.0
 
@@ -205,7 +206,7 @@ var propellant_kg: float:
 	get: return probe_propellant_kg
 	set(val): probe_propellant_kg = val
 
-var velocity_kms: float = 7.75 # km/s in parking orbit
+var velocity_kms: float = 7.797393 # sqrt(mu / (Earth radius + 185 km))
 var mission_elapsed_days: float = 0.0
 var mission_elapsed_hours: float = 0.0
 var trajectory_mode: String = "direct_injection" # direct (110d) or phased_wsb (135d)
@@ -271,6 +272,10 @@ var crisis_choice_safemode: int = 1 # 1: Full Safe, 2: Partial, 3: Continue Scie
 var crisis_choice_instruments: int = 1 # 1: Safe Optics, 2: Prioritize SEP, 3: Full Suite
 var crisis_choice_comms: int = 1 # 1: Low-power Carrier, 2: High-rate DSN, 3: Memory Buffer
 var crisis_decisions_committed: bool = false
+var director_advisor_action_used: bool = false
+var director_propulsion_trim_armed: bool = false
+var director_science_reboot_armed: bool = false
+var director_action_button: Button = null
 
 # Recovery Sub-step
 var recovery_step: int = 0 # 0: Diagnostics, 1: Instruments, 2: Comms, 3: Attitude, 4: Done
@@ -339,6 +344,7 @@ func _ready() -> void:
 	_build_3d_trajectory()
 	_build_starfield()
 	_connect_ui_signals()
+	_setup_director_advisor_action()
 	_setup_perk_and_autowarp_hud()
 	_set_camera_mode(CamMode.CHASE_3_4)
 	_update_flight_guidance()
@@ -347,6 +353,10 @@ func _ready() -> void:
 		MarginTheme.apply_interactive_polish(transfer_ui)
 		_build_camera_hint(transfer_ui)
 		_build_objective_banner(transfer_ui)
+		var legacy_objective_panel := find_child("FlightObjectivePanel", true, false) as Control
+		if legacy_objective_panel:
+			legacy_objective_panel.visible = false
+		_update_objective_banner()
 		Sfx.attach_hud_toggle(transfer_ui)
 	Sfx.start_space_ambient()
 	if current_subphase == SubPhase.SOLAR_CRISIS_ALERT:
@@ -400,8 +410,8 @@ func _inherit_campaign_state() -> void:
 		trajectory_mode = v_cfg.get("trajectory_mode", "direct_injection")
 		target_cruise_days = 135.0 if trajectory_mode == "phased_wsb" else 110.0
 	if not l_tel.is_empty():
-		parking_orbit_altitude_km = l_tel.get("orbit_altitude_km", 165.0)
-		velocity_kms = l_tel.get("orbit_velocity_ms", 7750.0) / 1000.0
+		parking_orbit_altitude_km = l_tel.get("orbit_altitude_km", PARKING_ORBIT_ALTITUDE_KM)
+		velocity_kms = l_tel.get("orbit_velocity_ms", 7797.393) / 1000.0
 
 	# Check if jumping directly into Phase 4 (Crisis).
 	if Helios4CampaignData.current_stage == Helios4CampaignData.Stage.PHASE_4_CRISIS or name == "Helios4Crisis":
@@ -414,9 +424,12 @@ func _inherit_campaign_state() -> void:
 			probe_propellant_kg = 295.0 # Account for TLI and MCC.
 	else:
 		current_subphase = SubPhase.PARKING_ORBIT
-		parking_orbit_altitude_km = 165.0
+		parking_orbit_altitude_km = PARKING_ORBIT_ALTITUDE_KM
 		transfer_progress_km = 0.0
-		velocity_kms = 7.75
+		velocity_kms = _get_parking_orbit_speed_kms()
+
+func _get_parking_orbit_speed_kms() -> float:
+	return sqrt(EARTH_MU_KM3_S2 / (EARTH_RADIUS_KM + parking_orbit_altitude_km))
 
 func _build_spacecraft_model() -> void:
 	if not probe_node:
@@ -781,7 +794,7 @@ func _process(delta: float) -> void:
 			transfer_start_y_km = spacecraft_y_km
 			transfer_start_z_km = spacecraft_z_km
 			transfer_progress_km = 0.0
-			velocity_kms = 7.75
+			velocity_kms = _get_parking_orbit_speed_kms()
 			if probe_node:
 				probe_node.position = Vector3(spacecraft_x_km, spacecraft_y_km, spacecraft_z_km) * VISUAL_SCALE
 				var tangent = Vector3(
@@ -869,7 +882,7 @@ func _process_injection_burn(dt: float) -> void:
 	probe_propellant_kg -= fuel_spent
 
 	var progress = clamp(burn_timer_s / burn_duration_s, 0.0, 1.0)
-	velocity_kms = lerp(7.75, 10.95, progress)
+	velocity_kms = lerp(_get_parking_orbit_speed_kms(), 10.95, progress)
 	transfer_progress_km += velocity_kms * dt * 15.0 # initial escape surge
 
 	var u = clamp(transfer_progress_km / L1_DISTANCE_KM, 0.0, 1.0)
@@ -893,7 +906,7 @@ func _process_injection_burn(dt: float) -> void:
 			"Deep Space Trans-L1 Injection",
 			"Trans-L1 Injection Burn Completed. Hyperbolic escape velocity 10.95 km/s achieved."
 		)
-		_show_advisory("★ TRANS-L1 INJECTION COMPLETE! HELIOS-4 on interplanetary trajectory sunward.")
+		_show_advisory("* TRANS-L1 INJECTION COMPLETE! HELIOS-4 on interplanetary trajectory sunward.")
 		_update_flight_guidance()
 
 func _process_cruise_progression(dt: float) -> void:
@@ -970,7 +983,7 @@ func _process_mcc_burn(dt: float) -> void:
 		if rcs_particles: rcs_particles.emitting = false
 		current_subphase = SubPhase.CRUISE_MID
 		_set_time_warp(2) # Speed up to 100x for cruise to crisis
-		_show_advisory("★ MCC-1 BURN EXECUTED: Trajectory accuracy restored to %.1f%%." % trajectory_accuracy_pct)
+		_show_advisory("* MCC-1 BURN EXECUTED: Trajectory accuracy restored to %.1f%%." % trajectory_accuracy_pct)
 		_update_flight_guidance()
 
 func _enter_solar_crisis() -> void:
@@ -1013,7 +1026,7 @@ func _process_crisis_simulation(dt: float) -> void:
 			tactical_crisis_panel.visible = false
 		Sfx.stop_klaxon()
 		Sfx.success_chime()
-		_show_advisory("★ SOLAR STORM SUBSIDED: Proton flux below hazard limit. Begin spacecraft recovery.")
+		_show_advisory("* SOLAR STORM SUBSIDED: Proton flux below hazard limit. Begin spacecraft recovery.")
 		_update_flight_guidance()
 
 func _process_crisis_thermal(dt: float) -> void:
@@ -1236,11 +1249,11 @@ func _setup_perk_and_autowarp_hud() -> void:
 		_auto_warp_banner.name = "AutoWarpAlertBanner"
 		_auto_warp_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_auto_warp_banner.visible = false
-		_auto_warp_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		_auto_warp_banner.offset_left = -290.0
-		_auto_warp_banner.offset_top = 48.0
-		_auto_warp_banner.offset_right = 290.0
-		_auto_warp_banner.offset_bottom = 80.0
+		_auto_warp_banner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_auto_warp_banner.offset_left = -410.0
+		_auto_warp_banner.offset_top = 52.0
+		_auto_warp_banner.offset_right = -18.0
+		_auto_warp_banner.offset_bottom = 92.0
 		_auto_warp_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 		var st := StyleBoxFlat.new()
 		st.bg_color = Color(0.14, 0.04, 0.03, 0.94)
@@ -1258,6 +1271,59 @@ func _setup_perk_and_autowarp_hud() -> void:
 		_auto_warp_label.add_theme_font_size_override("font_size", 11)
 		_auto_warp_banner.add_child(_auto_warp_label)
 		root_ui.add_child(_auto_warp_banner)
+
+func _setup_director_advisor_action() -> void:
+	var panel_vbox := tactical_crisis_panel.get_node_or_null("VBox") as VBoxContainer if tactical_crisis_panel else null
+	if panel_vbox == null or btn_commit_crisis == null:
+		return
+	director_action_button = Button.new()
+	director_action_button.name = "DirectorAdvisorActionBtn"
+	director_action_button.custom_minimum_size = Vector2(0.0, 36.0)
+	director_action_button.add_theme_font_size_override("font_size", 10)
+	director_action_button.focus_mode = Control.FOCUS_NONE
+	director_action_button.tooltip_text = "A one-use Mission Director assist with a measurable effect on the active mission."
+	director_action_button.pressed.connect(_on_director_advisor_action_pressed)
+	panel_vbox.add_child(director_action_button)
+	panel_vbox.move_child(director_action_button, btn_commit_crisis.get_index())
+	_update_director_advisor_action_ui()
+
+func _update_director_advisor_action_ui() -> void:
+	if director_action_button == null:
+		return
+	var role_id: String = Helios4CampaignData.team_perk_id if Helios4CampaignData.is_team_perk_active() else Helios4CampaignData.ROLE_PROPULSION
+	var role_meta: Dictionary = Helios4CampaignData.TEAM_PERK_METADATA.get(role_id, {})
+	director_action_button.text = "MISSION DIRECTOR ACTION: %s" % role_meta.get("advisor_action", "FLIGHT ASSIST")
+	director_action_button.visible = current_subphase == SubPhase.SOLAR_CRISIS_ALERT
+	director_action_button.disabled = director_advisor_action_used
+	if director_advisor_action_used:
+		director_action_button.text = "MISSION DIRECTOR ACTION USED"
+	director_action_button.modulate = role_meta.get("color", Color(0.35, 0.85, 1.0))
+
+func _on_director_advisor_action_pressed() -> void:
+	if director_advisor_action_used or current_subphase != SubPhase.SOLAR_CRISIS_ALERT:
+		return
+	director_advisor_action_used = true
+	var role_id: String = Helios4CampaignData.team_perk_id if Helios4CampaignData.is_team_perk_active() else Helios4CampaignData.ROLE_PROPULSION
+	var role_meta: Dictionary = Helios4CampaignData.TEAM_PERK_METADATA.get(role_id, {})
+	match role_id:
+		Helios4CampaignData.ROLE_PROPULSION:
+			director_propulsion_trim_armed = true
+			_show_advisory("PROPULSION DIRECTOR: HOI burn profile trimmed; insertion propellant requirement falls 5%.")
+		Helios4CampaignData.ROLE_STRUCTURAL:
+			var reserve_wh: float = Helios4CampaignData.probe_config.get("battery_capacity_wh", battery_capacity_wh) * 0.15
+			battery_capacity_wh += reserve_wh
+			battery_charge_wh = minf(battery_charge_wh + reserve_wh, battery_capacity_wh)
+			_show_advisory("POWER / THERMAL DIRECTOR: Battery overclock unlocked %.0f Wh of protected reserve." % reserve_wh)
+		Helios4CampaignData.ROLE_ASTROGATOR:
+			trajectory_accuracy_pct = minf(100.0, trajectory_accuracy_pct + 0.4)
+			_show_advisory("GNC DIRECTOR: Burn auto-aligned; trajectory accuracy is now %.1f%%." % trajectory_accuracy_pct)
+		Helios4CampaignData.ROLE_SYSTEMS:
+			director_science_reboot_armed = true
+			_show_advisory("SCIENCE DIRECTOR: Payload reboot queued; one sensor will return to 100% health and add 10 science points.")
+	Helios4CampaignData.record_team_decision(role_id, "Mission Director Advisor Action", role_meta.get("advisor_action", "Flight assist"))
+	Sfx.success_chime()
+	_update_director_advisor_action_ui()
+	_update_telemetry_ui()
 
 func _sync_crisis_mode_attitude() -> void:
 	match crisis_choice_safemode:
@@ -1286,7 +1352,7 @@ func _toggle_simulation_pause() -> void:
 	if sim_pause_banner:
 		sim_pause_banner.visible = is_sim_paused
 	if btn_pause:
-		btn_pause.text = "▶ RESUME" if is_sim_paused else "⏸ PAUSE"
+		btn_pause.text = "> RESUME" if is_sim_paused else "PAUSE"
 
 func _select_crisis_option(card_idx: int, option_idx: int) -> void:
 	match card_idx:
@@ -1381,9 +1447,19 @@ func _on_commit_crisis_pressed() -> void:
 		3: # Memory buffer
 			comms_power_w = 5.0
 
+	if director_science_reboot_armed:
+		var weakest_instrument: String = "faraday_cup"
+		for instrument_id in instruments_health:
+			if instruments_health[instrument_id] < instruments_health.get(weakest_instrument, 100.0):
+				weakest_instrument = instrument_id
+		instruments_health[weakest_instrument] = 100.0
+		instruments_active[weakest_instrument] = true
+		science_bonus_pts += 10.0
+		director_science_reboot_armed = false
+
 	current_subphase = SubPhase.CRISIS_SIMULATION
 	_set_time_warp(1) # Run simulation through storm
-	_show_advisory("★ CRISIS TACTICS COMMITTED: Running spacecraft storm survival simulation...")
+	_show_advisory("* CRISIS TACTICS COMMITTED: Running spacecraft storm survival simulation...")
 	_update_flight_guidance()
 
 func _on_primary_action_pressed() -> void:
@@ -1399,7 +1475,7 @@ func _on_primary_action_pressed() -> void:
 			transfer_start_z_km = spacecraft_z_km
 			transfer_progress_km = 0.0
 			_build_trajectory_arc()
-			_show_advisory("🚀 TLI IGNITION: Hyperbolic escape burn initiated toward Sun-Earth L1.")
+			_show_advisory("TLI IGNITION: Hyperbolic escape burn initiated toward Sun-Earth L1.")
 			_update_flight_guidance()
 
 		SubPhase.MIDCOURSE_CORRECTION:
@@ -1416,7 +1492,7 @@ func _on_primary_action_pressed() -> void:
 					"Trajectory Correction",
 					"MCC-1 Burn Executed (-16.2 kg). Trajectory locked to L1 Halo entry corridor (99.6%)."
 				)
-				_show_advisory("🧭 MCC-1 BURN EXECUTED: Trajectory accuracy locked to 99.6%.")
+				_show_advisory("MCC-1 BURN EXECUTED: Trajectory accuracy locked to 99.6%.")
 				_update_flight_guidance()
 			else:
 				var remaining_fuel := probe_propellant_kg
@@ -1442,7 +1518,7 @@ func _on_secondary_action_pressed() -> void:
 		SubPhase.CRUISE_EARLY, SubPhase.CRUISE_MID:
 			# Align Solar Arrays Sunward
 			solar_alignment_deg = 0.0
-			_show_advisory("⚡ SYSTEMS: Solar wings aligned normal to Sun. Illumination efficiency 100%.")
+			_show_advisory("SYSTEMS: Solar wings aligned normal to Sun. Illumination efficiency 100%.")
 			_update_flight_guidance()
 
 func _advance_recovery_step() -> void:
@@ -1453,18 +1529,18 @@ func _advance_recovery_step() -> void:
 			instruments_active["magnetometer"] = true
 			instruments_active["radiation_monitor"] = true
 			is_in_safe_mode = false
-			_show_advisory("⚡ RECOVERY: Eligible instruments powered up and verified.")
+			_show_advisory("RECOVERY: Eligible instruments powered up and verified.")
 		2: # Restore Comms
 			comms_power_w = 45.0
-			_show_advisory("📡 RECOVERY: High-gain dish re-acquired Goldstone DSN carrier lock.")
+			_show_advisory("RECOVERY: High-gain dish re-acquired Goldstone DSN carrier lock.")
 		3: # Attitude Trim
 			solar_alignment_deg = 0.0
-			_show_advisory("🧭 RECOVERY: RCS attitude trim pulse fired. 3-axis pointing stabilized.")
+			_show_advisory("RECOVERY: RCS attitude trim pulse fired. 3-axis pointing stabilized.")
 		4: # Recovery Complete -> L1 Approach Ready
 			current_subphase = SubPhase.L1_APPROACH_READY
 			distance_km = 1485000.0 # Reached L1 threshold
 			mission_elapsed_days = target_cruise_days
-			_show_advisory("★ L1 APPROACH READY: Spacecraft verified for Sun-Earth L1 Halo-Orbit Insertion!")
+			_show_advisory("* L1 APPROACH READY: Spacecraft verified for Sun-Earth L1 Halo-Orbit Insertion!")
 	_update_flight_guidance()
 
 func _on_proceed_to_l1_arrival() -> void:
@@ -1476,9 +1552,12 @@ func _on_proceed_to_l1_arrival() -> void:
 		"propellant_remaining_kg": probe_propellant_kg,
 		"available_delta_v_ms": available_delta_v_ms,
 		"battery_charge_wh": battery_charge_wh,
+		"battery_capacity_wh": battery_capacity_wh,
 		"accumulated_dose_rad": accumulated_radiation_dose_rad,
 		"thermal_bus_temp_c": thermal_bus_temp_c,
-		"thermal_shield_sunward": thermal_shield_sunward
+		"thermal_shield_sunward": thermal_shield_sunward,
+		"instruments_health": instruments_health.duplicate(true),
+		"director_propulsion_trim": director_propulsion_trim_armed
 	}
 	Helios4CampaignData.crisis_results = {
 		"equipment_degradation_pct": equipment_degradation_pct,
@@ -1504,12 +1583,12 @@ func _update_flight_guidance() -> void:
 	match current_subphase:
 		SubPhase.PARKING_ORBIT:
 			lbl_phase.text = "PHASE 3A: EARTH PARKING ORBIT"
-			lbl_status.text = "ORBITAL VELOCITY: 7.75 km/s • PERIGEE: 165 km"
+			lbl_status.text = "ORBITAL VELOCITY: %.2f km/s • PERIGEE: 185 km" % _get_parking_orbit_speed_kms()
 			lbl_primary.text = "PRIMARY: Authorize Trans-L1 Deep Space Injection Burn (TLI)"
 			lbl_action.text = "ACTION: Press [Space] or click EXECUTE INJECTION BURN to escape Earth orbit"
 			lbl_next.text = "NEXT: Hyperbolic Escape Surge & Earth Departure"
 			lbl_controls.text = "CONTROLS: [Space] Ignite Burn · [C] Switch Camera · [P] Pause"
-			btn_primary_action.text = "🚀 EXECUTE INJECTION BURN"
+			btn_primary_action.text = "EXECUTE INJECTION BURN"
 			btn_primary_action.visible = true
 			btn_primary_action.disabled = false
 			btn_secondary_action.visible = false
@@ -1521,7 +1600,7 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = "ACTION: Hold attitude nominal during stage burn"
 			lbl_next.text = "NEXT: Engine Cutoff & Interplanetary Coast"
 			lbl_controls.text = "CONTROLS: Burn executing automatically"
-			btn_primary_action.text = "🔥 FIRING APOGEE ENGINE..."
+			btn_primary_action.text = "FIRING APOGEE ENGINE..."
 			btn_primary_action.disabled = true
 
 		SubPhase.CRUISE_EARLY:
@@ -1531,9 +1610,9 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = "ACTION: Engage Time Acceleration (10x / 100x) to cruise to MCC waypoint"
 			lbl_next.text = "NEXT: Mid-Course Correction (MCC-1) at 300,000 km"
 			lbl_controls.text = "CONTROLS: [Z/X/V/B] Time Warp · [Space] Align Solar · [C] Camera"
-			btn_primary_action.text = "⏩ TIME ACCELERATION ACTIVE"
+			btn_primary_action.text = "TIME ACCELERATION ACTIVE"
 			btn_primary_action.disabled = true
-			btn_secondary_action.text = "⚡ ALIGN ARRAYS SUNWARD"
+			btn_secondary_action.text = "ALIGN ARRAYS SUNWARD"
 			btn_secondary_action.visible = true
 
 		SubPhase.MIDCOURSE_CORRECTION:
@@ -1543,7 +1622,7 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = "ACTION: Press [Space] or click EXECUTE MCC-1 BURN (-16.2 kg propellant)"
 			lbl_next.text = "NEXT: Trajectory Lock & Deep Space Cruise"
 			lbl_controls.text = "CONTROLS: [Space] Fire RCS Trim · [C] Camera Mode"
-			btn_primary_action.text = "🧭 EXECUTE MCC-1 BURN (-16.2 kg)"
+			btn_primary_action.text = "EXECUTE MCC-1 BURN (-16.2 kg)"
 			btn_primary_action.visible = true
 			btn_primary_action.disabled = false
 			btn_secondary_action.visible = false
@@ -1555,7 +1634,7 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = "ACTION: Use Time Acceleration to advance along Sunward transfer arc"
 			lbl_next.text = "NEXT: Precursor Space Weather Anomaly at 750,000 km"
 			lbl_controls.text = "CONTROLS: [Z/X/V/B] Time Warp · [C] Camera"
-			btn_primary_action.text = "⏩ TIME ACCELERATION ACTIVE"
+			btn_primary_action.text = "TIME ACCELERATION ACTIVE"
 			btn_primary_action.disabled = true
 			btn_secondary_action.visible = false
 
@@ -1566,7 +1645,7 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = "ACTION: Select Safe Mode, Instrument, and Comms options, then click COMMIT"
 			lbl_next.text = "NEXT: Particle Storm Peak & Dynamic Survival Simulation"
 			lbl_controls.text = "CONTROLS: Click Tactical Choices · Click COMMIT TACTICS"
-			btn_primary_action.text = "▲ COMMIT TACTICAL DECISIONS"
+			btn_primary_action.text = "COMMIT TACTICAL DECISIONS"
 			btn_primary_action.visible = true
 			btn_primary_action.disabled = false
 			btn_secondary_action.visible = false
@@ -1578,7 +1657,7 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = "ACTION: Stand by while storm simulation runs its course"
 			lbl_next.text = "NEXT: Storm Clearance & Spacecraft Recovery"
 			lbl_controls.text = "CONTROLS: [P] Pause · [C] Camera Perspective"
-			btn_primary_action.text = "⚡ STORM PROPAGATING..."
+			btn_primary_action.text = "STORM PROPAGATING..."
 			btn_primary_action.disabled = true
 			btn_secondary_action.visible = false
 
@@ -1592,22 +1671,24 @@ func _update_flight_guidance() -> void:
 			lbl_action.text = act_txt
 			lbl_next.text = "NEXT: L1 Approach Region Preparation"
 			lbl_controls.text = "CONTROLS: Click Next Recovery Step"
-			btn_primary_action.text = "🔧 EXECUTE RECOVERY STEP (%d/3)" % (recovery_step + 1)
+			btn_primary_action.text = "EXECUTE RECOVERY STEP (%d/3)" % (recovery_step + 1)
 			btn_primary_action.visible = true
 			btn_primary_action.disabled = false
 			btn_secondary_action.visible = false
 
 		SubPhase.L1_APPROACH_READY:
 			lbl_phase.text = "PHASE 3G: L1 APPROACH REGION READY"
-			lbl_status.text = "★ L1 PROXIMITY CONFIRMED (1,485,000 km / 1,500,000 km)"
+			lbl_status.text = "* L1 PROXIMITY CONFIRMED (1,485,000 km / 1,500,000 km)"
 			lbl_primary.text = "PRIMARY: Spacecraft verified for Sun-Earth L1 Halo-Orbit Insertion"
 			lbl_action.text = "ACTION: Press [Space] or click PROCEED TO L1 HALO INSERTION (PART 4)"
 			lbl_next.text = "NEXT: Phase 5 — L1 Halo Orbit Insertion & Commissioning"
 			lbl_controls.text = "CONTROLS: [Space] Advance to Part 4"
-			btn_primary_action.text = "★ L1 APPROACH READY — PROCEED TO PART 4 →"
+			btn_primary_action.text = "* L1 APPROACH READY — PROCEED TO PART 4 >"
 			btn_primary_action.visible = true
 			btn_primary_action.disabled = false
 			btn_secondary_action.visible = false
+
+	_update_director_advisor_action_ui()
 
 func _update_telemetry_ui() -> void:
 	if val_met:
@@ -1716,9 +1797,9 @@ func _build_objective_banner(root_ui: Control) -> void:
 	objective_banner = ObjectiveBanner.new()
 	objective_banner.name = "ObjectiveBanner"
 	objective_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	objective_banner.position = Vector2(-190, 12)
-	objective_banner.custom_minimum_size = Vector2(380, 0)
-	objective_banner.size = Vector2(380, 0)
+	objective_banner.position = Vector2(-210, 50)
+	objective_banner.custom_minimum_size = Vector2(420, 0)
+	objective_banner.size = Vector2(420, 0)
 	objective_banner.action_pressed.connect(_on_primary_action_pressed)
 	root_ui.add_child(objective_banner)
 
@@ -1728,8 +1809,8 @@ func _update_objective_banner() -> void:
 		return
 	match current_subphase:
 		SubPhase.PARKING_ORBIT:
-			objective_banner.set_objective(1, 4, "IGNITE THE TRANSFER BURN",
-				"▶ IGNITE TRANSFER ENGINE", "[SPACE] Ignite the engine",
+			objective_banner.set_objective(1, 4, "EARTH PARKING ORBIT — 185 KM",
+				"> IGNITE TLI BURN", "7.80 km/s circular speed • [SPACE] Begin injection burn",
 				Color(1.0, 0.72, 0.25))
 		SubPhase.INJECTION_BURN:
 			objective_banner.set_objective(1, 4, "TRANSFER BURN IN PROGRESS",
@@ -1741,19 +1822,19 @@ func _update_objective_banner() -> void:
 				Color(0.35, 0.85, 1.0))
 		SubPhase.MIDCOURSE_CORRECTION:
 			objective_banner.set_objective(2, 4, "EXECUTE MID-COURSE CORRECTION",
-				"▶ EXECUTE MCC-1 BURN", "[SPACE] Trim trajectory (costs propellant)",
+				"> EXECUTE MCC-1 BURN", "[SPACE] Trim trajectory (costs propellant)",
 				Color(0.35, 0.85, 1.0))
 		SubPhase.SOLAR_CRISIS_ALERT, SubPhase.CRISIS_SIMULATION:
 			objective_banner.set_objective(3, 4, "CME STORM — SURVIVE THE HAZARD",
-				"▶ ORIENT SHIELD + SAFE POWER", "Pick Safe Mode, then commit the crisis decisions",
+				"> ORIENT SHIELD + SAFE POWER", "Pick Safe Mode, then commit the crisis decisions",
 				Color(1.0, 0.35, 0.25))
 		SubPhase.SPACECRAFT_RECOVERY:
 			objective_banner.set_objective(3, 4, "STORM CLEARED — RECOVER SYSTEMS",
-				"▶ ADVANCE RECOVERY", "[SPACE] Restore spacecraft to nominal",
+				"> ADVANCE RECOVERY", "[SPACE] Restore spacecraft to nominal",
 				Color(0.35, 0.95, 0.55))
 		SubPhase.L1_APPROACH_READY:
 			objective_banner.set_objective(4, 4, "L1 APPROACH — BEGIN ARRIVAL",
-				"▶ PROCEED TO L1 ARRIVAL", "[SPACE] Hand off to orbit insertion",
+				"> PROCEED TO L1 ARRIVAL", "[SPACE] Hand off to orbit insertion",
 				Color(0.35, 0.95, 0.55))
 
 
@@ -1858,7 +1939,7 @@ func _show_failure_overlay(title: String, detail: String, fix: String) -> void:
 
 	var rebuild := Button.new()
 	rebuild.name = "BtnRebuildHangar"
-	rebuild.text = "← REBUILD IN HANGAR"
+	rebuild.text = "< REBUILD IN HANGAR"
 	rebuild.custom_minimum_size = Vector2(180, 40)
 	rebuild.pressed.connect(func() -> void:
 		Sfx.ui_click()

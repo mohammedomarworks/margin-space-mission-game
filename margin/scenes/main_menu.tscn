@@ -22,14 +22,15 @@ ambient_light_energy = 0.9
 tonemap_mode = 2
 
 [sub_resource type="StandardMaterial3D" id="Mat_Sun_Menu"]
+albedo_color = Color(1, 0.58, 0.20, 1)
 emission_enabled = true
-emission = Color(1.0, 0.82, 0.35, 1)
-emission_energy_multiplier = 4.0
+emission = Color(1.0, 0.42, 0.10, 1)
+emission_energy_multiplier = 0.7
 
 [sub_resource type="SphereMesh" id="Mesh_Sun_Menu"]
 material = SubResource("Mat_Sun_Menu")
-radius = 4.0
-height = 8.0
+radius = 2.8
+height = 5.6
 
 [sub_resource type="StandardMaterial3D" id="Mat_Earth_Menu"]
 albedo_color = Color(0.15, 0.45, 0.85, 1)
@@ -129,17 +130,23 @@ environment = SubResource("Env_Menu")
 [node name="SunLight" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 6, 8, 6)
 light_color = Color(1, 0.98, 0.94, 1)
-light_energy = 1.7
+light_energy = 2.1
 shadow_enabled = true
 
 [node name="FillLight" type="OmniLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, -2, -4)
 light_color = Color(0.4, 0.55, 0.78, 1)
-light_energy = 0.65
+light_energy = 1.2
 omni_range = 18.0
 
+[node name="RimLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.707107, 0.353553, -0.612372, 0, 0.866025, 0.5, 0.707107, 0.353553, -0.612372, 0, 0, 0)
+light_color = Color(0.3, 0.72, 1.0, 1)
+light_energy = 1.1
+shadow_enabled = false
+
 [node name="DistantSun" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28, 6, -40)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 25, -72)
 mesh = SubResource("Mesh_Sun_Menu")
 
 [node name="DistantEarth" type="MeshInstance3D" parent="."]
@@ -214,7 +221,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
 theme_override_font_sizes/font_size = 11
-text = "FLAGSHIP CAMPAIGN AUTHORIZATION • BUILD v3.0"
+text = "FLAGSHIP CAMPAIGN AUTHORIZATION • BUILD v3.2"
 
 [node name="MName" type="Label" parent="CanvasLayer/RootUI/BrandLayout/MissionBanner/VBox"]
 layout_mode = 2
@@ -233,21 +240,13 @@ autowrap_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="NewCampaignBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
-layout_mode = 2
-theme_override_styles/normal = SubResource("Style_PrimaryBtn_Menu")
-theme_override_font_sizes/font_size = 14
-text = "> 1. NEW CAMPAIGN (HELIOS-4)"
-
 [node name="ContinueCampaignBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
 theme_override_font_sizes/font_size = 13
-text = "2. CONTINUE CAMPAIGN"
+text = "CONTINUE CAMPAIGN"
 
 [node name="SettingsHowToPlayBtn" type="Button" parent="CanvasLayer/RootUI/BrandLayout/MenuButtons"]
 unique_name_in_owner = true
@@ -255,7 +254,7 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn_Menu")
 theme_override_font_sizes/font_size = 13
-text = "3. HOW TO PLAY"
+text = "HOW TO PLAY"
 
 [node name="BuildBadgePanel" type="PanelContainer" parent="CanvasLayer/RootUI"]
 layout_mode = 1
@@ -274,7 +273,7 @@ theme_override_styles/panel = SubResource("Style_BuildBadge")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.22, 0.9, 1.0, 1)
 theme_override_font_sizes/font_size = 11
-text = "BUILD v3.0 — FULL 3D & AUDIO EDITION"
+text = "BUILD v3.2 — AEROSPACE PHYSICS & 3D EDITION"
 horizontal_alignment = 1
 
 [node name="FooterDisclaimer" type="Label" parent="CanvasLayer/RootUI"]
@@ -376,7 +375,6 @@ text = "4. NASA DONKI & REAL-WORLD SPACE WEATHER
 Real-world DONKI events (CCMC domain) can be viewed as educational benchmarks. In the 2038 campaign, the spacecraft's Faraday Cup and Magnetometer detect incoming solar storms to beam advance warnings (15–60 min notice) back to Earth."
 autowrap_mode = 2
 
-[connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/NewCampaignBtn" to="." method="_on_new_campaign_pressed"]
 [connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/ContinueCampaignBtn" to="." method="_on_continue_campaign_pressed"]
 [connection signal="pressed" from="CanvasLayer/RootUI/BrandLayout/MenuButtons/SettingsHowToPlayBtn" to="." method="_on_how_to_play_pressed"]
 [connection signal="pressed" from="CanvasLayer/RootUI/HowToPlayModal/VBox/ModalHeader/CloseModalBtn" to="." method="_on_close_modal_pressed"]

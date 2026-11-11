@@ -218,7 +218,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.35, 0.95, 0.55, 1)
 theme_override_font_sizes/font_size = 12
-text = "● READY FOR L1 APPROACH NAVIGATION TRIM"
+text = "- READY FOR L1 APPROACH NAVIGATION TRIM"
 
 [node name="TopTelemetryStrip" type="PanelContainer" parent="CanvasLayer/RootUI"]
 layout_mode = 1
@@ -558,7 +558,7 @@ custom_minimum_size = Vector2(380, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
 theme_override_font_sizes/font_size = 11
-text = "🧭 EXECUTE APPROACH TRIM BURN (-2.4 kg) →"
+text = "EXECUTE APPROACH TRIM BURN (-2.4 kg) >"
 
 [node name="SecondaryActionBtn" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
 unique_name_in_owner = true
@@ -575,7 +575,7 @@ custom_minimum_size = Vector2(380, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryActionBtn")
 theme_override_font_sizes/font_size = 11
-text = "COMMISSIONING COMPLETE: PROCEED TO DEBRIEF →"
+text = "COMMISSIONING COMPLETE: PROCEED TO DEBRIEF >"
 
 [node name="BtnPauseSim" type="Button" parent="CanvasLayer/RootUI/BottomControlsDeck"]
 unique_name_in_owner = true
@@ -583,7 +583,7 @@ custom_minimum_size = Vector2(90, 40)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryActionBtn")
 theme_override_font_sizes/font_size = 10
-text = "⏸ PAUSE"
+text = "PAUSE"
 
 [node name="SimPauseBanner" type="PanelContainer" parent="CanvasLayer/RootUI"]
 unique_name_in_owner = true
@@ -606,5 +606,5 @@ theme_override_styles/panel = SubResource("Style_ObjectivePanel")
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.35, 1)
 theme_override_font_sizes/font_size = 12
-text = "⏸ SIMULATION PAUSED — PRESS [P] OR CLICK RESUME"
+text = "SIMULATION PAUSED — PRESS [P] OR CLICK RESUME"
 horizontal_alignment = 1

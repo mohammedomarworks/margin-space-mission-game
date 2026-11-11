@@ -133,7 +133,7 @@ custom_minimum_size = Vector2(140, 34)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_SecondaryBtn")
 theme_override_font_sizes/font_size = 12
-text = "← MAIN MENU"
+text = "MAIN MENU"
 
 [node name="Spacer" type="Control" parent="CanvasLayer/RootUI/HeaderBar"]
 layout_mode = 2
@@ -143,7 +143,7 @@ size_flags_horizontal = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.98, 0.55, 0.15, 1)
 theme_override_font_sizes/font_size = 13
-text = "● CRISIS LEVEL: G5+ SOLAR SUPERSTORM • YEAR 2038"
+text = "CRISIS ALERT: G5+ SOLAR SUPERSTORM | YEAR 2038"
 
 [node name="CenterCard" type="PanelContainer" parent="CanvasLayer/RootUI"]
 layout_mode = 1
@@ -203,7 +203,7 @@ A specialized four-officer team is authorized to construct, launch, navigate, an
 • [b]Sun-Earth L1 Location:[/b] L1 is located approximately 1.5 million km sunward (only ~1% of the distance from Earth to the Sun), [b]NOT[/b] the midpoint.
 • [b]Periodic 3D Halo Orbit:[/b] The probe operates in a periodic 3D halo orbit around the unstable L1 saddle point. It does not stop at a fixed point, requiring continuous stationkeeping maneuvers (~15–30 m/s/yr; educational game model).
 • [b]Uncrewed Vehicle:[/b] HELIOS-4 is an autonomous robotic probe. There is no human life-support or oxygen subsystem.
-• [b]NASA DSCOVR Heritage:[/b] Educationally inspired Faraday Cup plasma analysis and fluxgate magnetometry measure solar-wind speed (km/s), density (p/cm³), and magnetic field direction (Bz, nT). Idealized L1-to-Earth warning time is estimated from distance ÷ shock speed; it is not fixed (NASA DONKI-inspired values are identified as catalog data, not live mission telemetry)."
+• [b]NASA DSCOVR Heritage:[/b] Educationally inspired Faraday Cup plasma analysis and fluxgate magnetometry measure solar-wind speed (km/s), density (p/cm^3), and magnetic field direction (Bz, nT). Idealized L1-to-Earth warning time is estimated from distance ÷ shock speed; it is not fixed (NASA DONKI-inspired values are identified as catalog data, not live mission telemetry)."
 
 [node name="ButtonGroup" type="HBoxContainer" parent="CanvasLayer/RootUI/CenterCard/VBox"]
 layout_mode = 2
@@ -225,7 +225,7 @@ custom_minimum_size = Vector2(280, 44)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_PrimaryBtn")
 theme_override_font_sizes/font_size = 13
-text = "ASSIGN 4-OFFICER TEAM →"
+text = "ASSIGN FOUR-OFFICER TEAM"
 
 [node name="DonkiModal" type="PanelContainer" parent="CanvasLayer/RootUI"]
 unique_name_in_owner = true

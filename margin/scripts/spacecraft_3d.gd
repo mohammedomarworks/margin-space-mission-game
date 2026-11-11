@@ -59,11 +59,15 @@ func update_component(category: ComponentDatabase.Category, component_id: String
 		mount.add_child(node)
 		_active_nodes[category] = node
 		
-		# Animate a smooth assembly pop / scaling tween
-		node.scale = Vector3(0.8, 0.8, 0.8)
+		# Module slides into its mount, then snaps to full scale with a light spring.
+		var target_position: Vector3 = node.position
+		var target_scale: Vector3 = Vector3.ONE
+		node.position = target_position + Vector3(0.0, 0.38, 0.0)
+		node.scale = target_scale * 0.72
 		var tween := create_tween()
-		tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tween.tween_property(node, "scale", Vector3.ONE, 0.35)
+		tween.set_parallel(true)
+		tween.tween_property(node, "position", target_position, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.tween_property(node, "scale", target_scale, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func get_category_position(category: ComponentDatabase.Category) -> Vector3:
 	return _category_positions.get(category, Vector3.ZERO)

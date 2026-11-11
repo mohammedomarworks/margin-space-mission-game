@@ -34,6 +34,7 @@ const REQUIREMENTS: Dictionary = {
 		"min_battery_wh": 900.0,
 		"min_solar_area_m2": 5.0,
 		"min_science_score": 40.0,
+		"min_thermal_flux_tolerance_w_m2": 1500.0,
 		"required_instruments": ["faraday_cup", "magnetometer"],
 		"requires_high_gain_dish": false,
 		"requires_rad_hard": true
@@ -45,6 +46,7 @@ const REQUIREMENTS: Dictionary = {
 		"min_battery_wh": 1400.0,
 		"min_solar_area_m2": 3.0,
 		"min_science_score": 30.0,
+		"min_thermal_flux_tolerance_w_m2": 1300.0,
 		"required_instruments": [],
 		"requires_high_gain_dish": false,
 		"requires_rad_hard": false
@@ -56,6 +58,7 @@ const REQUIREMENTS: Dictionary = {
 		"min_battery_wh": 1100.0,
 		"min_solar_area_m2": 9.0,
 		"min_science_score": 45.0,
+		"min_thermal_flux_tolerance_w_m2": 650.0,
 		"required_instruments": [],
 		"requires_high_gain_dish": true,
 		"requires_rad_hard": true
@@ -65,6 +68,7 @@ const REQUIREMENTS: Dictionary = {
 const METADATA: Dictionary = {
 	L1: {
 		"id": L1,
+		"solar_distance_au": 0.99,
 		"code": "HELIOS-4",
 		"name": "SUN-EARTH L1",
 		"subtitle": "Solar Observatory",
@@ -86,6 +90,7 @@ const METADATA: Dictionary = {
 	},
 	MOON: {
 		"id": MOON,
+		"solar_distance_au": 1.0,
 		"code": "ARTEMIS-SCOUT",
 		"name": "LUNAR SOUTH POLE",
 		"subtitle": "Volatile Mapping Orbiter",
@@ -107,6 +112,7 @@ const METADATA: Dictionary = {
 	},
 	MARS: {
 		"id": MARS,
+		"solar_distance_au": 1.524,
 		"code": "ARES-VOYAGER",
 		"name": "MARS ORBITER",
 		"subtitle": "Deep Space Survey",
@@ -176,6 +182,11 @@ static func evaluate(telemetry: Dictionary, dest_id: String,
 	rows.append(_row("power", "Power Margin",
 		req["min_power_margin_w"], power_margin,
 		power_margin >= req["min_power_margin_w"], "W"))
+
+	var thermal_tolerance: float = float(telemetry.get("thermal_flux_tolerance_w_m2", 0.0))
+	rows.append(_row("thermal", "Thermal Flux Envelope",
+		req["min_thermal_flux_tolerance_w_m2"], thermal_tolerance,
+		thermal_tolerance >= req["min_thermal_flux_tolerance_w_m2"], "W/m2"))
 
 	var battery: float = float(probe_config.get("battery_capacity_wh", 0.0))
 	rows.append(_row("battery", "Battery Capacity",

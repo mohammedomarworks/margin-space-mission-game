@@ -201,7 +201,7 @@ func _run_all_tests() -> void:
 	instance._execute_fairing_jettison()
 	_assert_test(instance.fairing_separated == true, "Fairing jettison executed successfully")
 	_assert_test(instance.btn_fairing_jettison.disabled == true, "Fairing button disabled after jettison")
-	_assert_test(instance.btn_fairing_jettison.text == "FAIRING JETTISONED ✓", "Fairing button shows confirmed checkmark")
+	_assert_test(instance.btn_fairing_jettison.text == "FAIRING JETTISONED [OK]", "Fairing button shows confirmed state")
 
 	print("\n[TEST 8] Steering and Throttle Controls Direction")
 	instance.throttle = 1.0
